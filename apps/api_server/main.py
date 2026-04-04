@@ -5,8 +5,10 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from apps.api_server.deps import get_runtime_summary
+from apps.api_server.routes.interaction import router as interaction_router
 
 app = FastAPI(title="analog-agent", version="0.1.0")
+app.include_router(interaction_router)
 
 
 @app.get("/health")
