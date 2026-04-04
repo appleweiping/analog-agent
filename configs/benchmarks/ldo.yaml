@@ -1,0 +1,6 @@
+name: ldo
+category: regulator
+targets:
+  dropout_mv: 200
+  load_regulation_mv: 10
+  quiescent_current_ua: 50

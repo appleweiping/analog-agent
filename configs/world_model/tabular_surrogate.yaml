@@ -1,0 +1,4 @@
+name: tabular_surrogate
+model_family: gradient_boosting
+objective: predict_scalar_metrics
+uncertainty: bootstrap

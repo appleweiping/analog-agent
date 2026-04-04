@@ -1,0 +1,6 @@
+name: ota2
+category: amplifier
+targets:
+  gain_db: 60
+  unity_gain_bandwidth_hz: 10000000
+  phase_margin_deg: 60

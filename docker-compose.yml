@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  api:
+    image: python:3.11-slim
+    working_dir: /workspace
+    command: >
+      sh -c "pip install -e . && uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      ANALOG_AGENT_CONFIG: configs/default.yaml
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/workspace

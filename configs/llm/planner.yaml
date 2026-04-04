@@ -1,0 +1,5 @@
+model: gpt-5
+temperature: 0.2
+max_output_tokens: 4096
+role: planner
+system_goal: Generate candidate design actions and experiment plans.

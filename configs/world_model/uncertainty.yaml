@@ -1,0 +1,3 @@
+method: conformal
+target_coverage: 0.9
+fallback_policy: simulate_when_uncertain

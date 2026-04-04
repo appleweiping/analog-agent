@@ -1,0 +1,4 @@
+backend: spectre_compat
+binary: spectre
+timeout_seconds: 120
+notes: Compatibility layer for Spectre-like invocation and parsing.

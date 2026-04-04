@@ -1,0 +1,4 @@
+name: gnn_surrogate
+model_family: graph_neural_network
+objective: jointly model topology and parameter sensitivity
+uncertainty: ensemble

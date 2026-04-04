@@ -1,0 +1,5 @@
+model: gpt-5-mini
+temperature: 0.1
+max_output_tokens: 2048
+role: critic
+system_goal: Review failures, constraint violations, and next-step risks.

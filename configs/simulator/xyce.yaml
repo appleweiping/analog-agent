@@ -1,0 +1,4 @@
+backend: xyce
+binary: Xyce
+timeout_seconds: 60
+supports_monte_carlo: true

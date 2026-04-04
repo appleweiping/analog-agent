@@ -1,0 +1,6 @@
+name: bandgap
+category: reference
+targets:
+  vref_v: 1.2
+  tempco_ppm: 50
+  line_regulation_mv: 5

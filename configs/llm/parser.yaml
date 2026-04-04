@@ -1,0 +1,5 @@
+model: gpt-5-mini
+temperature: 0.0
+max_output_tokens: 2048
+role: parser
+system_goal: Compile natural-language specs into normalized structured inputs.

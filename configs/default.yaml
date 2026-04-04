@@ -1,0 +1,16 @@
+project:
+  name: analog-agent
+  environment: development
+
+runtime:
+  benchmark: ota2
+  planner: planner
+  critic: critic
+  parser: parser
+  simulator: ngspice
+  world_model: tabular_surrogate
+
+paths:
+  data_root: research/datasets
+  trace_root: research/datasets/online_traces
+  benchmark_root: research/benchmarks
