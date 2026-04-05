@@ -66,6 +66,8 @@ You can also bootstrap the same environment with:
 .\scripts\bootstrap_dev_env.ps1
 ```
 
+On Windows, that bootstrap script temporarily clears `PIP_NO_INDEX` and common proxy environment variables for the script process only when they would otherwise block package installation. It does not permanently modify your global shell or system configuration.
+
 ## Testing
 
 The repository uses two testing modes so local development is not blocked by missing web dependencies:
