@@ -39,7 +39,7 @@ This is still an active research codebase rather than a finished release. Some d
 
 ## Getting Started
 
-The repository targets Python `3.11+`.
+The repository targets Python `3.11+`. On this codebase, the recommended Windows workflow is Python `3.12` inside a local `.venv`.
 
 On Windows, prefer `py -3.12` instead of a bare `python` command. This avoids interpreter drift when multiple Python installations exist on the same machine, such as MSYS2 Python alongside the official CPython installer.
 
@@ -68,6 +68,16 @@ You can also bootstrap the same environment with:
 
 On Windows, that bootstrap script temporarily clears `PIP_NO_INDEX` and common proxy environment variables for the script process only when they would otherwise block package installation. It does not permanently modify your global shell or system configuration.
 
+Recommended Windows workflow:
+
+```powershell
+.\scripts\bootstrap_dev_env.ps1
+.\scripts\run_test_suite.ps1
+.\scripts\run_test_suite.ps1 -UseVenv -RequireApiDeps
+```
+
+This is the safest path on machines that have multiple Python installations or preconfigured proxy settings.
+
 ## Testing
 
 The repository uses two testing modes so local development is not blocked by missing web dependencies:
@@ -95,6 +105,14 @@ py -3.12 scripts\run_test_suite.py
 ```
 
 If your machine has multiple Python installations, do not use a bare `python` command for this repository on Windows. Use `py -3.12` consistently for environment creation, package installation, and test execution.
+
+For a full local validation pass, prefer the `.venv`-backed path:
+
+```powershell
+.\scripts\run_test_suite.ps1 -UseVenv -RequireApiDeps
+```
+
+That command is the local equivalent of the CI expectation: API dependencies must be present and no integration tests are silently skipped.
 
 CI installs `.[dev]` and always runs the full API-inclusive suite, so `main` is protected even when local quick checks use the lighter path.
 
