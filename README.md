@@ -41,12 +41,60 @@ This is still an active research codebase rather than a finished release. Some d
 
 The repository targets Python `3.11+`.
 
+On Windows, prefer `py -3.12` instead of a bare `python` command. This avoids interpreter drift when multiple Python installations exist on the same machine, such as MSYS2 Python alongside the official CPython installer.
+
 ```bash
 python -m venv .venv
 . .venv/bin/activate
 pip install -e .[dev]
 python -m unittest discover -s tests -p "test_*.py"
 ```
+
+On Windows PowerShell, use the following instead:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+py -3.12 -m pip install -U pip
+py -3.12 -m pip install -e ".[dev]"
+py -3.12 scripts\run_test_suite.py
+```
+
+You can also bootstrap the same environment with:
+
+```powershell
+.\scripts\bootstrap_dev_env.ps1
+```
+
+## Testing
+
+The repository uses two testing modes so local development is not blocked by missing web dependencies:
+
+- `make test`: runs the full `unittest` discovery suite in the current environment. API tests may be skipped when `fastapi/httpx` are not installed.
+- `make test-all`: runs the same suite from `.venv` and requires API-test dependencies to be present.
+- `make test-api`: runs the API integration tests only from `.venv`.
+
+If `make` is unavailable on Windows, use the PowerShell wrappers or direct `py -3.12` commands instead.
+
+Equivalent direct commands:
+
+```bash
+python scripts/run_test_suite.py
+.venv\Scripts\python.exe scripts/run_test_suite.py --require-api-deps
+```
+
+Windows-specific equivalents:
+
+```powershell
+py -3.12 scripts\run_test_suite.py
+.\.venv\Scripts\python.exe scripts\run_test_suite.py --require-api-deps
+.\scripts\run_test_suite.ps1
+.\scripts\run_test_suite.ps1 -UseVenv -RequireApiDeps
+```
+
+If your machine has multiple Python installations, do not use a bare `python` command for this repository on Windows. Use `py -3.12` consistently for environment creation, package installation, and test execution.
+
+CI installs `.[dev]` and always runs the full API-inclusive suite, so `main` is protected even when local quick checks use the lighter path.
 
 To launch the API locally:
 
