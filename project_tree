@@ -1,0 +1,188 @@
+analog-agent/
+├── README.md
+├── LICENSE
+├── pyproject.toml
+├── Makefile
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── configs/
+│   ├── default.yaml
+│   ├── llm/
+│   │   ├── planner.yaml
+│   │   ├── critic.yaml
+│   │   └── parser.yaml
+│   ├── simulator/
+│   │   ├── ngspice.yaml
+│   │   ├── xyce.yaml
+│   │   └── spectre_compat.yaml
+│   ├── world_model/
+│   │   ├── tabular_surrogate.yaml
+│   │   ├── gnn_surrogate.yaml
+│   │   └── uncertainty.yaml
+│   └── benchmarks/
+│       ├── ota2.yaml
+│       ├── folded_cascode.yaml
+│       ├── ldo.yaml
+│       └── bandgap.yaml
+├── apps/
+│   ├── api_server/
+│   │   ├── main.py
+│   │   ├── deps.py
+│   │   └── routes/
+│   │       ├── interaction.py
+│   │       └── tasking.py
+│   ├── orchestrator/
+│   │   ├── state_machine.py
+│   │   ├── graph_runtime.py
+│   │   ├── scheduler.py
+│   │   └── job_runner.py
+│   ├── worker_llm/
+│   │   ├── planner_agent.py
+│   │   ├── parser_agent.py
+│   │   ├── critic_agent.py
+│   │   ├── reflection_agent.py
+│   │   └── topology_agent.py
+│   ├── worker_world_model/
+│   │   ├── inference_service.py
+│   │   ├── uncertainty_service.py
+│   │   └── candidate_ranker.py
+│   ├── worker_simulator/
+│   │   ├── ngspice_runner.py
+│   │   ├── xyce_runner.py
+│   │   ├── raw_parser.py
+│   │   └── metric_extractor.py
+│   └── worker_memory/
+│       ├── episodic_store.py
+│       ├── design_case_store.py
+│       ├── trace_indexer.py
+│       └── retrieval_service.py
+├── libs/
+│   ├── schema/
+│   │   ├── design_spec.py
+│   │   ├── design_task.py
+│   │   ├── circuit_ir.py
+│   │   ├── action_ir.py
+│   │   ├── simulation_ir.py
+│   │   ├── reflection_ir.py
+│   │   └── result_ir.py
+│   ├── interaction/
+│   │   ├── spec_compiler.py
+│   │   ├── normalizer.py
+│   │   ├── validator.py
+│   │   ├── repair_loop.py
+│   │   ├── prompt_contracts.py
+│   │   └── testing.py
+│   ├── tasking/
+│   │   ├── compiler.py
+│   │   ├── task_type_resolver.py
+│   │   ├── topology_resolver.py
+│   │   ├── design_space_builder.py
+│   │   ├── objective_compiler.py
+│   │   ├── constraint_compiler.py
+│   │   ├── evaluation_plan_builder.py
+│   │   ├── difficulty_profiler.py
+│   │   ├── validation.py
+│   │   ├── testing.py
+│   │   ├── task_graph_builder.py
+│   │   ├── constraint_resolver.py
+│   │   ├── default_testbench_planner.py
+│   │   └── objective_scalarizer.py
+│   ├── topology/
+│   │   ├── templates/
+│   │   ├── topology_registry.py
+│   │   ├── graph_encoder.py
+│   │   └── mutation_ops.py
+│   ├── world_model/
+│   │   ├── datasets/
+│   │   ├── features/
+│   │   ├── models/
+│   │   │   ├── mlp_surrogate.py
+│   │   │   ├── xgb_surrogate.py
+│   │   │   ├── gnn_surrogate.py
+│   │   │   └── feasibility_head.py
+│   │   ├── train.py
+│   │   ├── infer.py
+│   │   └── calibrate.py
+│   ├── planner/
+│   │   ├── search_controller.py
+│   │   ├── bo_engine.py
+│   │   ├── cmaes_engine.py
+│   │   ├── rl_policy.py
+│   │   ├── mpc_rollout.py
+│   │   └── acquisition.py
+│   ├── simulation/
+│   │   ├── netlist_builder.py
+│   │   ├── testbench_builder.py
+│   │   ├── corner_manager.py
+│   │   ├── batch_executor.py
+│   │   └── waveform_postproc.py
+│   ├── memory/
+│   │   ├── trajectory_logger.py
+│   │   ├── failure_taxonomy.py
+│   │   ├── reflection_summarizer.py
+│   │   └── retrieval_policy.py
+│   ├── knowledge/
+│   │   ├── analog_rules/
+│   │   ├── equation_cards/
+│   │   ├── topology_notes/
+│   │   └── paper_snippets/
+│   ├── eval/
+│   │   ├── metrics.py
+│   │   ├── budget.py
+│   │   ├── robustness.py
+│   │   └── explainability.py
+│   └── utils/
+│       ├── logging.py
+│       ├── io.py
+│       ├── hashing.py
+│       ├── units.py
+│       └── reproducibility.py
+├── research/
+│   ├── benchmarks/
+│   │   ├── ota2/
+│   │   ├── folded_cascode/
+│   │   ├── ldo/
+│   │   └── bandgap/
+│   ├── baselines/
+│   │   ├── bayesopt/
+│   │   ├── cmaes/
+│   │   ├── rl/
+│   │   └── random_search/
+│   ├── datasets/
+│   │   ├── offline_lhs/
+│   │   ├── online_traces/
+│   │   └── failure_cases/
+│   ├── notebooks/
+│   ├── ablations/
+│   └── papers/
+│       ├── figs/
+│       ├── tables/
+│       └── outline.md
+├── tests/
+│   ├── unit/
+│   │   ├── test_interaction_layer.py
+│   │   └── test_task_formalization_layer.py
+│   ├── integration/
+│   │   ├── test_interaction_api.py
+│   │   └── test_tasking_api.py
+│   ├── e2e/
+│   └── regression/
+│       ├── test_interaction_acceptance.py
+│       └── test_task_formalization_acceptance.py
+├── scripts/
+│   ├── bootstrap_dev_env.ps1
+│   ├── run_test_suite.ps1
+│   ├── run_test_suite.py
+│   ├── build_dataset.py
+│   ├── train_world_model.py
+│   ├── run_benchmark.py
+│   ├── replay_trace.py
+│   └── export_paper_tables.py
+└── infra/
+    ├── docker/
+    ├── ci/
+    └── observability/
