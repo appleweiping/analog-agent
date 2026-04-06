@@ -1,4 +1,4 @@
-"""ngspice binding for the fifth-layer simulation service."""
+"""Spectre-compatible binding for the fifth-layer simulation service."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from libs.schema.simulation import AnalysisStatement, NetlistInstance
 from libs.simulation.truth_model import analysis_payload
 
 
-def run_ngspice(
+def run_spectre_compat(
     task: DesignTask,
     candidate: CandidateRecord,
     *,
@@ -18,7 +18,7 @@ def run_ngspice(
     temperature_c: float,
     load_cap_f: float | None,
 ) -> dict[str, object]:
-    """Execute one deterministic ngspice-compatible analysis payload."""
+    """Execute one deterministic Spectre-compatible analysis payload."""
 
     payload = analysis_payload(
         task,
@@ -29,7 +29,7 @@ def run_ngspice(
         temperature_c=temperature_c,
         load_cap_f=load_cap_f,
     )
-    payload["backend"] = "ngspice"
-    payload["runtime_ms"] = 18 + analysis.order * 7
+    payload["backend"] = "spectre_compat"
+    payload["runtime_ms"] = 24 + analysis.order * 8
     payload["status"] = "ok"
     return payload

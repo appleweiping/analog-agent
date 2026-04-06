@@ -204,6 +204,9 @@ cython_debug/
 # Local paper drafts and notes
 paper/
 
+# Local simulation artifacts
+.artifacts/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
