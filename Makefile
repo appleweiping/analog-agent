@@ -31,10 +31,10 @@ test:
 	$(PYTHON) scripts/run_test_suite.py
 
 test-all:
-	$(VENV_PYTHON) scripts/run_test_suite.py --require-api-deps
+	$(VENV_PYTHON) scripts/run_test_suite.py --require-venv --require-api-deps
 
 test-api:
-	$(VENV_PYTHON) -m unittest tests.integration.test_interaction_api tests.integration.test_tasking_api
+	$(VENV_PYTHON) -m unittest tests.integration.test_interaction_api tests.integration.test_tasking_api tests.integration.test_world_model_api
 
 run-api:
 	$(PYTHON) -m uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload

@@ -55,8 +55,9 @@ On Windows PowerShell, use the following instead:
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-py -3.12 -m pip install -U pip
+py -3.12 -m pip install -U pip setuptools wheel
 py -3.12 -m pip install -e ".[dev]"
+py -3.12 -c "import fastapi, httpx, pytest; print('OK')"
 py -3.12 scripts\run_test_suite.py
 ```
 
@@ -76,15 +77,15 @@ Recommended Windows workflow:
 .\scripts\run_test_suite.ps1 -UseVenv -RequireApiDeps
 ```
 
-This is the safest path on machines that have multiple Python installations or preconfigured proxy settings.
+This is the safest path on machines that have multiple Python installations or preconfigured proxy settings. The bootstrap script prints the launcher target, the active `.venv` interpreter, and the `pip` install target before dependency installation. It also verifies `fastapi`, `httpx`, and `pytest` before you move into API-inclusive testing.
 
 ## Testing
 
 The repository uses two testing modes so local development is not blocked by missing web dependencies:
 
 - `make test`: runs the full `unittest` discovery suite in the current environment. API tests may be skipped when `fastapi/httpx` are not installed.
-- `make test-all`: runs the same suite from `.venv` and requires API-test dependencies to be present.
-- `make test-api`: runs the API integration tests only from `.venv`.
+- `make test-all`: runs the same suite from `.venv`, requires API-test dependencies to be present, and fails fast if the interpreter is not the repository `.venv`.
+- `make test-api`: runs all API integration tests only from `.venv`, including interaction, task formalization, and world model routes.
 
 If `make` is unavailable on Windows, use the PowerShell wrappers or direct `py -3.12` commands instead.
 
@@ -112,7 +113,7 @@ For a full local validation pass, prefer the `.venv`-backed path:
 .\scripts\run_test_suite.ps1 -UseVenv -RequireApiDeps
 ```
 
-That command is the local equivalent of the CI expectation: API dependencies must be present and no integration tests are silently skipped.
+That command is the local equivalent of the CI expectation: API dependencies must be present, the interpreter must be the repository `.venv`, and no integration tests are silently skipped. If you still see skipped API tests, you are almost certainly on the lightweight path rather than the strict `.venv` path.
 
 CI installs `.[dev]` and always runs the full API-inclusive suite, so `main` is protected even when local quick checks use the lighter path.
 

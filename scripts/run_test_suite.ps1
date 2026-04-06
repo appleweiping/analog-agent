@@ -14,6 +14,10 @@ if ($RequireApiDeps) {
 Push-Location $RepoRoot
 try {
     if ($UseVenv) {
+        if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
+            throw "Expected .venv\Scripts\python.exe but it was not found. Run .\scripts\bootstrap_dev_env.ps1 first."
+        }
+        $ArgsList += "--require-venv"
         & .\.venv\Scripts\python.exe @ArgsList
     }
     else {

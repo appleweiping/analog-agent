@@ -58,9 +58,14 @@ if ($clearedEnv.Count -gt 0) {
 }
 
 try {
+    py -$PythonVersion -c "import sys; print(sys.executable)"
+    py -$PythonVersion -m pip --version
     py -$PythonVersion -m venv .venv
+    & .\.venv\Scripts\python.exe -c "import sys; print(sys.executable)"
+    & .\.venv\Scripts\python.exe -m pip --version
     & .\.venv\Scripts\python.exe -m pip install @pipArgs -U pip setuptools wheel
     & .\.venv\Scripts\python.exe -m pip install @pipArgs -e ".[dev]"
+    & .\.venv\Scripts\python.exe -c "import fastapi, httpx, pytest; print('API dependencies ready')"
 }
 finally {
     Restore-TransientBootstrapEnv -Values $clearedEnv

@@ -1,10 +1,17 @@
-"""World-model inference service placeholder."""
+"""World-model inference service."""
 
 from __future__ import annotations
 
+from libs.schema.design_task import DesignTask
+from libs.schema.world_model import MetricsPrediction, WorldModelBundle, WorldState
+from libs.world_model.service import WorldModelService
+
 
 class InferenceService:
-    """Rank or score candidates using a learned surrogate."""
+    """Predict metrics and feasibility with the formal world-model service."""
 
-    def predict(self, features: dict) -> dict:
-        return {"service": "inference", "status": "stub", "features": features}
+    def __init__(self, bundle: WorldModelBundle, task: DesignTask) -> None:
+        self._service = WorldModelService(bundle, task)
+
+    def predict(self, state: WorldState) -> MetricsPrediction:
+        return self._service.predict_metrics(state)
