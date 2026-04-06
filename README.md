@@ -13,7 +13,7 @@ The current repository is organized around four principles:
 - simulator-grounded verification, where final decisions remain constrained by executable testbench logic;
 - traceable evaluation, where validation, repair, and benchmark flows are treated as first-class artifacts.
 
-The immediate benchmark focus is analog blocks such as OTA variants, LDOs, and bandgap references.
+The immediate benchmark focus is analog blocks such as OTA variants, LDOs, and bandgap references, under a full six-layer agent architecture.
 
 ## Current Capabilities
 
@@ -24,10 +24,11 @@ At the current stage, the repository includes:
 - a world-model layer that exposes structured state, action, transition, uncertainty, trust, ranking, rollout, and calibration contracts;
 - a planning and optimization layer that maintains explicit search state, candidate lifecycle, budget control, and optimization traces;
 - a ground-truth simulation and verification layer that realizes netlists, executes structured multi-analysis validation flows, adjudicates constraints, attributes failures, certifies robustness, and emits calibration/planner feedback;
-- deterministic normalization, validation, repair, testbench-planning, acceptance reporting, and API workflows across the implemented layers;
-- automated unit, integration, and regression tests spanning interaction, tasking, world model, planning, and simulation routes.
+- a memory and reflection layer that consolidates full episodes into evidence-backed knowledge objects, mines cross-episode patterns, emits governed strategy feedback, and controls long-term knowledge decay;
+- deterministic normalization, validation, repair, testbench-planning, acceptance reporting, retrieval, governance, and API workflows across the implemented layers;
+- automated unit, integration, and regression tests spanning interaction, tasking, world model, planning, simulation, and memory/reflection routes.
 
-This is still an active research codebase rather than a finished release. The first five system layers are now present in formal schema-and-service form, while later memory/reflection and research-tuned backend details remain under active iteration.
+This is still an active research codebase rather than a finished release. The first six system layers are now present in formal schema-and-service form, while research-tuned backend details and later experimental extensions remain under active iteration.
 
 ## Repository Structure
 
@@ -127,13 +128,14 @@ uvicorn apps.api_server.main:app --reload
 
 ## Layered System
 
-The repository currently exposes a five-layer execution spine:
+The repository currently exposes a six-layer execution spine:
 
 - Layer 1: specification understanding and validated `DesignSpec` compilation.
 - Layer 2: task formalization into executable optimization problem instances (`DesignTask`).
 - Layer 3: task-conditioned world-model services for prediction, rollout, trust, and calibration.
 - Layer 4: budget-aware, uncertainty-aware planning over explicit search state and candidate records.
 - Layer 5: ground-truth simulation, verification, robustness certification, and structured truth feedback.
+- Layer 6: cross-episode memory, reflection, governed retrieval, and advisory strategy feedback.
 
 This repository intentionally exposes stable system boundaries more than research-sensitive internals. In particular, the public implementation is meant to communicate:
 
@@ -146,4 +148,4 @@ It intentionally does not attempt to publish every modeling choice, prompt strat
 
 ## Status
 
-The project is under active construction, but it is no longer only a front-end scaffold. The repository now contains formal implementations for the first five layers of the system architecture, along with API routes and acceptance-oriented test coverage. What remains intentionally lightweight in the public tree are research-tuned backend details, long-horizon memory/reflection components, and some production-grade simulator bindings that will continue to evolve as the research pipeline is expanded.
+The project is under active construction, but it is no longer only a front-end scaffold. The repository now contains formal implementations for the first six layers of the system architecture, along with API routes and acceptance-oriented test coverage. What remains intentionally lightweight in the public tree are research-tuned backend details, deeper learned-backend integrations, and some production-grade simulator bindings that will continue to evolve as the research pipeline is expanded.

@@ -38,7 +38,8 @@
 |   |       |-- tasking.py
 |   |       |-- world_modeling.py
 |   |       |-- planning.py
-|   |       `-- simulation.py
+|   |       |-- simulation.py
+|   |       `-- memory_reflection.py
 |   |-- orchestrator/
 |   |   |-- state_machine.py
 |   |   |-- graph_runtime.py
@@ -54,6 +55,11 @@
 |   |   |-- inference_service.py
 |   |   |-- uncertainty_service.py
 |   |   `-- candidate_ranker.py
+|   |-- worker_memory/
+|   |   |-- episodic_store.py
+|   |   |-- design_case_store.py
+|   |   |-- trace_indexer.py
+|   |   `-- retrieval_service.py
 |   `-- worker_simulator/
 |       |-- ngspice_runner.py
 |       |-- xyce_runner.py
@@ -67,6 +73,7 @@
 |   |   |-- world_model.py
 |   |   |-- planning.py
 |   |   |-- simulation.py
+|   |   |-- memory.py
 |   |   |-- circuit_ir.py
 |   |   |-- action_ir.py
 |   |   |-- simulation_ir.py
@@ -153,10 +160,21 @@
 |   |   |-- validation.py
 |   |   `-- waveform_postproc.py
 |   |-- memory/
+|   |   |-- advice_emitter.py
+|   |   |-- compiler.py
+|   |   |-- consolidation_engine.py
 |   |   |-- trajectory_logger.py
 |   |   |-- failure_taxonomy.py
+|   |   |-- forgetting_manager.py
+|   |   |-- hybrid_retriever.py
+|   |   |-- pattern_miner.py
+|   |   |-- quality_governor.py
 |   |   |-- reflection_summarizer.py
-|   |   `-- retrieval_policy.py
+|   |   |-- retrieval_policy.py
+|   |   |-- service.py
+|   |   |-- task_signature.py
+|   |   |-- testing.py
+|   |   `-- validation.py
 |   |-- knowledge/
 |   |   |-- analog_rules/
 |   |   |-- equation_cards/
@@ -200,19 +218,22 @@
 |   |   |-- test_task_formalization_layer.py
 |   |   |-- test_world_model_layer.py
 |   |   |-- test_planning_layer.py
-|   |   `-- test_simulation_layer.py
+|   |   |-- test_simulation_layer.py
+|   |   `-- test_memory_layer.py
 |   |-- integration/
 |   |   |-- test_interaction_api.py
 |   |   |-- test_tasking_api.py
 |   |   |-- test_world_model_api.py
 |   |   |-- test_planning_api.py
-|   |   `-- test_simulation_api.py
+|   |   |-- test_simulation_api.py
+|   |   `-- test_memory_api.py
 |   |-- regression/
 |   |   |-- test_interaction_acceptance.py
 |   |   |-- test_task_formalization_acceptance.py
 |   |   |-- test_world_model_acceptance.py
 |   |   |-- test_planning_acceptance.py
-|   |   `-- test_simulation_acceptance.py
+|   |   |-- test_simulation_acceptance.py
+|   |   `-- test_memory_acceptance.py
 |   `-- e2e/
 |-- scripts/
 |   |-- bootstrap_dev_env.ps1
