@@ -6,6 +6,7 @@ analog-agent/
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
+├── project_tree
 ├── .github/
 │   └── workflows/
 │       └── ci.yml
@@ -34,7 +35,8 @@ analog-agent/
 │   │   ├── deps.py
 │   │   └── routes/
 │   │       ├── interaction.py
-│   │       └── tasking.py
+│   │       ├── tasking.py
+│   │       └── world_modeling.py
 │   ├── orchestrator/
 │   │   ├── state_machine.py
 │   │   ├── graph_runtime.py
@@ -64,12 +66,14 @@ analog-agent/
 │   ├── schema/
 │   │   ├── design_spec.py
 │   │   ├── design_task.py
+│   │   ├── world_model.py
 │   │   ├── circuit_ir.py
 │   │   ├── action_ir.py
 │   │   ├── simulation_ir.py
 │   │   ├── reflection_ir.py
 │   │   └── result_ir.py
 │   ├── interaction/
+│   │   ├── parser.py
 │   │   ├── spec_compiler.py
 │   │   ├── normalizer.py
 │   │   ├── validator.py
@@ -104,6 +108,14 @@ analog-agent/
 │   │   │   ├── xgb_surrogate.py
 │   │   │   ├── gnn_surrogate.py
 │   │   │   └── feasibility_head.py
+│   │   ├── action_builder.py
+│   │   ├── compiler.py
+│   │   ├── design_task_adapter.py
+│   │   ├── feature_projection.py
+│   │   ├── state_builder.py
+│   │   ├── service.py
+│   │   ├── validation.py
+│   │   ├── testing.py
 │   │   ├── train.py
 │   │   ├── infer.py
 │   │   └── calibrate.py
@@ -165,14 +177,17 @@ analog-agent/
 ├── tests/
 │   ├── unit/
 │   │   ├── test_interaction_layer.py
-│   │   └── test_task_formalization_layer.py
+│   │   ├── test_task_formalization_layer.py
+│   │   └── test_world_model_layer.py
 │   ├── integration/
 │   │   ├── test_interaction_api.py
-│   │   └── test_tasking_api.py
+│   │   ├── test_tasking_api.py
+│   │   └── test_world_model_api.py
 │   ├── e2e/
 │   └── regression/
 │       ├── test_interaction_acceptance.py
-│       └── test_task_formalization_acceptance.py
+│       ├── test_task_formalization_acceptance.py
+│       └── test_world_model_acceptance.py
 ├── scripts/
 │   ├── bootstrap_dev_env.ps1
 │   ├── run_test_suite.ps1
