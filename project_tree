@@ -35,6 +35,7 @@ analog-agent/
 │   │   ├── deps.py
 │   │   └── routes/
 │   │       ├── interaction.py
+│   │       ├── planning.py
 │   │       ├── tasking.py
 │   │       └── world_modeling.py
 │   ├── orchestrator/
@@ -66,6 +67,7 @@ analog-agent/
 │   ├── schema/
 │   │   ├── design_spec.py
 │   │   ├── design_task.py
+│   │   ├── planning.py
 │   │   ├── world_model.py
 │   │   ├── circuit_ir.py
 │   │   ├── action_ir.py
@@ -120,7 +122,16 @@ analog-agent/
 │   │   ├── infer.py
 │   │   └── calibrate.py
 │   ├── planner/
+│   │   ├── budget_controller.py
+│   │   ├── candidate_manager.py
+│   │   ├── compiler.py
+│   │   ├── phase_controller.py
+│   │   ├── rollout_planner.py
 │   │   ├── search_controller.py
+│   │   ├── selection_engine.py
+│   │   ├── service.py
+│   │   ├── testing.py
+│   │   ├── validation.py
 │   │   ├── bo_engine.py
 │   │   ├── cmaes_engine.py
 │   │   ├── rl_policy.py
@@ -177,15 +188,18 @@ analog-agent/
 ├── tests/
 │   ├── unit/
 │   │   ├── test_interaction_layer.py
+│   │   ├── test_planning_layer.py
 │   │   ├── test_task_formalization_layer.py
 │   │   └── test_world_model_layer.py
 │   ├── integration/
 │   │   ├── test_interaction_api.py
+│   │   ├── test_planning_api.py
 │   │   ├── test_tasking_api.py
 │   │   └── test_world_model_api.py
 │   ├── e2e/
 │   └── regression/
 │       ├── test_interaction_acceptance.py
+│       ├── test_planning_acceptance.py
 │       ├── test_task_formalization_acceptance.py
 │       └── test_world_model_acceptance.py
 ├── scripts/
