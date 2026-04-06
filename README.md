@@ -2,7 +2,7 @@
 
 `analog-agent` is a research-oriented framework for structured analog circuit design under a layered agent architecture. The project treats natural-language specification understanding, structured task compilation, model-based search, and simulator-backed verification as distinct system roles rather than collapsing them into a single generative loop.
 
-This repository is being developed as an engineering-grade prototype for analog design automation. The public code emphasizes system interfaces, compile-time guarantees, and evaluation scaffolding. Implementation details that are tightly coupled to ongoing research assets are intentionally abstracted at a high level.
+This repository is being developed as an engineering-grade prototype for analog design automation. The public code emphasizes system interfaces, compile-time guarantees, structured validation, and system-level evaluation scaffolding. Implementation details that are tightly coupled to ongoing research assets are intentionally abstracted at a high level.
 
 ## Research Scope
 
@@ -20,18 +20,20 @@ The immediate benchmark focus is analog blocks such as OTA variants, LDOs, and b
 At the current stage, the repository includes:
 
 - a structured interaction layer that compiles natural-language requirements into a validated `DesignSpec`;
-- deterministic normalization, validation, repair, and testbench-planning logic for the front-end compile pipeline;
-- a lightweight API surface for compile and validation workflows;
-- baseline project scaffolding for planning, simulation, memory, world-model, and evaluation modules;
-- automated tests covering standard, underspecified, ambiguous, adversarial, and repair-oriented interaction cases.
+- a task-formalization layer that compiles `DesignSpec` into a solver-facing `DesignTask`;
+- a world-model layer that exposes structured state, action, transition, uncertainty, trust, ranking, rollout, and calibration contracts;
+- a planning and optimization layer that maintains explicit search state, candidate lifecycle, budget control, and optimization traces;
+- a ground-truth simulation and verification layer that realizes netlists, executes structured multi-analysis validation flows, adjudicates constraints, attributes failures, certifies robustness, and emits calibration/planner feedback;
+- deterministic normalization, validation, repair, testbench-planning, acceptance reporting, and API workflows across the implemented layers;
+- automated unit, integration, and regression tests spanning interaction, tasking, world model, planning, and simulation routes.
 
-This is still an active research codebase rather than a finished release. Some downstream modules remain intentionally minimal while interfaces stabilize.
+This is still an active research codebase rather than a finished release. The first five system layers are now present in formal schema-and-service form, while later memory/reflection and research-tuned backend details remain under active iteration.
 
 ## Repository Structure
 
 - `apps/`: service entrypoints and worker-facing application modules.
 - `configs/`: benchmark, simulator, model, and runtime configuration.
-- `libs/`: core schemas, interaction logic, planners, simulation helpers, memory utilities, and evaluation code.
+- `libs/`: core schemas, interaction logic, task compilers, world-model services, planning services, simulation/verification services, memory utilities, and evaluation code.
 - `research/`: experiment assets, datasets, baselines, and paper-facing material.
 - `scripts/`: command-line utilities for dataset, training, benchmarking, and export workflows.
 - `tests/`: unit, integration, and regression coverage.
@@ -85,7 +87,7 @@ The repository uses two testing modes so local development is not blocked by mis
 
 - `make test`: runs the full `unittest` discovery suite in the current environment. API tests may be skipped when `fastapi/httpx` are not installed.
 - `make test-all`: runs the same suite from `.venv`, requires API-test dependencies to be present, and fails fast if the interpreter is not the repository `.venv`.
-- `make test-api`: runs all API integration tests only from `.venv`, including interaction, task formalization, and world model routes.
+- `make test-api`: runs all API integration tests only from `.venv`, including interaction, task formalization, world model, planning, and simulation routes.
 
 If `make` is unavailable on Windows, use the PowerShell wrappers or direct `py -3.12` commands instead.
 
@@ -123,7 +125,15 @@ To launch the API locally:
 uvicorn apps.api_server.main:app --reload
 ```
 
-## Design Notes
+## Layered System
+
+The repository currently exposes a five-layer execution spine:
+
+- Layer 1: specification understanding and validated `DesignSpec` compilation.
+- Layer 2: task formalization into executable optimization problem instances (`DesignTask`).
+- Layer 3: task-conditioned world-model services for prediction, rollout, trust, and calibration.
+- Layer 4: budget-aware, uncertainty-aware planning over explicit search state and candidate records.
+- Layer 5: ground-truth simulation, verification, robustness certification, and structured truth feedback.
 
 This repository intentionally exposes stable system boundaries more than research-sensitive internals. In particular, the public implementation is meant to communicate:
 
@@ -136,4 +146,4 @@ It intentionally does not attempt to publish every modeling choice, prompt strat
 
 ## Status
 
-The project is under active construction. Interfaces in the interaction layer are substantially more concrete than the downstream optimization and simulation stack, which will continue to evolve as the research pipeline is expanded.
+The project is under active construction, but it is no longer only a front-end scaffold. The repository now contains formal implementations for the first five layers of the system architecture, along with API routes and acceptance-oriented test coverage. What remains intentionally lightweight in the public tree are research-tuned backend details, long-horizon memory/reflection components, and some production-grade simulator bindings that will continue to evolve as the research pipeline is expanded.
