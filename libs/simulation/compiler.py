@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from apps.worker_simulator.ngspice_runner import native_ngspice_available
 from libs.planner.candidate_manager import find_candidate
 from libs.schema.design_task import DesignTask
 from libs.schema.planning import PlanningBundle, SearchState
@@ -171,6 +172,13 @@ def compile_simulation_bundle(
         analyses=analysis_plan.ordered_analyses,
     )
     signature = stable_hash(f"{task.task_id}|{candidate_id}|{fidelity_level}|{backend_preference}")
+    native_ngspice = (
+        backend_preference == "ngspice"
+        and native_ngspice_available()
+        and task.circuit_family == "two_stage_ota"
+        and task.topology.topology_mode == "fixed"
+        and {analysis.analysis_type for analysis in analysis_plan.ordered_analyses}.issubset({"op", "ac"})
+    )
     bundle = SimulationBundle(
         simulation_id=f"sim_{signature[:12]}",
         parent_task_id=task.task_id,
@@ -178,9 +186,9 @@ def compile_simulation_bundle(
         planner_context_ref=search_state.search_id,
         backend_binding=BackendBinding(
             backend=backend_preference,
-            backend_version="deterministic-backend-v1",
+            backend_version="ngspice-native-batch-v1" if native_ngspice else "deterministic-backend-v1",
             capability_map=["op", "ac", "tran", "noise", "pvt_sweep", "load_sweep", "temperature_sweep", "monte_carlo"],
-            invocation_mode="mock_truth",
+            invocation_mode="native" if native_ngspice else "mock_truth",
             support_multi_analysis=True,
         ),
         netlist_instance=netlist,
@@ -202,8 +210,9 @@ def compile_simulation_bundle(
             implementation_version="simulation-layer-v1",
             assumptions=[
                 "ground-truth layer remains the only physical verification authority",
-                "backend bindings preserve a unified schema even in mock_truth mode",
+                "backend bindings preserve a unified schema across demonstrator truth and mock_truth modes",
                 "verification outputs are emitted as structured objects for planner and world-model feedback",
+                "native ngspice is currently enabled for two_stage_ota fixed-topology op/ac verification only" if native_ngspice else "bundle currently executes in mock_truth mode",
             ],
             provenance=[
                 "task_formalization_layer",

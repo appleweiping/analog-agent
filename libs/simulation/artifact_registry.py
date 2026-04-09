@@ -54,3 +54,19 @@ def persist_json_artifact(registry: ArtifactRegistry, artifact_type: str, name: 
         }
     )
     return updated, artifact_id
+
+
+def register_artifact(registry: ArtifactRegistry, artifact_type: str, path: str) -> tuple[ArtifactRegistry, str]:
+    """Register an existing artifact path without copying it."""
+
+    artifact_path = Path(path)
+    artifact_id = f"artifact_{stable_hash(f'{artifact_type}|{artifact_path.name}')[:12]}"
+    updated = registry.model_copy(
+        update={
+            "records": [
+                *registry.records,
+                ArtifactRecord(artifact_id=artifact_id, artifact_type=artifact_type, path=str(artifact_path)),
+            ]
+        }
+    )
+    return updated, artifact_id

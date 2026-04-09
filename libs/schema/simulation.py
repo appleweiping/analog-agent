@@ -65,6 +65,15 @@ VALIDATION_ERROR_CODES = (
     "feedback_contract_failure",
     "execution_failure",
 )
+BACKEND_ERROR_TYPES = (
+    "none",
+    "invocation_error",
+    "timeout",
+    "netlist_error",
+    "simulation_error",
+    "measurement_error",
+    "artifact_error",
+)
 ACCEPTANCE_FAILURE_CODES = (
     "schema_failure",
     "execution_failure",
@@ -353,6 +362,43 @@ class ArtifactRegistry(BaseModel):
 
     run_directory: str
     records: list[ArtifactRecord] = Field(default_factory=list)
+
+
+class BackendRunRequest(BaseModel):
+    """Structured backend execution request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    simulator_binary_path: str
+    netlist_path: str
+    log_path: str
+    timeout_sec: int
+    working_directory: str | None = None
+    environment_overrides: dict[str, str] = Field(default_factory=dict)
+    fidelity_tag: str
+
+
+class BackendRunResult(BaseModel):
+    """Structured backend execution response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ok: bool
+    returncode: int | None = None
+    stdout_excerpt: str = ""
+    stderr_excerpt: str = ""
+    log_exists: bool = False
+    log_path: str
+    runtime_sec: float | None = None
+    error_type: str = "none"
+    raw_completion_status: str
+
+    @field_validator("error_type")
+    @classmethod
+    def validate_error_type(cls, value: str) -> str:
+        if value not in BACKEND_ERROR_TYPES:
+            raise ValueError(f"unsupported backend error type: {value}")
+        return value
 
 
 class ServiceMethodSpec(BaseModel):

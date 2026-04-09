@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from apps.worker_simulator.ngspice_runner import run_ngspice
+from pathlib import Path
+
+from apps.worker_simulator.ngspice_runner import native_ngspice_available, run_ngspice, run_ngspice_native_analysis
 from apps.worker_simulator.raw_parser import parse_raw_output
 from apps.worker_simulator.spectre_compat_runner import run_spectre_compat
 from apps.worker_simulator.xyce_runner import run_xyce
@@ -15,7 +17,7 @@ from libs.schema.simulation import (
     SimulationBundle,
     SimulationRequest,
 )
-from libs.simulation.artifact_registry import persist_json_artifact
+from libs.simulation.artifact_registry import persist_json_artifact, register_artifact
 from libs.simulation.batch_executor import order_analyses
 
 
@@ -23,11 +25,16 @@ def validate_backend(backend_binding: BackendBinding) -> BackendValidationReport
     """Validate backend availability in the current environment."""
 
     warnings = []
-    if backend_binding.invocation_mode != "native":
+    is_available = True
+    if backend_binding.backend == "ngspice" and backend_binding.invocation_mode == "native":
+        is_available = native_ngspice_available()
+        if not is_available:
+            warnings.append("native_ngspice_binary_not_found")
+    elif backend_binding.invocation_mode != "native":
         warnings.append("backend_running_in_mock_truth_mode")
     return BackendValidationReport(
         backend=backend_binding.backend,
-        is_available=True,
+        is_available=is_available,
         invocation_mode=backend_binding.invocation_mode,
         warnings=warnings,
     )
@@ -43,7 +50,18 @@ def _dispatch(
     corner: str,
     temperature_c: float,
     load_cap_f: float | None,
+    run_directory: str | Path | None = None,
+    timeout_sec: int = 45,
+    fidelity_tag: str = "focused_validation",
 ) -> dict[str, object]:
+    if backend == "ngspice" and run_directory is not None:
+        return run_ngspice_native_analysis(
+            netlist=netlist,
+            analysis=analysis,
+            run_directory=run_directory,
+            timeout_sec=timeout_sec,
+            fidelity_tag=fidelity_tag,
+        )
     if backend == "ngspice":
         return run_ngspice(task, candidate, netlist=netlist, analysis=analysis, corner=corner, temperature_c=temperature_c, load_cap_f=load_cap_f)
     if backend == "xyce":
@@ -64,6 +82,7 @@ def execute_bundle(
     outputs: list[dict[str, object]] = []
     environment = candidate.world_state_snapshot.environment_state
     analyses = order_analyses(simulation_bundle.analysis_plan.ordered_analyses)
+    use_native = simulation_bundle.backend_binding.backend == "ngspice" and simulation_bundle.backend_binding.invocation_mode == "native"
 
     for analysis in analyses:
         raw = _dispatch(
@@ -75,13 +94,18 @@ def execute_bundle(
             corner=str(simulation_request.environment_overrides.get("corner", environment.corner)),
             temperature_c=float(simulation_request.environment_overrides.get("temperature_c", environment.temperature_c)),
             load_cap_f=float(simulation_request.environment_overrides.get("load_cap_f", environment.load_cap_f or 2e-12)),
+            run_directory=registry.run_directory if use_native else None,
+            timeout_sec=simulation_request.resource_budget.timeout_seconds,
+            fidelity_tag=simulation_request.fidelity_level,
         )
-        registry, artifact_id = persist_json_artifact(
-            registry,
-            "raw_waveform",
-            f"{analysis.analysis_type}.json",
-            raw,
-        )
+        registry, artifact_id = persist_json_artifact(registry, "raw_waveform", f"{analysis.analysis_type}.json", raw)
+        if use_native:
+            netlist_path = str(raw.get("netlist_path", ""))
+            log_path = str(raw.get("log_path", ""))
+            if netlist_path:
+                registry, _ = register_artifact(registry, "netlist", netlist_path)
+            if log_path and Path(log_path).exists():
+                registry, _ = register_artifact(registry, "stdout", log_path)
         parsed = parse_raw_output({**raw, "artifact_ref": artifact_id})
         outputs.append(parsed)
 

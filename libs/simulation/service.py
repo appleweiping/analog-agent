@@ -16,7 +16,7 @@ from libs.schema.simulation import (
     SimulationRequest,
     VerificationResult,
 )
-from libs.schema.world_model import TruthCalibrationRecord, TruthConstraint, TruthMetric
+from libs.schema.world_model import WORLD_MODEL_METRICS, TruthCalibrationRecord, TruthConstraint, TruthMetric
 from libs.simulation.artifact_registry import persist_json_artifact, persist_text_artifact
 from libs.simulation.backend_router import execute_bundle, validate_backend
 from libs.simulation.compiler import build_simulation_request, compile_simulation_bundle
@@ -112,7 +112,11 @@ class SimulationService:
         truth_record = TruthCalibrationRecord(
             simulator_signature=f"{simulation_bundle.backend_binding.backend}:{simulation_bundle.backend_binding.backend_version}",
             analysis_fidelity=_truth_fidelity(simulation_bundle.analysis_plan.fidelity_level),
-            metrics=[TruthMetric(metric=metric.metric, value=metric.value) for metric in measurement_report.measured_metrics],
+            metrics=[
+                TruthMetric(metric=metric.metric, value=metric.value)
+                for metric in measurement_report.measured_metrics
+                if metric.metric in WORLD_MODEL_METRICS
+            ],
             constraints=[
                 TruthConstraint(
                     constraint_name=item.constraint_name,

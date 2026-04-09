@@ -33,7 +33,19 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
 
     existing = {analysis.analysis_type for analysis in base}
     extras: list[AnalysisStatement] = []
-    if request.fidelity_level == "quick_truth":
+    real_ota_native = request.backend_preference == "ngspice" and task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed"
+    if real_ota_native and request.fidelity_level in {"quick_truth", "focused_validation"}:
+        ordered = []
+        for analysis in base:
+            if analysis.analysis_type not in {"op", "ac"}:
+                continue
+            required = list(analysis.required_metrics)
+            if analysis.analysis_type == "ac" and "dc_gain_db" not in required:
+                required = ["dc_gain_db", *required]
+            ordered.append(analysis.model_copy(update={"required_metrics": required}))
+        execution_policy = "serial"
+        termination_rules = ["stop_on_netlist_failure", "stop_on_simulation_error", "stop_after_core_truth_violation"]
+    elif request.fidelity_level == "quick_truth":
         ordered = [analysis for analysis in base if analysis.analysis_type in {"op", "ac", "tran"}][:2]
         execution_policy = "serial"
         termination_rules = ["stop_on_critical_integrity_failure", "stop_after_first_core_constraint_violation"]

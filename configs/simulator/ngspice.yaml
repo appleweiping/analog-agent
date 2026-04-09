@@ -1,4 +1,8 @@
 backend: ngspice
-binary: ngspice
-timeout_seconds: 60
+binary: D:\Research\Agent-AI4EDA\tools\ngspice\bin\ngspice.exe
+invocation_mode: batch
+timeout_seconds: 20
+default_log_dir: .artifacts\ngspice_logs
+smoke_test_netlist: scripts\smoke\test_ngspice_min.cir
+require_explicit_log_path: true
 supports_monte_carlo: false

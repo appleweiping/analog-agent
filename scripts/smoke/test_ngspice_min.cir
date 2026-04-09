@@ -1,0 +1,7 @@
+* Minimal ngspice smoke test
+
+V1 in 0 DC 1
+R1 in 0 1k
+
+.op
+.end
