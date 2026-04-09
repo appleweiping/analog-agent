@@ -12,6 +12,7 @@ from libs.schema.design_task import TASK_TYPES
 WORLD_MODEL_SCHEMA_VERSION = "world-model-schema-v1"
 ANALYSIS_FIDELITIES = ("quick_screening", "partial_simulation", "full_ground_truth")
 STATE_PROVENANCE_TYPES = ("offline_dataset", "real_simulation", "trajectory_replay", "model_rollout", "hybrid_calibration")
+SOURCE_STAGES = ("initial", "predicted", "simulated")
 FIELD_PROVENANCE_TYPES = ("truth", "prediction", "missing", "calibrated")
 ACTION_FAMILIES = (
     "parameter_update",
@@ -395,6 +396,7 @@ class ProvenanceRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     state_origin: Literal["offline_dataset", "real_simulation", "trajectory_replay", "model_rollout", "hybrid_calibration"]
+    source_stage: Literal["initial", "predicted", "simulated"] = "predicted"
     analysis_fidelity: Literal["quick_screening", "partial_simulation", "full_ground_truth"]
     artifact_refs: list[str] = Field(default_factory=list)
     created_at: str

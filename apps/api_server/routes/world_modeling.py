@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 
 from libs.schema.design_task import DesignTask
+from libs.schema.system_binding import WorldModelTruthBindingRequest, WorldModelTruthBindingResponse
 from libs.schema.world_model import (
     CalibrationUpdateResponse,
     DesignAction,
@@ -16,9 +17,10 @@ from libs.schema.world_model import (
     WorldModelCompileResponse,
     WorldState,
 )
+from apps.orchestrator.job_runner import run_world_model_truth_binding
 from libs.world_model.compiler import compile_world_model_bundle
 from libs.world_model.service import WorldModelService
-from libs.world_model.state_builder import build_world_state
+from libs.world_model.state_builder import build_world_state_from_design_task
 
 router = APIRouter(prefix="/world-model", tags=["world-model"])
 
@@ -77,7 +79,7 @@ def compile_bundle(design_task: DesignTask) -> WorldModelCompileResponse:
 def build_state(request: BuildStateRequest) -> WorldState:
     """Build a formal WorldState from a DesignTask."""
 
-    return build_world_state(
+    return build_world_state_from_design_task(
         request.design_task,
         parameter_values=request.parameter_values,
         corner=request.corner,
@@ -85,6 +87,7 @@ def build_state(request: BuildStateRequest) -> WorldState:
         analysis_fidelity=request.analysis_fidelity,
         analysis_intent=request.analysis_intent,
         output_load_ohm=request.output_load_ohm,
+        provenance_stage="initial",
     )
 
 
@@ -126,3 +129,16 @@ def calibrate(request: CalibrateRequest) -> CalibrationUpdateResponse:
     if compiled.world_model_bundle is None:
         raise ValueError("world model bundle failed to compile")
     return WorldModelService(compiled.world_model_bundle, request.design_task).calibrate_with_truth(request.world_state, request.truth_record)
+
+
+@router.post("/verify-and-calibrate", response_model=WorldModelTruthBindingResponse)
+def verify_and_calibrate(request: WorldModelTruthBindingRequest) -> WorldModelTruthBindingResponse:
+    """Run the formal Day-2 prediction -> truth -> calibration cycle."""
+
+    return run_world_model_truth_binding(
+        request.design_task,
+        candidate_id=request.candidate_id,
+        fidelity_level=request.fidelity_level,
+        backend_preference=request.backend_preference,
+        escalation_reason=request.escalation_reason,
+    )

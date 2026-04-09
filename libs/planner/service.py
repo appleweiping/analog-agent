@@ -49,7 +49,7 @@ from libs.schema.planning import (
 from libs.schema.world_model import TruthCalibrationRecord, TrustAssessment, WorldModelBundle, WorldState
 from libs.utils.hashing import stable_hash
 from libs.world_model.service import WorldModelService
-from libs.world_model.state_builder import build_world_state
+from libs.world_model.state_builder import build_world_state_from_design_task
 
 
 def _timestamp() -> str:
@@ -261,9 +261,9 @@ class PlanningService:
         if self.task.initial_state.seed_candidates:
             for seed in self.task.initial_state.seed_candidates:
                 seed_values = {**self.task.initial_state.template_defaults, **seed.values}
-                seed_states.append(build_world_state(self.task, parameter_values=seed_values))
+                seed_states.append(build_world_state_from_design_task(self.task, parameter_values=seed_values, provenance_stage="initial"))
         if not seed_states:
-            seed_states.append(build_world_state(self.task, parameter_values=self.task.initial_state.template_defaults))
+            seed_states.append(build_world_state_from_design_task(self.task, parameter_values=self.task.initial_state.template_defaults, provenance_stage="initial"))
 
         budget_state = initialize_budget_state(self.planning_bundle.budget_controller)
         phase_state = initialize_phase_state(self.planning_bundle.phase_controller)

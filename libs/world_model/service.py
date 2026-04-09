@@ -25,10 +25,11 @@ from libs.schema.world_model import (
     UsableRegion,
     WorldModelBundle,
     WorldState,
+    MetricEstimate,
 )
 from libs.utils.hashing import stable_hash
 from libs.world_model.feature_projection import build_metric_estimates, evaluate_constraints, project_metrics
-from libs.world_model.state_builder import build_world_state
+from libs.world_model.state_builder import build_world_state, build_world_state_from_design_task
 from libs.world_model.validation import validate_design_action, validate_world_state
 
 
@@ -179,6 +180,7 @@ class WorldModelService:
             analysis_intent=state.evaluation_context.analysis_intent,
             output_load_ohm=state.environment_state.output_load_ohm,
             provenance_type="model_rollout",
+            provenance_stage="predicted",
             artifact_refs=state.provenance.artifact_refs,
             recent_actions=[*state.history_context.recent_actions,],
         )
@@ -383,4 +385,72 @@ class WorldModelService:
             updated_metrics=updated_metric_summaries,
             updated_usable_regions=updated_regions,
             trust_assessment=trust,
+        )
+
+    def build_truth_state_from_verification(self, state: WorldState, verification_result) -> WorldState:
+        """Project a real verification result into a formal simulated WorldState."""
+
+        truth_metrics = [
+            MetricEstimate(
+                metric=metric.metric,
+                value=metric.value,
+                lower_bound=metric.value,
+                upper_bound=metric.value,
+                uncertainty=0.0,
+                trust_level="high",
+                source="truth",
+            )
+            for metric in verification_result.measurement_report.measured_metrics
+            if metric.metric in {head_metric for head_metric in self.bundle.prediction_heads.metric_prediction_head.supported_metrics}
+        ]
+        truth_constraints = [
+            ConstraintObservation(
+                constraint_name=item.constraint_name,
+                constraint_group=item.constraint_group,
+                satisfied_probability=1.0 if item.is_satisfied else 0.0,
+                margin=item.margin,
+                violation_severity=0.0 if item.is_satisfied else abs(min(item.margin, 0.0)),
+                source="truth",
+            )
+            for item in verification_result.constraint_assessment
+        ]
+        diagnostic_map = {
+            metric.metric: metric.value
+            for metric in verification_result.measurement_report.measured_metrics
+            if metric.metric in {"output_dc_v", "first_stage_node_v"}
+        }
+        op_state = state.operating_point_state.model_copy(
+            update={
+                "node_voltage_summary": {
+                    **state.operating_point_state.node_voltage_summary,
+                    "vout": float(diagnostic_map.get("output_dc_v", state.operating_point_state.node_voltage_summary.get("vout", 0.0))),
+                }
+            }
+        )
+        uncertainty = state.uncertainty_context.model_copy(
+            update={
+                "field_states": [
+                    item.model_copy(update={"source": "truth", "confidence": 1.0})
+                    for item in state.uncertainty_context.field_states
+                ],
+                "epistemic_score": 0.02,
+                "aleatoric_score": 0.03,
+            }
+        )
+        return state.model_copy(
+            update={
+                "evaluation_context": state.evaluation_context.model_copy(update={"analysis_fidelity": "full_ground_truth"}),
+                "operating_point_state": op_state,
+                "performance_observation": truth_metrics,
+                "constraint_observation": truth_constraints,
+                "uncertainty_context": uncertainty,
+                "provenance": state.provenance.model_copy(
+                    update={
+                        "state_origin": "real_simulation",
+                        "source_stage": "simulated",
+                        "analysis_fidelity": "full_ground_truth",
+                        "artifact_refs": list(verification_result.artifact_refs),
+                    }
+                ),
+            }
         )

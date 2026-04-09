@@ -69,6 +69,7 @@ def build_world_state(
     analysis_intent: str | None = None,
     output_load_ohm: float | None = None,
     provenance_type: str = "offline_dataset",
+    provenance_stage: str = "initial",
     artifact_refs: list[str] | None = None,
     recent_actions=None,
 ) -> WorldState:
@@ -144,6 +145,7 @@ def build_world_state(
         uncertainty_context=None,
         provenance=ProvenanceRecord(
             state_origin=provenance_type,
+            source_stage=provenance_stage,
             analysis_fidelity=analysis_fidelity,
             artifact_refs=list(artifact_refs or []),
             created_at=timestamp,
@@ -201,8 +203,44 @@ def build_world_state(
         uncertainty_context=uncertainty_context,
         provenance=ProvenanceRecord(
             state_origin=provenance_type,
+            source_stage=provenance_stage,
             analysis_fidelity=analysis_fidelity,
             artifact_refs=list(artifact_refs or []),
             created_at=timestamp,
         ),
+    )
+
+
+def build_world_state_from_design_task(
+    task: DesignTask,
+    parameter_values: dict[str, float | int | str | bool] | None = None,
+    *,
+    corner: str | None = None,
+    temperature_c: float | None = None,
+    analysis_fidelity: str = "quick_screening",
+    analysis_intent: str | None = None,
+    output_load_ohm: float | None = None,
+    provenance_stage: str = "initial",
+    artifact_refs: list[str] | None = None,
+    recent_actions=None,
+) -> WorldState:
+    """Formal public builder aligned to DesignTask semantics."""
+
+    provenance_map = {
+        "initial": "offline_dataset",
+        "predicted": "model_rollout",
+        "simulated": "real_simulation",
+    }
+    return build_world_state(
+        task,
+        parameter_values=parameter_values,
+        corner=corner,
+        temperature_c=temperature_c,
+        analysis_fidelity=analysis_fidelity,
+        analysis_intent=analysis_intent,
+        output_load_ohm=output_load_ohm,
+        provenance_type=provenance_map[provenance_stage],
+        provenance_stage=provenance_stage,
+        artifact_refs=artifact_refs,
+        recent_actions=recent_actions,
     )
