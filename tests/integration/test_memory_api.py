@@ -38,7 +38,7 @@ def _pipeline(task_id: str, family: str = "two_stage_ota"):
     search_state = planner.initialize_search().search_state
     search_state = planner.propose_candidates(search_state).search_state
     search_state = planner.evaluate_candidates(search_state).search_state
-    verification = SimulationService(task, planning_bundle, search_state).execute(search_state.candidate_pool_state.candidates[0].candidate_id).verification_result
+    verification = SimulationService(task, planning_bundle, search_state).verify_candidate(search_state.candidate_pool_state.candidates[0].candidate_id).verification_result
     return task, search_state, verification
 
 

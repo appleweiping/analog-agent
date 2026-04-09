@@ -61,7 +61,7 @@ class SimulationLayerTests(unittest.TestCase):
 
     def test_execute_standard_validation_pipeline(self) -> None:
         task, planning_bundle, search_state, candidate_id = self._context()
-        execution = SimulationService(task, planning_bundle, search_state).execute(candidate_id, fidelity_level="focused_validation")
+        execution = SimulationService(task, planning_bundle, search_state).verify_candidate(candidate_id, fidelity_level="focused_validation")
 
         self.assertTrue(execution.verification_result.measurement_report.measured_metrics)
         self.assertTrue(execution.verification_result.constraint_assessment)
@@ -70,7 +70,7 @@ class SimulationLayerTests(unittest.TestCase):
 
     def test_full_robustness_certification_emits_certificate(self) -> None:
         task, planning_bundle, search_state, candidate_id = self._context()
-        execution = SimulationService(task, planning_bundle, search_state).execute(candidate_id, fidelity_level="full_robustness_certification")
+        execution = SimulationService(task, planning_bundle, search_state).verify_candidate(candidate_id, fidelity_level="full_robustness_certification")
 
         self.assertGreaterEqual(len(execution.verification_result.robustness_summary.evaluated_conditions), 1)
         self.assertIn(
@@ -81,8 +81,8 @@ class SimulationLayerTests(unittest.TestCase):
     def test_backend_consistency_across_ngspice_and_xyce(self) -> None:
         task, planning_bundle, search_state, candidate_id = self._context()
         service = SimulationService(task, planning_bundle, search_state)
-        ng = service.execute(candidate_id, fidelity_level="focused_validation", backend_preference="ngspice")
-        xy = service.execute(candidate_id, fidelity_level="focused_validation", backend_preference="xyce")
+        ng = service.verify_candidate(candidate_id, fidelity_level="focused_validation", backend_preference="ngspice")
+        xy = service.verify_candidate(candidate_id, fidelity_level="focused_validation", backend_preference="xyce")
 
         ng_metrics = {metric.metric: metric.value for metric in ng.verification_result.measurement_report.measured_metrics}
         xy_metrics = {metric.metric: metric.value for metric in xy.verification_result.measurement_report.measured_metrics}
@@ -97,7 +97,7 @@ class SimulationLayerTests(unittest.TestCase):
         for index, parameter in enumerate(candidate.world_state_snapshot.parameter_state):
             if parameter.variable_name == "cc":
                 candidate.world_state_snapshot.parameter_state[index].value = 1e-13
-        execution = SimulationService(task, planning_bundle, search_state).execute(candidate_id, fidelity_level="targeted_failure_analysis")
+        execution = SimulationService(task, planning_bundle, search_state).verify_candidate(candidate_id, fidelity_level="targeted_failure_analysis")
 
         self.assertNotEqual(execution.verification_result.failure_attribution.primary_failure_class, "measurement_failure")
         self.assertTrue(execution.verification_result.failure_attribution.evidence)
@@ -110,7 +110,7 @@ class SimulationLayerTests(unittest.TestCase):
         self.assertIsNotNone(compiled.simulation_bundle)
         assert compiled.simulation_bundle is not None
         self.assertEqual(compiled.simulation_bundle.backend_binding.invocation_mode, "native")
-        execution = SimulationService(task, planning_bundle, search_state).execute(candidate_id, fidelity_level="focused_validation", backend_preference="ngspice")
+        execution = SimulationService(task, planning_bundle, search_state).verify_candidate(candidate_id, fidelity_level="focused_validation", backend_preference="ngspice")
         metrics = {metric.metric: metric.value for metric in execution.verification_result.measurement_report.measured_metrics}
         self.assertIn("dc_gain_db", metrics)
         self.assertIn("gbw_hz", metrics)

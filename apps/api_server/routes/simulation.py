@@ -43,12 +43,12 @@ def compile_bundle(request: SimulationCompileRequest) -> SimulationCompileRespon
     )
 
 
-@router.post("/execute", response_model=SimulationExecutionResponse)
-def execute(request: SimulationCompileRequest) -> SimulationExecutionResponse:
+@router.post("/verify", response_model=SimulationExecutionResponse)
+def verify(request: SimulationCompileRequest) -> SimulationExecutionResponse:
     """Compile and execute fifth-layer truth verification."""
 
     service = SimulationService(request.design_task, request.planning_bundle, request.search_state)
-    return service.execute(
+    return service.verify_candidate(
         request.candidate_id,
         fidelity_level=request.fidelity_level,
         backend_preference=request.backend_preference,

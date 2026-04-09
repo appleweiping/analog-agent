@@ -68,7 +68,7 @@ def _execute_case(case: SimulationAcceptanceCase) -> SimulationExecutionResponse
     assert planning_bundle is not None
     search_state = PlanningService(planning_bundle, case.design_task, world_model_bundle).initialize_search().search_state
     candidate_id = search_state.candidate_pool_state.candidates[0].candidate_id
-    return SimulationService(case.design_task, planning_bundle, search_state).execute(
+    return SimulationService(case.design_task, planning_bundle, search_state).verify_candidate(
         candidate_id,
         fidelity_level=case.fidelity_level,
         backend_preference=case.backend,

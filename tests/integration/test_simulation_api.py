@@ -66,7 +66,7 @@ class SimulationApiTests(unittest.TestCase):
         self.assertIn("simulation_bundle", payload)
         self.assertIn("report", payload)
 
-    def test_execute_endpoint(self) -> None:
+    def test_verify_endpoint(self) -> None:
         from fastapi.testclient import TestClient
 
         from apps.api_server.main import app
@@ -74,7 +74,7 @@ class SimulationApiTests(unittest.TestCase):
         task, planning_bundle, search_state, candidate_id = self._context()
         client = TestClient(app)
         response = client.post(
-            "/simulation/execute",
+            "/simulation/verify",
             json={
                 "design_task": task.model_dump(),
                 "planning_bundle": planning_bundle.model_dump(),
@@ -90,3 +90,31 @@ class SimulationApiTests(unittest.TestCase):
         self.assertIn("verification_result", payload)
         self.assertIn("backend_report", payload)
         self.assertIn("simulation_request", payload)
+
+    def test_verify_endpoint_hits_native_ngspice_path(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from apps.api_server.main import app
+
+        task, planning_bundle, search_state, candidate_id = self._context()
+        client = TestClient(app)
+        response = client.post(
+            "/simulation/verify",
+            json={
+                "design_task": task.model_dump(),
+                "planning_bundle": planning_bundle.model_dump(),
+                "search_state": search_state.model_dump(),
+                "candidate_id": candidate_id,
+                "fidelity_level": "focused_validation",
+                "backend_preference": "ngspice",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["simulation_bundle"]["backend_binding"]["invocation_mode"], "native")
+        self.assertEqual(payload["backend_report"]["backend"], "ngspice")
+        self.assertTrue(payload["backend_report"]["is_available"])
+        metric_names = {metric["metric"] for metric in payload["verification_result"]["measurement_report"]["measured_metrics"]}
+        self.assertTrue({"dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w"}.issubset(metric_names))
+        self.assertEqual(payload["verification_result"]["completion_status"], "success")

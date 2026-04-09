@@ -182,7 +182,7 @@ class SimulationService:
             artifact_refs=[record.artifact_id for record in simulation_bundle.artifact_registry.records],
         )
 
-    def execute_compiled_bundle(self, simulation_bundle: SimulationBundle, simulation_request: SimulationRequest) -> SimulationExecutionResponse:
+    def _verify_compiled_bundle(self, simulation_bundle: SimulationBundle, simulation_request: SimulationRequest) -> SimulationExecutionResponse:
         """Run the full fifth-layer execution pipeline for a precompiled bundle."""
 
         netlist_artifact = self.realize_netlist(simulation_bundle)
@@ -255,7 +255,7 @@ class SimulationService:
             verification_result=result,
         )
 
-    def execute(
+    def verify_candidate(
         self,
         candidate_id: str,
         *,
@@ -263,7 +263,7 @@ class SimulationService:
         backend_preference: str = "ngspice",
         escalation_reason: str = "planner_requested_truth_verification",
     ) -> SimulationExecutionResponse:
-        """Compile and execute a full fifth-layer request."""
+        """Formal fifth-layer public entry for candidate verification."""
 
         compiled: SimulationCompileResponse = compile_simulation_bundle(
             self.task,
@@ -285,4 +285,4 @@ class SimulationService:
             backend_preference=backend_preference,
             escalation_reason=escalation_reason,
         )
-        return self.execute_compiled_bundle(compiled.simulation_bundle, request)
+        return self._verify_compiled_bundle(compiled.simulation_bundle, request)
