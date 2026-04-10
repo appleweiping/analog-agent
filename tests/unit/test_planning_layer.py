@@ -86,6 +86,37 @@ class PlanningLayerTests(unittest.TestCase):
 
         self.assertLessEqual(selection.search_state.budget_state.simulations_used, selection.search_state.budget_state.simulation_budget)
         self.assertTrue(all(candidate.lifecycle_status == "queued_for_simulation" for candidate in selection.selected_candidates))
+        selectable_count = sum(
+            1
+            for candidate in state.candidate_pool_state.candidates
+            if candidate.lifecycle_status in {"frontier", "best_feasible", "best_infeasible"}
+            and candidate.predicted_uncertainty is not None
+            and candidate.simulation_value_estimate is not None
+        )
+        if selectable_count > 1:
+            self.assertLess(len(selection.selected_candidates), selectable_count)
+
+    def test_rank_candidates_returns_explicit_priority_order(self) -> None:
+        task = build_standard_ota_task()
+        world_model_bundle = compile_world_model_bundle(task).world_model_bundle
+        assert world_model_bundle is not None
+        planning_bundle = compile_planning_bundle(task, world_model_bundle).planning_bundle
+        assert planning_bundle is not None
+        service = PlanningService(planning_bundle, task, world_model_bundle)
+
+        state = service.evaluate_candidates(service.propose_candidates(service.initialize_search().search_state).search_state).search_state
+        frontier = [
+            candidate
+            for candidate in state.candidate_pool_state.candidates
+            if candidate.lifecycle_status in {"frontier", "best_feasible", "best_infeasible"}
+        ]
+        ranked = service.rank_candidates(frontier)
+
+        self.assertTrue(ranked)
+        self.assertTrue(all(ranked[index].priority_score >= ranked[index + 1].priority_score for index in range(len(ranked) - 1)))
+        self.assertTrue(all(candidate.predicted_feasibility is not None for candidate in ranked))
+        self.assertTrue(all(candidate.predicted_uncertainty is not None for candidate in ranked))
+        self.assertTrue(all(candidate.simulation_value_estimate is not None for candidate in ranked))
 
     def test_world_model_mismatch_triggers_calibration_recovery_signal(self) -> None:
         task = build_standard_ota_task()
@@ -137,4 +168,3 @@ class PlanningLayerTests(unittest.TestCase):
             [candidate.candidate_id for candidate in second.candidate_pool_state.candidates],
         )
         self.assertEqual(first.frontier_state.frontier_candidate_ids, second.frontier_state.frontier_candidate_ids)
-

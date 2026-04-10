@@ -449,6 +449,18 @@ class CandidateRecord(BaseModel):
     simulation_value_estimate: SimulationValueEstimate | None = None
     priority_score: float = 0.0
     dominance_status: Literal["unknown", "dominant", "nondominated", "dominated", "boundary_feasible", "boundary_infeasible"] = "unknown"
+    lifecycle_state: Literal[
+        "proposed",
+        "frontier",
+        "screened_out",
+        "queued_for_rollout",
+        "queued_for_simulation",
+        "verified",
+        "rejected",
+        "archived",
+        "best_feasible",
+        "best_infeasible",
+    ] = "proposed"
     lifecycle_status: Literal[
         "proposed",
         "frontier",
@@ -469,6 +481,16 @@ class CandidateRecord(BaseModel):
     @classmethod
     def dedupe_artifacts(cls, values: list[str]) -> list[str]:
         return _ordered_unique(values)
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_lifecycle_fields(cls, values):
+        if not isinstance(values, dict):
+            return values
+        lifecycle = values.get("lifecycle_state", values.get("lifecycle_status", "proposed"))
+        values["lifecycle_state"] = lifecycle
+        values["lifecycle_status"] = lifecycle
+        return values
 
 
 class CandidatePoolState(BaseModel):
@@ -891,4 +913,3 @@ class PlanningAcceptanceSummary(BaseModel):
         if value < 0.0 or value > 1.0:
             raise ValueError("acceptance rates must be within [0, 1]")
         return round(float(value), 4)
-

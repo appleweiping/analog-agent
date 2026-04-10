@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 import unittest
 
+from apps.worker_simulator.ngspice_runner import native_ngspice_available
+
 
 @unittest.skipUnless(
     importlib.util.find_spec("fastapi") and importlib.util.find_spec("httpx"),
@@ -103,3 +105,55 @@ class PlanningApiTests(unittest.TestCase):
         )
         self.assertEqual(best_response.status_code, 200)
         self.assertIn("summary", best_response.json())
+
+    @unittest.skipUnless(native_ngspice_available(), "native ngspice is not available in this environment")
+    def test_run_truth_loop_reduces_simulation_calls_against_full_baseline(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from apps.api_server.main import app
+        from libs.schema.design_spec import DesignSpec, Environment, MetricRange, Objectives
+        from libs.tasking.compiler import compile_design_task
+
+        spec = DesignSpec(
+            task_id="api-planning-truth-loop",
+            circuit_family="two_stage_ota",
+            process_node="65nm",
+            supply_voltage_v=1.2,
+            objectives=Objectives(maximize=["gbw_hz"], minimize=["power_w"]),
+            hard_constraints={
+                "gbw_hz": MetricRange(min=8e7),
+                "phase_margin_deg": MetricRange(min=55.0),
+                "power_w": MetricRange(max=1.5e-3),
+            },
+            environment=Environment(temperature_c=[27.0], corners=["tt"], load_cap_f=2e-12, supply_voltage_v=1.2),
+            testbench_plan=["op", "ac"],
+            design_variables=["w_in", "l_in", "w_tail", "l_tail", "ibias", "cc"],
+            missing_information=[],
+            notes=[],
+            compile_confidence=0.94,
+        )
+        task = compile_design_task(spec).design_task
+        assert task is not None
+
+        client = TestClient(app)
+        response = client.post(
+            "/planning/run-truth-loop",
+            json={
+                "design_task": task.model_dump(),
+                "max_steps": 3,
+                "fidelity_level": "focused_validation",
+                "backend_preference": "ngspice",
+                "escalation_reason": "day3_integration_test",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["simulation_executions"])
+        self.assertEqual(payload["simulation_executions"][0]["simulation_bundle"]["backend_binding"]["invocation_mode"], "native")
+        self.assertEqual(payload["simulation_executions"][0]["backend_report"]["backend"], "ngspice")
+        self.assertLess(
+            payload["comparison_summary"]["selective_simulation_calls"],
+            payload["comparison_summary"]["baseline_full_simulation_calls"],
+        )
+        self.assertGreaterEqual(payload["comparison_summary"]["selective_quality_ratio"], 0.5)

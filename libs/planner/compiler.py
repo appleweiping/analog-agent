@@ -210,6 +210,7 @@ def compile_planning_bundle(task: DesignTask, world_model_bundle: WorldModelBund
                 "simulation_value_estimate",
                 "priority_score",
                 "dominance_status",
+                "lifecycle_state",
                 "lifecycle_status",
                 "evaluation_history",
                 "decision_history",
@@ -304,4 +305,3 @@ def compile_planning_bundle(task: DesignTask, world_model_bundle: WorldModelBund
         planning_bundle=None if status == "invalid" else compiled_bundle,
         report=report,
     )
-

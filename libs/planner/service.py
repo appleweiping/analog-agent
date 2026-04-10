@@ -214,18 +214,30 @@ class PlanningService:
             proposal_action_chain=list(action_chain),
             priority_score=0.0,
             dominance_status="unknown",
+            lifecycle_state="proposed",
             lifecycle_status="proposed",
             evaluation_history=[],
             decision_history=[],
             artifact_refs=list(world_state.provenance.artifact_refs),
         )
 
-    def _evaluate_records(self, candidates: list[CandidateRecord], budget_state):
+    def rank_candidates(self, candidates: list[CandidateRecord]) -> list[CandidateRecord]:
+        """Rank candidates using an explicit fourth-layer scoring function."""
+
         if not candidates:
-            return [], budget_state
+            return []
         states = [candidate.world_state_snapshot for candidate in candidates]
         ranking = self.world_model_service.rank_candidates(states)
         ranking_scores = {item.state_id: item.score for item in ranking.ranked_candidates}
+        return apply_priority_scores(
+            candidates,
+            ranking_scores=ranking_scores,
+            policy=self.planning_bundle.selection_policy,
+        )
+
+    def _evaluate_records(self, candidates: list[CandidateRecord], budget_state):
+        if not candidates:
+            return [], budget_state
         evaluated: list[CandidateRecord] = []
         for candidate in candidates:
             metrics = self.world_model_service.predict_metrics(candidate.world_state_snapshot)
@@ -249,8 +261,8 @@ class PlanningService:
                 updated = append_decision_event(updated, "drop", "low feasibility with low simulation value")
             else:
                 updated = append_decision_event(updated, "keep", "candidate remains eligible for search")
-            evaluated.append(updated.model_copy(update={"lifecycle_status": lifecycle}))
-        scored = apply_priority_scores(evaluated, ranking_scores=ranking_scores, policy=self.planning_bundle.selection_policy)
+            evaluated.append(updated.model_copy(update={"lifecycle_state": lifecycle, "lifecycle_status": lifecycle}))
+        scored = self.rank_candidates(evaluated)
         budget_state = consume_proxy_evaluations(budget_state, len(candidates))
         return scored, budget_state
 
@@ -462,28 +474,41 @@ class PlanningService:
         """Select high-value candidates for real simulation."""
 
         selectable = []
+        fallback_pool = []
         for candidate in search_state.candidate_pool_state.candidates:
             if candidate.lifecycle_status not in {"frontier", "best_feasible", "best_infeasible"}:
                 continue
             if candidate.simulation_value_estimate is None or candidate.predicted_uncertainty is None:
                 continue
+            if candidate.predicted_uncertainty.service_tier != "hard_block":
+                fallback_pool.append(candidate)
             if candidate.predicted_uncertainty.service_tier not in self.planning_bundle.escalation_policy.allowed_service_tiers:
                 continue
             if candidate.simulation_value_estimate.estimated_value < self.planning_bundle.escalation_policy.min_simulation_value and not candidate.predicted_uncertainty.must_escalate:
                 continue
             selectable.append(candidate)
-        selectable = sorted(
-            selectable,
-            key=lambda item: (
-                item.simulation_value_estimate.estimated_value if item.simulation_value_estimate else 0.0,
-                item.priority_score,
-            ),
-            reverse=True,
-        )
-        selected = selectable[: min(self.planning_bundle.escalation_policy.max_batch_size, remaining_simulations(search_state.budget_state))]
+        ranked_selectable = self.rank_candidates(selectable)
+        if not ranked_selectable and fallback_pool and remaining_simulations(search_state.budget_state) > 0:
+            ranked_selectable = self.rank_candidates(fallback_pool)[:1]
+        selectable = ranked_selectable
+        if len(selectable) > 1:
+            top_k = min(
+                self.planning_bundle.escalation_policy.max_batch_size,
+                remaining_simulations(search_state.budget_state),
+                len(selectable) - 1,
+            )
+        else:
+            top_k = min(1, remaining_simulations(search_state.budget_state))
+        selected = selectable[:top_k]
         pool_state = search_state.candidate_pool_state
+        queued_selected: list[CandidateRecord] = []
         for candidate in selected:
-            updated = append_decision_event(candidate.model_copy(update={"lifecycle_status": "queued_for_simulation"}), "simulate", "selected by escalation policy")
+            updated = append_decision_event(
+                candidate.model_copy(update={"lifecycle_state": "queued_for_simulation", "lifecycle_status": "queued_for_simulation"}),
+                "simulate",
+                "selected by escalation policy",
+            )
+            queued_selected.append(updated)
             pool_state = upsert_candidate(pool_state, updated)
         budget_state = consume_simulations(search_state.budget_state, len(selected))
         trace = self._make_trace(
@@ -508,8 +533,8 @@ class PlanningService:
             budget_state=budget_state,
             provenance_source="candidate_evaluation",
             traces=[trace],
-        ).model_copy(update={"pending_simulation_refs": [*search_state.pending_simulation_refs, *[candidate.candidate_id for candidate in selected]]})
-        return SimulationSelectionResponse(search_state=updated_state, selected_candidates=selected, traces=[trace])
+        ).model_copy(update={"pending_simulation_refs": [*search_state.pending_simulation_refs, *[candidate.candidate_id for candidate in queued_selected]]})
+        return SimulationSelectionResponse(search_state=updated_state, selected_candidates=queued_selected, traces=[trace])
 
     def ingest_simulation_feedback(
         self,
@@ -531,6 +556,7 @@ class PlanningService:
         updated_candidate = append_evaluation_event(
             candidate.model_copy(
                 update={
+                    "lifecycle_state": lifecycle,
                     "lifecycle_status": lifecycle,
                     "artifact_refs": [*candidate.artifact_refs, *truth.artifact_refs],
                 }

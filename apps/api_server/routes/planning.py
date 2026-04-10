@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
 
+from apps.orchestrator.job_runner import run_planning_truth_loop
 from libs.planner.compiler import compile_planning_bundle
 from libs.planner.service import PlanningService
 from libs.schema.design_task import DesignTask
@@ -20,6 +21,7 @@ from libs.schema.planning import (
     SimulationSelectionResponse,
     TerminationDecision,
 )
+from libs.schema.system_binding import PlanningTruthLoopRequest, PlanningTruthLoopResponse
 from libs.schema.world_model import TruthCalibrationRecord, WorldModelBundle
 
 router = APIRouter(prefix="/planning", tags=["planning"])
@@ -154,3 +156,16 @@ def best_result(request: SearchStateRequest) -> PlanningBestResult:
 
     service, _ = _service(request.design_task, request.world_model_bundle, request.planning_bundle)
     return service.get_best_result(request.search_state)
+
+
+@router.post("/run-truth-loop", response_model=PlanningTruthLoopResponse)
+def run_truth_loop(request: PlanningTruthLoopRequest) -> PlanningTruthLoopResponse:
+    """Run the formal Day-3 selective simulation loop."""
+
+    return run_planning_truth_loop(
+        request.design_task,
+        max_steps=request.max_steps,
+        fidelity_level=request.fidelity_level,
+        backend_preference=request.backend_preference,
+        escalation_reason=request.escalation_reason,
+    )
