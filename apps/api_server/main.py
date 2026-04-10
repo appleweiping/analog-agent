@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from apps.api_server.deps import get_runtime_summary
+from apps.api_server.routes.experiments import router as experiments_router
 from apps.api_server.routes.interaction import router as interaction_router
 from apps.api_server.routes.memory_reflection import router as memory_reflection_router
 from apps.api_server.routes.planning import router as planning_router
@@ -13,6 +14,7 @@ from apps.api_server.routes.tasking import router as tasking_router
 from apps.api_server.routes.world_modeling import router as world_modeling_router
 
 app = FastAPI(title="analog-agent", version="0.1.0")
+app.include_router(experiments_router)
 app.include_router(interaction_router)
 app.include_router(memory_reflection_router)
 app.include_router(planning_router)
