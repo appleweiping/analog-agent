@@ -74,6 +74,27 @@ BACKEND_ERROR_TYPES = (
     "measurement_error",
     "artifact_error",
 )
+MEASUREMENT_STATUSES = (
+    "measured",
+    "missing",
+    "indeterminate",
+    "analysis_failed",
+    "extraction_failed",
+)
+MEASUREMENT_FAILURE_CODES = (
+    "none",
+    "analysis_failure",
+    "measurement_failure",
+    "curve_exists_but_no_crossing",
+    "invalid_phase_readout",
+    "insufficient_curve_quality",
+    "power_unavailable",
+    "power_supply_missing",
+    "current_direction_ambiguous",
+    "no_metric_source",
+    "multiple_crossings",
+    "partial_analysis_failure",
+)
 ACCEPTANCE_FAILURE_CODES = (
     "schema_failure",
     "execution_failure",
@@ -256,14 +277,24 @@ class AnalysisPlan(BaseModel):
         return _ordered_unique(values)
 
 
-class MetricDefinition(BaseModel):
-    """Structured measurement definition."""
+class MeasurementDefinition(BaseModel):
+    """Structured definition for one measurable simulator-facing metric."""
 
     model_config = ConfigDict(extra="forbid")
 
     metric: str
     units: str
+    required_analysis_types: list[str] = Field(default_factory=list)
+    semantic_role: Literal["performance", "stability", "power", "diagnostic"] = "performance"
     expected_range: list[float] = Field(default_factory=list)
+
+    @field_validator("required_analysis_types")
+    @classmethod
+    def validate_analysis_types(cls, values: list[str]) -> list[str]:
+        invalid = [value for value in values if value not in ANALYSIS_TYPES]
+        if invalid:
+            raise ValueError(f"unsupported required_analysis_types: {invalid}")
+        return _ordered_unique(values, ANALYSIS_TYPES)
 
 
 class ExtractionMethod(BaseModel):
@@ -274,6 +305,60 @@ class ExtractionMethod(BaseModel):
     metric: str
     method: str
     from_analysis: Literal["op", "ac", "tran", "noise", "pvt_sweep", "load_sweep", "temperature_sweep", "monte_carlo"]
+    preferred_source_field: str | None = None
+    failure_conditions: list[str] = Field(default_factory=list)
+
+    @field_validator("failure_conditions")
+    @classmethod
+    def dedupe_failure_conditions(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class PostprocessingRule(BaseModel):
+    """Structured postprocessing rule for extracted measurements."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rule_name: str
+    applies_to_metrics: list[str] = Field(default_factory=list)
+    parameters: dict[str, float | int | str | bool] = Field(default_factory=dict)
+
+    @field_validator("applies_to_metrics")
+    @classmethod
+    def dedupe_metrics(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class ValidationCheck(BaseModel):
+    """Structured validation check applied to one extracted metric."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    check_name: str
+    applies_to_metrics: list[str] = Field(default_factory=list)
+    failure_severity: Literal["low", "medium", "high", "critical"] = "medium"
+    parameters: dict[str, float | int | str | bool] = Field(default_factory=dict)
+
+    @field_validator("applies_to_metrics")
+    @classmethod
+    def dedupe_metrics(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class FallbackStrategy(BaseModel):
+    """Structured fallback strategy when a metric cannot be extracted cleanly."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    strategy_name: str
+    applies_to_metrics: list[str] = Field(default_factory=list)
+    trigger_condition: str
+    action: str
+
+    @field_validator("applies_to_metrics")
+    @classmethod
+    def dedupe_metrics(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
 
 
 class MeasurementContract(BaseModel):
@@ -281,16 +366,29 @@ class MeasurementContract(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    metric_definitions: list[MetricDefinition] = Field(default_factory=list)
+    measurement_definitions: list[MeasurementDefinition] = Field(default_factory=list)
     extraction_methods: list[ExtractionMethod] = Field(default_factory=list)
-    postprocessing_rules: list[str] = Field(default_factory=list)
-    fallback_strategies: list[str] = Field(default_factory=list)
-    validation_checks: list[str] = Field(default_factory=list)
+    postprocessing_rules: list[PostprocessingRule] = Field(default_factory=list)
+    fallback_strategies: list[FallbackStrategy] = Field(default_factory=list)
+    validation_checks: list[ValidationCheck] = Field(default_factory=list)
 
-    @field_validator("postprocessing_rules", "fallback_strategies", "validation_checks")
+    @property
+    def metric_definitions(self) -> list[MeasurementDefinition]:
+        """Backward-compatible access for older call sites."""
+
+        return self.measurement_definitions
+
+    @field_validator("measurement_definitions")
     @classmethod
-    def dedupe_lists(cls, values: list[str]) -> list[str]:
-        return _ordered_unique(values)
+    def dedupe_definitions(cls, values: list[MeasurementDefinition]) -> list[MeasurementDefinition]:
+        seen: set[str] = set()
+        ordered: list[MeasurementDefinition] = []
+        for value in values:
+            if value.metric in seen:
+                continue
+            seen.add(value.metric)
+            ordered.append(value)
+        return ordered
 
 
 class SeverityRule(BaseModel):
@@ -582,6 +680,51 @@ class AnalysisExecutionRecord(BaseModel):
         return _ordered_unique(values)
 
 
+class MeasurementStatus(BaseModel):
+    """Structured status for one extracted measurement."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["measured", "missing", "indeterminate", "analysis_failed", "extraction_failed"]
+    detail: str | None = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        if value not in MEASUREMENT_STATUSES:
+            raise ValueError(f"unsupported measurement status: {value}")
+        return value
+
+
+class MeasurementFailureReason(BaseModel):
+    """Structured reason describing why extraction failed or is unreliable."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: Literal[
+        "none",
+        "analysis_failure",
+        "measurement_failure",
+        "curve_exists_but_no_crossing",
+        "invalid_phase_readout",
+        "insufficient_curve_quality",
+        "power_unavailable",
+        "power_supply_missing",
+        "current_direction_ambiguous",
+        "no_metric_source",
+        "multiple_crossings",
+        "partial_analysis_failure",
+    ] = "none"
+    detail: str | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str) -> str:
+        if value not in MEASUREMENT_FAILURE_CODES:
+            raise ValueError(f"unsupported measurement failure code: {value}")
+        return value
+
+
 class MeasuredMetric(BaseModel):
     """Structured measured metric."""
 
@@ -601,6 +744,35 @@ class MeasuredMetric(BaseModel):
         return round(float(value), 4)
 
 
+class MeasurementResult(BaseModel):
+    """Formal extraction result for one metric, including failure semantics."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str
+    units: str
+    source_analysis: str
+    status: MeasurementStatus
+    failure_reason: MeasurementFailureReason = Field(default_factory=MeasurementFailureReason)
+    value: float | None = None
+    raw_value: float | None = None
+    postprocessed_value: float | None = None
+    confidence: float = 0.0
+    provenance: list[str] = Field(default_factory=list)
+
+    @field_validator("confidence")
+    @classmethod
+    def validate_confidence(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("confidence must be within [0, 1]")
+        return round(float(value), 4)
+
+    @field_validator("provenance")
+    @classmethod
+    def dedupe_provenance(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
 class MeasurementReport(BaseModel):
     """Structured measurement report."""
 
@@ -609,6 +781,7 @@ class MeasurementReport(BaseModel):
     report_id: str
     candidate_id: str
     executed_analyses: list[AnalysisExecutionRecord] = Field(default_factory=list)
+    measurement_results: list[MeasurementResult] = Field(default_factory=list)
     measured_metrics: list[MeasuredMetric] = Field(default_factory=list)
     extraction_notes: list[str] = Field(default_factory=list)
     validation_checks: list[IntegrityCheckResult] = Field(default_factory=list)
@@ -628,8 +801,12 @@ class ConstraintAssessmentRecord(BaseModel):
     constraint_group: str
     metric: str
     is_satisfied: bool
+    assessment_basis: Literal["measurement_value", "measurement_unavailable"] = "measurement_value"
+    measured_value: float | None = None
     margin: float
     severity: Literal["low", "medium", "high", "critical"]
+    measurement_status: str = "measured"
+    measurement_failure_reason: str = "none"
 
 
 class FailureAttribution(BaseModel):
@@ -639,6 +816,9 @@ class FailureAttribution(BaseModel):
 
     primary_failure_class: Literal[
         "none",
+        "design_failure",
+        "simulation_invalid",
+        "analysis_failure",
         "operating_region_failure",
         "stability_failure",
         "drive_bandwidth_failure",
@@ -716,6 +896,7 @@ class PlannerFeedback(BaseModel):
     strategy_correction: list[str] = Field(default_factory=list)
     phase_hint: str | None = None
     trust_alerts: list[str] = Field(default_factory=list)
+    feedback_basis: Literal["design_failure", "measurement_failure", "simulation_failure", "verification_success"] = "verification_success"
     artifact_refs: list[str] = Field(default_factory=list)
 
     @field_validator("strategy_correction", "trust_alerts", "artifact_refs")

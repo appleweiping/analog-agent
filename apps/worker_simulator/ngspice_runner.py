@@ -209,7 +209,7 @@ def _parse_source_current(log_text: str, source_name: str) -> float | None:
         parts = line.split()
         if len(parts) >= 2 and parts[0] == token:
             try:
-                return abs(float(parts[1]))
+                return float(parts[1])
             except ValueError:
                 return None
     return None
@@ -242,6 +242,16 @@ def _parse_ac_rows(log_text: str) -> list[tuple[float, float, float]]:
         if len(parts) >= 4 and parts[0].isdigit():
             rows.append((float(parts[1]), float(parts[2]), float(parts[3])))
     return rows
+
+
+def _crossing_count(rows: list[tuple[float, float, float]]) -> int:
+    count = 0
+    for index in range(1, len(rows)):
+        previous = rows[index - 1][1]
+        current = rows[index][1]
+        if previous >= 0.0 >= current:
+            count += 1
+    return count
 
 
 def _unity_gain_frequency(rows: list[tuple[float, float, float]]) -> float | None:
@@ -314,20 +324,25 @@ def run_ngspice_native_analysis(
         n1 = _parse_node_voltage(log_text, "n1")
         power_w = None
         if supply_current is not None:
-            power_w = supply_current * float(netlist.model_binding.supply_voltage_v or 1.2)
+            power_w = abs(supply_current) * float(netlist.model_binding.supply_voltage_v or 1.2)
         payload["metrics"] = {
-            "power_w": float(power_w or 0.0),
-            "output_dc_v": float(vout or 0.0),
-            "first_stage_node_v": float(n1 or 0.0),
+            **({"power_w": float(power_w)} if power_w is not None else {}),
+            **({"output_dc_v": float(vout)} if vout is not None else {}),
+            **({"first_stage_node_v": float(n1)} if n1 is not None else {}),
         }
         payload["op_diagnostics"] = {
-            "supply_current_a": float(supply_current or 0.0),
-            "output_dc_v": float(vout or 0.0),
-            "first_stage_node_v": float(n1 or 0.0),
+            "supply_currents": [float(supply_current)] if supply_current is not None else [],
+            "supply_voltage_v": float(netlist.model_binding.supply_voltage_v or 1.2),
+            **({"output_dc_v": float(vout)} if vout is not None else {}),
+            **({"first_stage_node_v": float(n1)} if n1 is not None else {}),
         }
         return payload
 
     rows = _parse_ac_rows(log_text)
+    payload["ac_curve"] = [
+        {"frequency_hz": float(freq), "gain_db": float(gain_db), "phase_deg": float(phase_deg)}
+        for freq, gain_db, phase_deg in rows
+    ]
     if not rows:
         payload["status"] = "error"
         payload["error_type"] = "measurement_error"
@@ -338,13 +353,14 @@ def run_ngspice_native_analysis(
     phase_margin = _phase_margin_proxy(ugb_hz, p2_hint_hz)
     payload["metrics"] = {
         "dc_gain_db": float(dc_gain_db),
-        "gbw_hz": float(ugb_hz or 0.0),
-        "phase_margin_deg": float(phase_margin or 0.0),
+        **({"gbw_hz": float(ugb_hz)} if ugb_hz is not None else {}),
+        **({"phase_margin_deg": float(phase_margin)} if phase_margin is not None else {}),
     }
     payload["op_diagnostics"] = {
         "ac_row_count": len(rows),
-        "ugb_hz": float(ugb_hz or 0.0),
-        "phase_margin_proxy_deg": float(phase_margin or 0.0),
+        "crossing_count": _crossing_count(rows),
+        **({"ugb_hz": float(ugb_hz)} if ugb_hz is not None else {}),
+        **({"phase_margin_proxy_deg": float(phase_margin)} if phase_margin is not None else {}),
     }
     return payload
 

@@ -80,10 +80,10 @@ class SimulationService:
 
         return extract_measurement_report(simulation_bundle, parsed_outputs, candidate_id=simulation_bundle.candidate_id)
 
-    def verify_constraints(self, metric_values: dict[str, float], simulation_bundle: SimulationBundle):
+    def verify_constraints(self, measurement_report, simulation_bundle: SimulationBundle):
         """Verify DesignTask constraints against extracted truth metrics."""
 
-        return verify_constraints(self.task, metric_values, simulation_bundle.verification_policy)
+        return verify_constraints(self.task, measurement_report, simulation_bundle.verification_policy)
 
     def certify_robustness(self, candidate_id: str, simulation_bundle: SimulationBundle):
         """Certify robustness according to the bundle policy."""
@@ -159,26 +159,36 @@ class SimulationService:
             ],
         )
 
-    def _planner_feedback(self, simulation_bundle: SimulationBundle, assessments, robustness, calibration_feedback: CalibrationFeedback) -> PlannerFeedback:
-        all_pass = all(item.is_satisfied for item in assessments)
-        robust_pass = robustness.certification_status in {"robust_certified", "partial_robust", "nominal_only"}
-        if all_pass and robust_pass and simulation_bundle.analysis_plan.fidelity_level == "full_robustness_certification":
-            lifecycle = "verified"
-        elif all_pass:
+    def _planner_feedback(self, simulation_bundle: SimulationBundle, assessments, robustness, calibration_feedback: CalibrationFeedback, failure) -> PlannerFeedback:
+        if failure.primary_failure_class in {"measurement_failure", "analysis_failure", "simulation_invalid", "simulator_failure"}:
             lifecycle = "needs_more_simulation"
-        elif any(abs(item.margin) <= 0.05 for item in assessments):
-            lifecycle = "boundary_candidate"
+            strategy = ["inspect_measurement_path", "retry_or_escalate_truth_verification"]
+            basis = "measurement_failure" if failure.primary_failure_class in {"measurement_failure", "analysis_failure"} else "simulation_failure"
+            phase_hint = self.search_state.phase_state.current_phase
         else:
-            lifecycle = "rejected"
+            all_pass = all(item.is_satisfied for item in assessments)
+            robust_pass = robustness.certification_status in {"robust_certified", "partial_robust", "nominal_only"}
+            if all_pass and robust_pass and simulation_bundle.analysis_plan.fidelity_level == "full_robustness_certification":
+                lifecycle = "verified"
+            elif all_pass:
+                lifecycle = "needs_more_simulation"
+            elif any(abs(item.margin) <= 0.05 for item in assessments if item.assessment_basis == "measurement_value"):
+                lifecycle = "boundary_candidate"
+            else:
+                lifecycle = "rejected"
+            strategy = [
+                "increase_safety_margin" if calibration_feedback.constraint_disagreement else "retain_current_direction",
+                "prefer_high_truth_candidates_for_phase_transition" if lifecycle == "verified" else "revisit_candidate_neighborhood",
+            ]
+            basis = "verification_success" if lifecycle == "verified" else "design_failure"
+            phase_hint = "robustness_verification" if lifecycle == "verified" else self.search_state.phase_state.current_phase
         return PlannerFeedback(
             candidate_id=simulation_bundle.candidate_id,
             lifecycle_update=lifecycle,
-            strategy_correction=[
-                "increase_safety_margin" if calibration_feedback.constraint_disagreement else "retain_current_direction",
-                "prefer_high_truth_candidates_for_phase_transition" if lifecycle == "verified" else "revisit_candidate_neighborhood",
-            ],
-            phase_hint="robustness_verification" if lifecycle == "verified" else self.search_state.phase_state.current_phase,
+            strategy_correction=strategy,
+            phase_hint=phase_hint,
             trust_alerts=list(calibration_feedback.trust_violation_flags),
+            feedback_basis=basis,
             artifact_refs=[record.artifact_id for record in simulation_bundle.artifact_registry.records],
         )
 
@@ -188,10 +198,14 @@ class SimulationService:
         netlist_artifact = self.realize_netlist(simulation_bundle)
         simulation_bundle, backend_report, parsed_outputs = self.run_simulation(simulation_bundle, simulation_request)
         measurement_report = self.extract_measurements(simulation_bundle, parsed_outputs)
-        metric_values = {metric.metric: metric.value for metric in measurement_report.measured_metrics}
-        assessments = self.verify_constraints(metric_values, simulation_bundle)
+        assessments = self.verify_constraints(measurement_report, simulation_bundle)
         robustness = self.certify_robustness(simulation_bundle.candidate_id, simulation_bundle)
+        measurement_failures = [result for result in measurement_report.measurement_results if result.status.status != "measured"]
         completion_status = "success" if all(record.success for record in measurement_report.executed_analyses) else "simulator_failure"
+        if completion_status == "success" and measurement_failures and not measurement_report.measured_metrics:
+            completion_status = "measurement_failure"
+        elif completion_status == "success" and measurement_failures:
+            completion_status = "partial_success"
         failure = attribute_failures(
             assessments,
             measurement_report,
@@ -200,7 +214,7 @@ class SimulationService:
             completion_status=completion_status,
         )
         calibration_feedback = self.emit_calibration_feedback(simulation_bundle, measurement_report, assessments)
-        planner_feedback = self._planner_feedback(simulation_bundle, assessments, robustness, calibration_feedback)
+        planner_feedback = self._planner_feedback(simulation_bundle, assessments, robustness, calibration_feedback, failure)
         simulation_bundle.artifact_registry, verification_artifact = persist_json_artifact(
             simulation_bundle.artifact_registry,
             "verification_report",
@@ -212,9 +226,14 @@ class SimulationService:
                 "robustness_status": robustness.certification_status,
             },
         )
-        all_constraints_pass = all(item.is_satisfied for item in assessments)
+        all_constraints_pass = all(item.is_satisfied for item in assessments if item.assessment_basis == "measurement_value")
+        unavailable_assessments = [item for item in assessments if item.assessment_basis == "measurement_unavailable"]
         feasibility = "feasible_nominal"
-        if not all_constraints_pass:
+        if completion_status == "simulator_failure" or failure.primary_failure_class in {"simulator_failure", "simulation_invalid"}:
+            feasibility = "simulation_invalid"
+        elif completion_status == "measurement_failure" or unavailable_assessments:
+            feasibility = "measurement_invalid"
+        elif not all_constraints_pass:
             feasibility = "constraint_fail"
         elif (
             simulation_bundle.analysis_plan.fidelity_level == "full_robustness_certification"

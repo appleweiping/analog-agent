@@ -55,11 +55,11 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                 severity="error",
             )
         )
-    if not simulation_bundle.measurement_contract.metric_definitions:
+    if not simulation_bundle.measurement_contract.measurement_definitions:
         errors.append(
             SimulationValidationIssue(
                 code="measurement_contract_failure",
-                path="measurement_contract.metric_definitions",
+                path="measurement_contract.measurement_definitions",
                 message="measurement contract defines no metrics",
                 severity="error",
             )
@@ -93,12 +93,12 @@ def validate_verification_result(result: VerificationResult) -> SimulationValida
 
     errors: list[SimulationValidationIssue] = []
     warnings: list[SimulationValidationIssue] = []
-    if not result.measurement_report.measured_metrics:
+    if not result.measurement_report.measurement_results:
         errors.append(
             SimulationValidationIssue(
                 code="measurement_contract_failure",
-                path="measurement_report.measured_metrics",
-                message="verification result has no measured metrics",
+                path="measurement_report.measurement_results",
+                message="verification result has no measurement results",
                 severity="error",
             )
         )

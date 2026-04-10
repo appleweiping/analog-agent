@@ -22,19 +22,40 @@ def attribute_failures(
             evidence=["render_status=invalid"],
             recommended_focus=["fix_parameter_binding", "fix_topology_template"],
         )
-    if completion_status == "simulator_failure":
+    if completion_status in {"simulator_failure", "timeout"}:
         return FailureAttribution(
-            primary_failure_class="simulator_failure",
+            primary_failure_class="simulation_invalid",
             contributing_factors=["backend_execution_failed"],
             evidence=["backend_status!=ok"],
             recommended_focus=["retry_backend", "switch_backend"],
         )
-    if not measurement_report.measured_metrics:
+    analysis_failures = [result for result in measurement_report.measurement_results if result.status.status == "analysis_failed"]
+    extraction_failures = [
+        result
+        for result in measurement_report.measurement_results
+        if result.status.status in {"extraction_failed", "indeterminate", "missing"}
+    ]
+    if analysis_failures:
+        return FailureAttribution(
+            primary_failure_class="analysis_failure",
+            contributing_factors=[item.metric for item in analysis_failures],
+            evidence=[f"{item.metric}:{item.failure_reason.code}" for item in analysis_failures],
+            recommended_focus=["inspect_analysis_plan", "retry_truth_verification"],
+        )
+    if extraction_failures and not measurement_report.measured_metrics:
         return FailureAttribution(
             primary_failure_class="measurement_failure",
-            contributing_factors=["measurement_contract_unfulfilled"],
-            evidence=["no_metrics_extracted"],
-            recommended_focus=["add_extractor", "inspect_raw_artifacts"],
+            contributing_factors=[item.metric for item in extraction_failures],
+            evidence=[f"{item.metric}:{item.failure_reason.code}" for item in extraction_failures],
+            recommended_focus=["inspect_measurement_contract", "inspect_raw_artifacts"],
+        )
+    measurement_side_failures = [assessment for assessment in assessments if assessment.assessment_basis == "measurement_unavailable"]
+    if measurement_side_failures:
+        return FailureAttribution(
+            primary_failure_class="measurement_failure",
+            contributing_factors=[assessment.metric for assessment in measurement_side_failures],
+            evidence=[f"{assessment.metric}:{assessment.measurement_failure_reason}" for assessment in measurement_side_failures],
+            recommended_focus=["retry_measurement_extraction", "escalate_truth_fidelity"],
         )
 
     failing = [assessment for assessment in assessments if not assessment.is_satisfied]
@@ -68,6 +89,13 @@ def attribute_failures(
                 evidence=[f"{metric}_margin={assessment.margin}"],
                 recommended_focus=["resize_input_devices", "rebalance_power_noise_tradeoff"],
             )
+    if failing:
+        return FailureAttribution(
+            primary_failure_class="design_failure",
+            contributing_factors=[assessment.constraint_name for assessment in failing],
+            evidence=[f"{assessment.metric}_margin={assessment.margin}" for assessment in failing],
+            recommended_focus=["explore_candidate_neighborhood", "update_planner_priority"],
+        )
     return FailureAttribution(
         primary_failure_class="none",
         contributing_factors=[],

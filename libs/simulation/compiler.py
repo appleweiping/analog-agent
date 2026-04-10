@@ -253,7 +253,7 @@ def compile_simulation_bundle(
         validation_warnings=validation.warnings,
         acceptance_summary={
             "analysis_count": len(compiled_bundle.analysis_plan.ordered_analyses),
-            "metric_count": len(compiled_bundle.measurement_contract.metric_definitions),
+            "metric_count": len(compiled_bundle.measurement_contract.measurement_definitions),
             "completeness_score": validation.completeness_score,
             "backend": backend_preference,
         },

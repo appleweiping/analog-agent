@@ -57,7 +57,7 @@ class SimulationLayerTests(unittest.TestCase):
         self.assertIsNotNone(compiled.simulation_bundle)
         assert compiled.simulation_bundle is not None
         self.assertTrue(compiled.simulation_bundle.analysis_plan.ordered_analyses)
-        self.assertTrue(compiled.simulation_bundle.measurement_contract.metric_definitions)
+        self.assertTrue(compiled.simulation_bundle.measurement_contract.measurement_definitions)
 
     def test_execute_standard_validation_pipeline(self) -> None:
         task, planning_bundle, search_state, candidate_id = self._context()

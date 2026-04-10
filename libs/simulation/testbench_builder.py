@@ -8,9 +8,12 @@ from libs.schema.simulation import (
     AnalysisPlan,
     AnalysisStatement,
     ExtractionMethod,
+    FallbackStrategy,
     MeasurementContract,
-    MetricDefinition,
+    MeasurementDefinition,
+    PostprocessingRule,
     SimulationRequest,
+    ValidationCheck,
 )
 
 def _analysis_statement(spec: AnalysisSpec) -> AnalysisStatement:
@@ -96,23 +99,73 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
 def build_measurement_contract(task: DesignTask, analysis_plan: AnalysisPlan) -> MeasurementContract:
     """Build a formal measurement extraction contract."""
 
-    definitions: dict[str, MetricDefinition] = {}
+    definitions: dict[str, MeasurementDefinition] = {}
     methods: list[ExtractionMethod] = []
     active_analyses = {analysis.analysis_type for analysis in analysis_plan.ordered_analyses}
     for extractor in task.evaluation_plan.metric_extractors:
         if extractor.from_analysis not in active_analyses:
             continue
-        definitions.setdefault(extractor.metric, MetricDefinition(metric=extractor.metric, units="si", expected_range=[]))
-        methods.append(ExtractionMethod(metric=extractor.metric, method=extractor.method, from_analysis=extractor.from_analysis))
+        role = "power" if extractor.metric == "power_w" else "stability" if extractor.metric in {"dc_gain_db", "gbw_hz", "phase_margin_deg"} else "performance"
+        definitions.setdefault(
+            extractor.metric,
+            MeasurementDefinition(
+                metric=extractor.metric,
+                units="si",
+                required_analysis_types=[extractor.from_analysis],
+                semantic_role=role,
+                expected_range=[],
+            ),
+        )
+        methods.append(
+            ExtractionMethod(
+                metric=extractor.metric,
+                method=extractor.method,
+                from_analysis=extractor.from_analysis,
+                preferred_source_field="metrics",
+                failure_conditions=["analysis_failure", "measurement_failure"],
+            )
+        )
     for analysis in analysis_plan.ordered_analyses:
         for metric in analysis.required_metrics:
-            definitions.setdefault(metric, MetricDefinition(metric=metric, units="si", expected_range=[]))
+            role = "power" if metric == "power_w" else "stability" if metric in {"dc_gain_db", "gbw_hz", "phase_margin_deg"} else "performance"
+            definitions.setdefault(
+                metric,
+                MeasurementDefinition(
+                    metric=metric,
+                    units="si",
+                    required_analysis_types=[analysis.analysis_type],
+                    semantic_role=role,
+                    expected_range=[],
+                ),
+            )
             if not any(method.metric == metric and method.from_analysis == analysis.analysis_type for method in methods):
-                methods.append(ExtractionMethod(metric=metric, method="direct", from_analysis=analysis.analysis_type))
+                methods.append(
+                    ExtractionMethod(
+                        metric=metric,
+                        method="direct",
+                        from_analysis=analysis.analysis_type,
+                        preferred_source_field="metrics",
+                        failure_conditions=["analysis_failure", "no_metric_source"],
+                    )
+                )
     return MeasurementContract(
-        metric_definitions=list(definitions.values()),
+        measurement_definitions=list(definitions.values()),
         extraction_methods=methods,
-        postprocessing_rules=["normalize_to_si_units", "prefer_highest_fidelity_observation"],
-        fallback_strategies=["reuse_previous_analysis_for_same_metric", "flag_missing_metric"],
-        validation_checks=["all_required_metrics_extracted", "analysis_sources_resolved", "no_metric_conflict"],
+        postprocessing_rules=[
+            PostprocessingRule(rule_name="normalize_to_si_units", applies_to_metrics=list(definitions.keys())),
+            PostprocessingRule(rule_name="prefer_highest_confidence_observation", applies_to_metrics=list(definitions.keys())),
+        ],
+        fallback_strategies=[
+            FallbackStrategy(
+                strategy_name="flag_missing_metric",
+                applies_to_metrics=list(definitions.keys()),
+                trigger_condition="metric_not_extractable",
+                action="emit_structured_measurement_failure",
+            )
+        ],
+        validation_checks=[
+            ValidationCheck(check_name="all_required_metrics_accounted_for", applies_to_metrics=list(definitions.keys()), failure_severity="critical"),
+            ValidationCheck(check_name="analysis_sources_resolved", applies_to_metrics=list(definitions.keys()), failure_severity="high"),
+            ValidationCheck(check_name="no_metric_conflict", applies_to_metrics=list(definitions.keys()), failure_severity="medium"),
+        ],
     )

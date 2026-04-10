@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from libs.schema.design_task import ConstraintSpec, DesignTask
-from libs.schema.simulation import ConstraintAssessmentRecord, VerificationPolicy
+from libs.schema.simulation import ConstraintAssessmentRecord, MeasurementReport, VerificationPolicy
 
 
 def _severity(constraint: ConstraintSpec, is_satisfied: bool, margin: float) -> str:
@@ -46,31 +46,37 @@ def _is_satisfied(constraint: ConstraintSpec, value: float) -> bool:
 
 def verify_constraints(
     task: DesignTask,
-    metric_values: dict[str, float],
+    measurement_report: MeasurementReport,
     verification_policy: VerificationPolicy,
 ) -> list[ConstraintAssessmentRecord]:
     """Return structured constraint assessments."""
 
     assessments: list[ConstraintAssessmentRecord] = []
+    measurement_map = {result.metric: result for result in measurement_report.measurement_results}
     group_map = {
         member: group.name
         for group in task.constraints.constraint_groups
         for member in group.members
     }
     for constraint in [*task.constraints.hard_constraints, *task.constraints.soft_constraints]:
-        value = metric_values.get(constraint.metric)
-        if value is None:
+        measurement = measurement_map.get(constraint.metric)
+        if measurement is None or measurement.status.status != "measured" or measurement.value is None:
             assessments.append(
                 ConstraintAssessmentRecord(
                     constraint_name=constraint.name,
                     constraint_group=group_map.get(constraint.name, "ungrouped"),
                     metric=constraint.metric,
                     is_satisfied=False,
+                    assessment_basis="measurement_unavailable",
+                    measured_value=measurement.value if measurement is not None else None,
                     margin=-1.0,
                     severity="critical" if constraint.criticality == "core" else "high",
+                    measurement_status=measurement.status.status if measurement is not None else "missing",
+                    measurement_failure_reason=measurement.failure_reason.code if measurement is not None else "no_metric_source",
                 )
             )
             continue
+        value = measurement.value
         margin = _margin(constraint, value)
         satisfied = _is_satisfied(constraint, value)
         assessments.append(
@@ -79,8 +85,12 @@ def verify_constraints(
                 constraint_group=group_map.get(constraint.name, "ungrouped"),
                 metric=constraint.metric,
                 is_satisfied=satisfied,
+                assessment_basis="measurement_value",
+                measured_value=round(float(value), 6),
                 margin=round(float(margin), 6),
                 severity=_severity(constraint, satisfied, margin),
+                measurement_status=measurement.status.status,
+                measurement_failure_reason=measurement.failure_reason.code,
             )
         )
     return assessments

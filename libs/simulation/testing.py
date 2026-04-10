@@ -104,10 +104,13 @@ def evaluate_case(case: SimulationAcceptanceCase) -> SimulationAcceptanceResult:
     execution = _execute_case(case)
     failures: list[SimulationAcceptanceFailureRecord] = []
     schema_valid = execution.simulation_bundle.validation_status.is_valid
-    measurement_correct = bool(execution.verification_result.measurement_report.measured_metrics)
+    measurement_correct = bool(execution.verification_result.measurement_report.measurement_results)
     constraint_correct = bool(execution.verification_result.constraint_assessment)
     diagnosis_correct = execution.verification_result.failure_attribution.primary_failure_class in {
         "none",
+        "design_failure",
+        "simulation_invalid",
+        "analysis_failure",
         "operating_region_failure",
         "stability_failure",
         "drive_bandwidth_failure",
