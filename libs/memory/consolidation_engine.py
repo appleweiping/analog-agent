@@ -42,6 +42,8 @@ def _candidate_summary(candidate: CandidateRecord | None, verification: Verifica
         priority_score=candidate.priority_score,
         world_state_ref=candidate.world_state_ref,
         truth_feasibility_status=truth_status,
+        truth_level=verification.validation_status.truth_level if verification and verification.candidate_id == candidate.candidate_id else None,
+        validation_status=verification.validation_status.validity_state if verification and verification.candidate_id == candidate.candidate_id else None,
     )
 
 
@@ -154,6 +156,8 @@ def consolidate_episode(
                 source_object_type="VerificationResult",
                 source_object_id=verification.result_id,
                 evidence_kind="ground_truth_verification",
+                truth_level=verification.validation_status.truth_level,
+                validation_status=verification.validation_status.validity_state,
                 artifact_refs=verification.artifact_refs,
             )
         )
@@ -164,6 +168,8 @@ def consolidate_episode(
                 source_object_type="CalibrationFeedback",
                 source_object_id=verification.calibration_payload.calibration_id,
                 evidence_kind="calibration_feedback",
+                truth_level=verification.validation_status.truth_level,
+                validation_status=verification.validation_status.validity_state,
                 artifact_refs=verification.calibration_payload.truth_record.artifact_refs,
             )
         )
@@ -234,6 +240,8 @@ def consolidate_episode(
             best_candidate_id=verification.candidate_id if verification is not None else (search_state.best_known_feasible.candidate_id if search_state.best_known_feasible else None),
             best_feasibility_status=verification.feasibility_status if verification is not None else None,
             robustness_status=verification.robustness_summary.certification_status if verification is not None else None,
+            truth_level=verification.validation_status.truth_level if verification is not None else None,
+            validation_status=verification.validation_status.validity_state if verification is not None else None,
             failure_classes=_dominant_failure_modes(search_state, verification),
         ),
         evidence_refs=evidence_refs,

@@ -2,6 +2,9 @@ backend: ngspice
 binary: D:\Research\Agent-AI4EDA\tools\ngspice\bin\ngspice.exe
 invocation_mode: batch
 timeout_seconds: 20
+model_type: builtin
+default_builtin_model: builtin_demo_ota2_small_signal_v1
+external_model_card_path:
 default_log_dir: .artifacts\ngspice_logs
 smoke_test_netlist: scripts\smoke\test_ngspice_min.cir
 require_explicit_log_path: true

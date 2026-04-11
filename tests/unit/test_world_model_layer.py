@@ -131,12 +131,15 @@ class WorldModelLayerTests(unittest.TestCase):
             TruthCalibrationRecord(
                 simulator_signature="ngspice-test",
                 analysis_fidelity="full_ground_truth",
+                truth_level="configured_truth",
+                validation_status="strong",
                 metrics=[
                     TruthMetric(metric="gbw_hz", value=9.5e7),
                     TruthMetric(metric="phase_margin_deg", value=61.0),
                 ],
                 constraints=[],
                 artifact_refs=["artifact://spice/1"],
+                provenance_tags=["test_fixture"],
                 timestamp=datetime.now(timezone.utc).isoformat(),
             ),
         )

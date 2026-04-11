@@ -112,6 +112,8 @@ class EvidenceReference(BaseModel):
     source_object_type: str
     source_object_id: str
     evidence_kind: str
+    truth_level: str | None = None
+    validation_status: str | None = None
     artifact_refs: list[str] = Field(default_factory=list)
 
     @field_validator("artifact_refs")
@@ -177,6 +179,8 @@ class CandidateOutcomeSummary(BaseModel):
     priority_score: float | None = None
     world_state_ref: str | None = None
     truth_feasibility_status: str | None = None
+    truth_level: str | None = None
+    validation_status: str | None = None
 
     @field_validator("feasible_probability")
     @classmethod
@@ -285,6 +289,8 @@ class FinalOutcomeSummary(BaseModel):
     best_candidate_id: str | None = None
     best_feasibility_status: str | None = None
     robustness_status: str | None = None
+    truth_level: str | None = None
+    validation_status: str | None = None
     failure_classes: list[str] = Field(default_factory=list)
 
     @field_validator("failure_classes")

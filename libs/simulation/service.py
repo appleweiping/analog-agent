@@ -14,6 +14,7 @@ from libs.schema.simulation import (
     SimulationCompileResponse,
     SimulationExecutionResponse,
     SimulationRequest,
+    ValidationStatus,
     VerificationResult,
 )
 from libs.schema.world_model import WORLD_MODEL_METRICS, TruthCalibrationRecord, TruthConstraint, TruthMetric
@@ -43,6 +44,33 @@ def _truth_fidelity(simulation_fidelity: str) -> str:
     return mapping[simulation_fidelity]
 
 
+def _physical_validation_from_bundle(simulation_bundle: SimulationBundle, completion_status: str | None = None) -> ValidationStatus:
+    base = simulation_bundle.simulation_provenance.model_binding
+    warnings = list(simulation_bundle.simulation_provenance.provenance_tags)
+    warnings.extend(simulation_bundle.metadata.assumptions[:1])
+    validity_state = "strong"
+    summary = "configured truth executed with explicit external model binding"
+    if base.validity_level.truth_level == "demonstrator_truth":
+        validity_state = "weak"
+        summary = "demonstrator truth executed with builtin or simplified model binding"
+        warnings.append("demonstrator_truth_only")
+    if not base.backend_model_ref or base.binding_confidence < 0.3:
+        validity_state = "invalid"
+        summary = "model binding missing or too weak to claim reliable physical truth"
+        warnings.append("model_binding_missing_or_weak")
+    if completion_status in {"simulator_failure", "measurement_failure", "timeout"}:
+        warnings.append(f"completion_status={completion_status}")
+        if validity_state == "strong":
+            validity_state = "weak"
+    return ValidationStatus(
+        truth_level=base.validity_level.truth_level,
+        validity_state=validity_state,
+        model_binding_present=bool(base.backend_model_ref),
+        summary=summary,
+        warnings=warnings,
+    )
+
+
 class SimulationService:
     """Ground-truth simulation and verification service."""
 
@@ -64,6 +92,8 @@ class SimulationService:
             "netlist",
             "candidate.sp",
             simulation_bundle.netlist_instance.rendered_netlist,
+            simulation_provenance=simulation_bundle.simulation_provenance,
+            validation_status=_physical_validation_from_bundle(simulation_bundle),
         )
         simulation_bundle.artifact_registry = registry
         return artifact_id
@@ -113,6 +143,8 @@ class SimulationService:
         truth_record = TruthCalibrationRecord(
             simulator_signature=f"{simulation_bundle.backend_binding.backend}:{simulation_bundle.backend_binding.backend_version}",
             analysis_fidelity=_truth_fidelity(simulation_bundle.analysis_plan.fidelity_level),
+            truth_level=simulation_bundle.simulation_provenance.truth_level,
+            validation_status=_physical_validation_from_bundle(simulation_bundle).validity_state,
             metrics=[
                 TruthMetric(metric=metric.metric, value=metric.value)
                 for metric in measurement_report.measured_metrics
@@ -128,6 +160,11 @@ class SimulationService:
                 for item in assessments
             ],
             artifact_refs=[record.artifact_id for record in simulation_bundle.artifact_registry.records],
+            provenance_tags=[
+                f"truth_level={simulation_bundle.simulation_provenance.truth_level}",
+                f"fidelity={simulation_bundle.execution_profile.resolved_fidelity}",
+                f"backend={simulation_bundle.backend_binding.backend}",
+            ],
             timestamp=_timestamp(),
         )
         predicted_map = {
@@ -157,6 +194,8 @@ class SimulationService:
             provenance=[
                 f"planner_search={self.search_state.search_id}",
                 f"phase={self.search_state.phase_state.current_phase}",
+                f"truth_level={simulation_bundle.simulation_provenance.truth_level}",
+                f"validation_state={_physical_validation_from_bundle(simulation_bundle).validity_state}",
             ],
         )
 
@@ -201,6 +240,10 @@ class SimulationService:
             escalation_advice = ["defer_escalation"]
             recommended_fidelity = "quick_truth"
             escalation_reason = "default_screening_path"
+        if simulation_bundle.simulation_provenance.truth_level == "demonstrator_truth":
+            strategy.append("respect_demonstrator_truth_boundary")
+            if "demonstrator_truth_only" not in calibration_feedback.trust_violation_flags:
+                calibration_feedback.trust_violation_flags.append("demonstrator_truth_only")
         return PlannerFeedback(
             candidate_id=simulation_bundle.candidate_id,
             lifecycle_update=lifecycle,
@@ -245,6 +288,16 @@ class SimulationService:
         )
         calibration_feedback = self.emit_calibration_feedback(simulation_bundle, measurement_report, assessments)
         planner_feedback = self._planner_feedback(simulation_bundle, assessments, robustness, calibration_feedback, failure)
+        physical_validation = _physical_validation_from_bundle(simulation_bundle, completion_status)
+        simulation_bundle.simulation_provenance = simulation_bundle.simulation_provenance.model_copy(
+            update={
+                "artifact_lineage": [record.artifact_id for record in simulation_bundle.artifact_registry.records],
+                "provenance_tags": [
+                    *simulation_bundle.simulation_provenance.provenance_tags,
+                    f"validation_state={physical_validation.validity_state}",
+                ],
+            }
+        )
         simulation_bundle.artifact_registry, verification_artifact = persist_json_artifact(
             simulation_bundle.artifact_registry,
             "verification_report",
@@ -254,7 +307,11 @@ class SimulationService:
                 "netlist_artifact": netlist_artifact,
                 "assessment_count": len(assessments),
                 "robustness_status": robustness.certification_status,
+                "truth_level": physical_validation.truth_level,
+                "validation_state": physical_validation.validity_state,
             },
+            simulation_provenance=simulation_bundle.simulation_provenance,
+            validation_status=physical_validation,
         )
         all_constraints_pass = all(item.is_satisfied for item in assessments if item.assessment_basis == "measurement_value")
         unavailable_assessments = [item for item in assessments if item.assessment_basis == "measurement_unavailable"]
@@ -280,6 +337,8 @@ class SimulationService:
             candidate_id=simulation_bundle.candidate_id,
             executed_fidelity=simulation_bundle.execution_profile.resolved_fidelity,
             backend_signature=f"{simulation_bundle.backend_binding.backend}:{simulation_bundle.backend_binding.backend_version}",
+            simulation_provenance=simulation_bundle.simulation_provenance,
+            validation_status=physical_validation,
             execution_profile=simulation_bundle.execution_profile,
             measurement_report=measurement_report,
             constraint_assessment=assessments,
@@ -290,6 +349,8 @@ class SimulationService:
                 "analysis_count": len(measurement_report.executed_analyses),
                 "netlist_ready": simulation_bundle.netlist_instance.render_status == "ready",
                 "critical_failure_count": sum(1 for item in assessments if not item.is_satisfied and item.severity == "critical"),
+                "truth_level": physical_validation.truth_level,
+                "validation_state": physical_validation.validity_state,
             },
             artifact_refs=[netlist_artifact, verification_artifact, *[record.artifact_id for record in simulation_bundle.artifact_registry.records]],
             calibration_payload=calibration_feedback,
@@ -312,6 +373,7 @@ class SimulationService:
         fidelity_level: str = "quick_truth",
         backend_preference: str = "ngspice",
         escalation_reason: str = "planner_requested_truth_verification",
+        model_binding_overrides: dict[str, float | int | str | bool] | None = None,
     ) -> SimulationExecutionResponse:
         """Formal fifth-layer public entry for candidate verification."""
 
@@ -323,6 +385,7 @@ class SimulationService:
             fidelity_level=fidelity_level,
             backend_preference=backend_preference,
             escalation_reason=escalation_reason,
+            model_binding_overrides=model_binding_overrides,
         )
         if compiled.simulation_bundle is None:
             raise ValueError("simulation bundle failed to compile")
@@ -334,5 +397,7 @@ class SimulationService:
             fidelity_level=fidelity_level,
             backend_preference=backend_preference,
             escalation_reason=escalation_reason,
+            model_binding_overrides=model_binding_overrides,
         )
+        request = request.model_copy(update={"model_binding": compiled.simulation_bundle.model_binding})
         return self._verify_compiled_bundle(compiled.simulation_bundle, request)

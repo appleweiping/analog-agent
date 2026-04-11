@@ -587,6 +587,8 @@ class PlanningService:
             candidate.predicted_feasibility.overall_feasibility >= 0.8 if candidate.predicted_feasibility else False
         )
         requested_lifecycle = planner_feedback.lifecycle_update if planner_feedback is not None else ("verified" if feasible else "rejected")
+        if truth.truth_level == "demonstrator_truth" and requested_lifecycle == "verified":
+            requested_lifecycle = "boundary_candidate"
         lifecycle = {
             "verified": "verified",
             "rejected": "rejected",
@@ -621,6 +623,7 @@ class PlanningService:
                 or (candidate.predicted_uncertainty is not None and candidate.predicted_uncertainty.confidence >= 0.45)
             )
         )
+        calibration_required = mismatch or truth.truth_level == "demonstrator_truth" or truth.validation_status != "strong"
         trace = self._make_trace(
             search_state,
             outcome_tag="simulation_feedback_ingested",
@@ -640,8 +643,15 @@ class PlanningService:
             budget_state=budget_state,
             provenance_source="simulation_feedback",
             traces=[trace],
-            calibration_required=mismatch,
-            extra_failures=["trust_violation"] if mismatch else [],
+            calibration_required=calibration_required,
+            extra_failures=[
+                *(["trust_violation"] if mismatch else []),
+                *(
+                    [f"truth_level={truth.truth_level}", f"validation_status={truth.validation_status}"]
+                    if truth.truth_level == "demonstrator_truth" or truth.validation_status != "strong"
+                    else []
+                ),
+            ],
         ).model_copy(update={"pending_simulation_refs": [ref for ref in search_state.pending_simulation_refs if ref != candidate_id]})
         return SimulationFeedbackResponse(
             search_state=updated_state,

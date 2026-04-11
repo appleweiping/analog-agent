@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from libs.schema.design_task import DesignTask
 from libs.schema.planning import PlanningBundle, SearchState
@@ -26,6 +26,7 @@ class SimulationCompileRequest(BaseModel):
     fidelity_level: str = "quick_truth"
     backend_preference: str = "ngspice"
     escalation_reason: str = "planner_requested_truth_verification"
+    model_binding_overrides: dict[str, float | int | str | bool] = Field(default_factory=dict)
 
 
 @router.post("/compile", response_model=SimulationCompileResponse)
@@ -40,6 +41,7 @@ def compile_bundle(request: SimulationCompileRequest) -> SimulationCompileRespon
         fidelity_level=request.fidelity_level,
         backend_preference=request.backend_preference,
         escalation_reason=request.escalation_reason,
+        model_binding_overrides=request.model_binding_overrides,
     )
 
 
@@ -53,4 +55,5 @@ def verify(request: SimulationCompileRequest) -> SimulationExecutionResponse:
         fidelity_level=request.fidelity_level,
         backend_preference=request.backend_preference,
         escalation_reason=request.escalation_reason,
+        model_binding_overrides=request.model_binding_overrides,
     )

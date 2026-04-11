@@ -12,6 +12,8 @@ from libs.schema.simulation import (
     IntegrityCheckResult,
     MeasurementHook,
     ModelBinding,
+    ModelSource,
+    ModelValidityLevel,
     NetlistInstance,
     ParameterBinding,
     SavePolicy,
@@ -21,6 +23,84 @@ from libs.schema.simulation import (
 from libs.utils.hashing import stable_hash
 
 TEMPLATE_ROOT = Path(__file__).resolve().parent / "templates"
+CONFIG_ROOT = Path(__file__).resolve().parents[2] / "configs" / "simulator"
+
+
+def _load_backend_model_config(backend: str) -> dict[str, str | int | bool]:
+    config_path = CONFIG_ROOT / f"{backend}.yaml"
+    config: dict[str, str | int | bool] = {}
+    if not config_path.exists():
+        return config
+    for line in config_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or ":" not in stripped:
+            continue
+        key, value = stripped.split(":", 1)
+        value = value.strip()
+        lowered = value.lower()
+        if lowered in {"true", "false"}:
+            config[key.strip()] = lowered == "true"
+        elif value.isdigit():
+            config[key.strip()] = int(value)
+        else:
+            config[key.strip()] = value
+    return config
+
+
+def _model_binding_from_config(
+    *,
+    backend: str,
+    process_node: str,
+    corner: str,
+    temperature_c: float,
+    supply_voltage_v: float | None,
+    default_builtin_ref: str,
+    overrides: dict[str, float | int | str | bool] | None = None,
+) -> ModelBinding:
+    config = _load_backend_model_config(backend)
+    if overrides:
+        config.update({key: value for key, value in overrides.items() if value not in {None, ""}})
+    model_type = str(config.get("model_type", "builtin")).strip() or "builtin"
+    external_path = str(config.get("external_model_card_path", "")).strip()
+    builtin_ref = str(config.get("default_builtin_model", default_builtin_ref)).strip() or default_builtin_ref
+    if model_type == "external" and external_path:
+        source = ModelSource(source_type="path", locator=external_path)
+        validity = ModelValidityLevel(
+            truth_level="configured_truth",
+            detail="external_model_card_configured",
+            industrial_confidence=0.9,
+        )
+        binding_confidence = 0.95
+        backend_model_ref = external_path
+    elif model_type == "external":
+        source = ModelSource(source_type="path", locator="missing_external_model_card")
+        validity = ModelValidityLevel(
+            truth_level="configured_truth",
+            detail="external_model_card_missing",
+            industrial_confidence=0.25,
+        )
+        binding_confidence = 0.2
+        backend_model_ref = "missing_external_model_card"
+    else:
+        source = ModelSource(source_type="registry", locator=builtin_ref, registry_key=builtin_ref)
+        validity = ModelValidityLevel(
+            truth_level="demonstrator_truth",
+            detail="builtin_demonstrator_model",
+            industrial_confidence=0.35,
+        )
+        binding_confidence = 0.62
+        backend_model_ref = builtin_ref
+    return ModelBinding(
+        model_type="external" if model_type == "external" else "builtin",
+        model_source=source,
+        process_node=process_node,
+        corner=corner,
+        temperature_c=temperature_c,
+        supply_voltage_v=supply_voltage_v,
+        backend_model_ref=backend_model_ref,
+        binding_confidence=binding_confidence,
+        validity_level=validity,
+    )
 
 
 def _integrity_checks(task: DesignTask, candidate: CandidateRecord) -> list[IntegrityCheckResult]:
@@ -92,12 +172,13 @@ def _demonstrator_ota2_bindings(task: DesignTask, candidate: CandidateRecord) ->
         ParameterBinding(variable_name="p2_hint_hz", netlist_target="hint::p2_hz", value_si=p2_hint_hz, units="Hz", source="system_inferred"),
         ParameterBinding(variable_name="vin_step_high", netlist_target="param::vin_step_high", value_si=vin_step_high, units="V", source="system_inferred"),
     ]
-    model_binding = ModelBinding(
+    model_binding = _model_binding_from_config(
+        backend="ngspice",
         process_node=task.parent_spec_id,
         corner=env.corner,
         temperature_c=env.temperature_c,
         supply_voltage_v=supply_v,
-        backend_model_ref="builtin_demo_ota2_small_signal_v1",
+        default_builtin_ref="builtin_demo_ota2_small_signal_v1",
     )
     stimulus = [
         StimulusBinding(source_name="VDD", stimulus_type="supply", parameters={"value": supply_v}),
@@ -130,12 +211,23 @@ def realize_netlist_instance(
     *,
     backend: str,
     analyses: list[AnalysisStatement],
+    model_binding_overrides: dict[str, float | int | str | bool] | None = None,
 ) -> NetlistInstance:
     """Realize a formal NetlistInstance for one candidate."""
 
     world_state = candidate.world_state_snapshot
     if backend == "ngspice" and task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed":
         bindings, model_binding, stimulus, rendered_netlist = _demonstrator_ota2_bindings(task, candidate)
+        if model_binding_overrides:
+            model_binding = _model_binding_from_config(
+                backend="ngspice",
+                process_node=task.parent_spec_id,
+                corner=world_state.environment_state.corner,
+                temperature_c=world_state.environment_state.temperature_c,
+                supply_voltage_v=world_state.environment_state.supply_voltage_v,
+                default_builtin_ref=model_binding.backend_model_ref,
+                overrides=model_binding_overrides,
+            )
     else:
         bindings = []
         for variable in task.design_space.variables:
@@ -149,12 +241,14 @@ def realize_netlist_instance(
                     source=variable.source,
                 )
             )
-        model_binding = ModelBinding(
+        model_binding = _model_binding_from_config(
+            backend=backend,
             process_node=task.parent_spec_id,
             corner=world_state.environment_state.corner,
             temperature_c=world_state.environment_state.temperature_c,
             supply_voltage_v=world_state.environment_state.supply_voltage_v,
-            backend_model_ref=f"{backend}::{task.circuit_family}::{world_state.environment_state.corner}",
+            default_builtin_ref=f"{backend}::{task.circuit_family}::{world_state.environment_state.corner}",
+            overrides=model_binding_overrides,
         )
         stimulus = [
             StimulusBinding(source_name="vdd", stimulus_type="supply", parameters={"value": world_state.environment_state.supply_voltage_v or 1.2}),

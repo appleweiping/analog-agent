@@ -64,6 +64,33 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                 severity="error",
             )
         )
+    if not simulation_bundle.model_binding.backend_model_ref:
+        errors.append(
+            SimulationValidationIssue(
+                code="backend_binding_failure",
+                path="model_binding.backend_model_ref",
+                message="model binding is missing a backend model reference",
+                severity="error",
+            )
+        )
+    if simulation_bundle.model_binding.binding_confidence < 0.3:
+        warnings.append(
+            SimulationValidationIssue(
+                code="backend_binding_failure",
+                path="model_binding.binding_confidence",
+                message="model binding confidence is too low for strong physical claims",
+                severity="warning",
+            )
+        )
+    if simulation_bundle.model_binding.validity_level.truth_level == "demonstrator_truth":
+        warnings.append(
+            SimulationValidationIssue(
+                code="backend_binding_failure",
+                path="model_binding.validity_level",
+                message="bundle is running with demonstrator_truth validity only",
+                severity="warning",
+            )
+        )
     if simulation_bundle.backend_binding.invocation_mode != "native":
         warnings.append(
             SimulationValidationIssue(
@@ -76,8 +103,7 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
     if not simulation_bundle.artifact_registry.run_directory:
         unresolved.append("artifact_registry.run_directory")
 
-    total_checks = 6
-    score = 1.0 - (len(errors) * 0.18 + len(unresolved) * 0.08 + len(warnings) * 0.03)
+    score = 1.0 - (len(errors) * 0.16 + len(unresolved) * 0.08 + len(warnings) * 0.03)
     return SimulationValidationStatus(
         is_valid=not errors,
         errors=errors,
@@ -117,6 +143,24 @@ def validate_verification_result(result: VerificationResult) -> SimulationValida
                 code="execution_failure",
                 path="robustness_summary",
                 message="candidate failed robustness certification",
+                severity="warning",
+            )
+        )
+    if result.validation_status.validity_state == "invalid":
+        errors.append(
+            SimulationValidationIssue(
+                code="backend_binding_failure",
+                path="validation_status",
+                message="verification result is physically invalid due to missing or weak model binding",
+                severity="error",
+            )
+        )
+    elif result.validation_status.validity_state == "weak":
+        warnings.append(
+            SimulationValidationIssue(
+                code="backend_binding_failure",
+                path="validation_status",
+                message="verification result is demonstrator-level truth only",
                 severity="warning",
             )
         )

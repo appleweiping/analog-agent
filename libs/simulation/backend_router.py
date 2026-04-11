@@ -98,14 +98,20 @@ def execute_bundle(
             timeout_sec=simulation_request.resource_budget.timeout_seconds,
             fidelity_tag=simulation_request.fidelity_level,
         )
-        registry, artifact_id = persist_json_artifact(registry, "raw_waveform", f"{analysis.analysis_type}.json", raw)
+        registry, artifact_id = persist_json_artifact(
+            registry,
+            "raw_waveform",
+            f"{analysis.analysis_type}.json",
+            raw,
+            simulation_provenance=simulation_bundle.simulation_provenance,
+        )
         if use_native:
             netlist_path = str(raw.get("netlist_path", ""))
             log_path = str(raw.get("log_path", ""))
             if netlist_path:
-                registry, _ = register_artifact(registry, "netlist", netlist_path)
+                registry, _ = register_artifact(registry, "netlist", netlist_path, simulation_provenance=simulation_bundle.simulation_provenance)
             if log_path and Path(log_path).exists():
-                registry, _ = register_artifact(registry, "stdout", log_path)
+                registry, _ = register_artifact(registry, "stdout", log_path, simulation_provenance=simulation_bundle.simulation_provenance)
         parsed = parse_raw_output({**raw, "artifact_ref": artifact_id})
         outputs.append(parsed)
 

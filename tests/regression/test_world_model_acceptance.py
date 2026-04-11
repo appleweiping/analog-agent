@@ -107,9 +107,12 @@ class WorldModelAcceptanceTests(unittest.TestCase):
                 truth_record=TruthCalibrationRecord(
                     simulator_signature="ngspice-calibration",
                     analysis_fidelity="full_ground_truth",
+                    truth_level="configured_truth",
+                    validation_status="strong",
                     metrics=[TruthMetric(metric="power_w", value=1.0e-3)],
                     constraints=[],
                     artifact_refs=["artifact://ldo-calibration"],
+                    provenance_tags=["acceptance_fixture"],
                     timestamp=datetime.now(timezone.utc).isoformat(),
                 ),
             ),

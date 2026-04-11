@@ -59,9 +59,12 @@ def fake_simulator_feedback(search_state: SearchState, candidate_id: str) -> Tru
     return TruthCalibrationRecord(
         simulator_signature="fake-simulator",
         analysis_fidelity="full_ground_truth",
+        truth_level="demonstrator_truth",
+        validation_status="weak",
         metrics=metrics,
         constraints=constraints,
         artifact_refs=[f"artifact://simulation/{candidate_id}"],
+        provenance_tags=["planning_testing_helper"],
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
@@ -149,4 +152,3 @@ def build_acceptance_summary(results: list[PlanningAcceptanceResult]) -> Plannin
         feasible_hit_rate=sum(1 for result in results if result.feasible_found) / total,
         failures=all_failures,
     )
-

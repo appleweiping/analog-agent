@@ -20,6 +20,7 @@ from libs.schema.simulation import (
     RobustnessPolicy,
     ServiceMethodSpec,
     SeverityRule,
+    SimulationProvenance,
     SimulationBundle,
     SimulationCompilationReport,
     SimulationCompileResponse,
@@ -27,6 +28,7 @@ from libs.schema.simulation import (
     SimulationRequest,
     SimulationServingContract,
     SimulationValidationStatus,
+    ValidationStatus,
     VerificationExecutionProfile,
     VerificationPolicy,
 )
@@ -77,6 +79,52 @@ def _fidelity_policy() -> FidelityPolicy:
     )
 
 
+def _physical_validation_status(model_binding, *, invocation_mode: str) -> ValidationStatus:
+    warnings: list[str] = []
+    truth_level = model_binding.validity_level.truth_level
+    validity_state = "strong"
+    summary = "configured model binding provides stronger physical grounding"
+    if truth_level == "demonstrator_truth":
+        validity_state = "weak"
+        summary = "builtin demonstrator model proves real SPICE participation but not industrial accuracy"
+        warnings.append("demonstrator_truth_only")
+    if model_binding.model_type == "external" and model_binding.model_source.locator in {"", "missing_external_model_card"}:
+        validity_state = "invalid"
+        summary = "external model binding requested but model source is missing"
+        warnings.append("missing_external_model_source")
+    if invocation_mode != "native":
+        warnings.append("non_native_backend_execution")
+        if validity_state == "strong":
+            validity_state = "weak"
+    return ValidationStatus(
+        truth_level=truth_level,
+        validity_state=validity_state,
+        model_binding_present=bool(model_binding.backend_model_ref),
+        summary=summary,
+        warnings=warnings,
+    )
+
+
+def _simulation_provenance(bundle_backend: BackendBinding, request: SimulationRequest):
+    model_binding = request.model_binding
+    if model_binding is None:
+        raise ValueError("simulation request must carry model_binding before provenance can be built")
+    return SimulationProvenance(
+        backend=bundle_backend.backend,
+        backend_version=bundle_backend.backend_version,
+        invocation_mode=bundle_backend.invocation_mode,
+        fidelity_level=normalize_fidelity_level(request.fidelity_level),
+        truth_level=model_binding.validity_level.truth_level,
+        model_binding=model_binding,
+        artifact_lineage=[],
+        provenance_tags=[
+            f"model_type={model_binding.model_type}",
+            f"model_source={model_binding.model_source.source_type}",
+            f"planner_context={request.planner_context_ref}",
+        ],
+    )
+
+
 def build_simulation_request(
     task: DesignTask,
     planning_bundle: PlanningBundle,
@@ -86,6 +134,7 @@ def build_simulation_request(
     fidelity_level: str,
     backend_preference: str = "ngspice",
     escalation_reason: str = "planner_requested_truth_verification",
+    model_binding_overrides: dict[str, float | int | str | bool] | None = None,
 ) -> SimulationRequest:
     """Build a formal SimulationRequest from fourth-layer state."""
 
@@ -111,7 +160,7 @@ def build_simulation_request(
         analysis_scope=analysis_scope,
         fidelity_level=requested_fidelity if requested_fidelity == "focused_validation" else fidelity_level,
         backend_preference=backend_preference,
-        environment_overrides={},
+        environment_overrides=dict(model_binding_overrides or {}),
         measurement_targets=list(task.objective.reporting_metrics) if fidelity_level == "quick_truth" else _ordered_unique([*task.objective.reporting_metrics, "slew_rate_v_per_us"]),
         escalation_reason=escalation_reason,
         priority_class="high" if candidate.predicted_uncertainty and candidate.predicted_uncertainty.must_escalate else "normal",
@@ -220,6 +269,7 @@ def compile_simulation_bundle(
     fidelity_level: str = "quick_truth",
     backend_preference: str = "ngspice",
     escalation_reason: str = "planner_requested_truth_verification",
+    model_binding_overrides: dict[str, float | int | str | bool] | None = None,
 ) -> SimulationCompileResponse:
     """Compile the formal fifth-layer SimulationBundle."""
 
@@ -234,6 +284,7 @@ def compile_simulation_bundle(
         fidelity_level=fidelity_level,
         backend_preference=backend_preference,
         escalation_reason=escalation_reason,
+        model_binding_overrides=model_binding_overrides,
     )
     analysis_plan = build_analysis_plan(task, request)
     measurement_contract = build_measurement_contract(task, analysis_plan)
@@ -243,6 +294,7 @@ def compile_simulation_bundle(
         candidate,
         backend=backend_preference,
         analyses=analysis_plan.ordered_analyses,
+        model_binding_overrides=request.environment_overrides,
     )
     signature = stable_hash(f"{task.task_id}|{candidate_id}|{fidelity_level}|{backend_preference}")
     resolved_fidelity = normalize_fidelity_level(fidelity_level)
@@ -253,18 +305,27 @@ def compile_simulation_bundle(
         and task.topology.topology_mode == "fixed"
         and {analysis.analysis_type for analysis in analysis_plan.ordered_analyses}.issubset({"op", "ac", "tran"})
     )
+    request = request.model_copy(update={"model_binding": netlist.model_binding})
+    backend_binding = BackendBinding(
+        backend=backend_preference,
+        backend_version="ngspice-native-batch-v1" if native_ngspice else "deterministic-backend-v1",
+        capability_map=["op", "ac", "tran", "noise", "pvt_sweep", "load_sweep", "temperature_sweep", "monte_carlo"],
+        invocation_mode="native" if native_ngspice else "mock_truth",
+        support_multi_analysis=True,
+    )
+    simulation_provenance = _simulation_provenance(backend_binding, request)
+    physical_validation = _physical_validation_status(
+        netlist.model_binding,
+        invocation_mode=backend_binding.invocation_mode,
+    )
     bundle = SimulationBundle(
         simulation_id=f"sim_{signature[:12]}",
         parent_task_id=task.task_id,
         candidate_id=candidate_id,
         planner_context_ref=search_state.search_id,
-        backend_binding=BackendBinding(
-            backend=backend_preference,
-            backend_version="ngspice-native-batch-v1" if native_ngspice else "deterministic-backend-v1",
-            capability_map=["op", "ac", "tran", "noise", "pvt_sweep", "load_sweep", "temperature_sweep", "monte_carlo"],
-            invocation_mode="native" if native_ngspice else "mock_truth",
-            support_multi_analysis=True,
-        ),
+        backend_binding=backend_binding,
+        model_binding=netlist.model_binding,
+        simulation_provenance=simulation_provenance,
         netlist_instance=netlist,
         analysis_plan=analysis_plan,
         measurement_contract=measurement_contract,
@@ -288,12 +349,15 @@ def compile_simulation_bundle(
                 "ground-truth layer remains the only physical verification authority",
                 "backend bindings preserve a unified schema across demonstrator truth and mock_truth modes",
                 "verification outputs are emitted as structured objects for planner and world-model feedback",
+                f"truth_level={physical_validation.truth_level}",
+                f"validation_state={physical_validation.validity_state}",
                 "native ngspice is currently enabled for two_stage_ota fixed-topology quick/focused truth verification" if native_ngspice else "bundle currently executes in mock_truth mode",
             ],
             provenance=[
                 "task_formalization_layer",
                 "planning_layer",
                 "simulation_compiler",
+                f"model_binding={netlist.model_binding.backend_model_ref}",
             ],
         ),
         validation_status=SimulationValidationStatus(
@@ -332,6 +396,8 @@ def compile_simulation_bundle(
             "metric_count": len(compiled_bundle.measurement_contract.measurement_definitions),
             "completeness_score": validation.completeness_score,
             "backend": backend_preference,
+            "truth_level": compiled_bundle.simulation_provenance.truth_level,
+            "validation_state": physical_validation.validity_state,
         },
     )
     return SimulationCompileResponse(

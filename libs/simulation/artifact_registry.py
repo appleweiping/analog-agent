@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from libs.schema.simulation import ArtifactRecord, ArtifactRegistry
+from libs.schema.simulation import ArtifactRecord, ArtifactRegistry, SimulationProvenance, ValidationStatus
 from libs.utils.hashing import stable_hash
 
 
@@ -20,7 +20,15 @@ def initialize_artifact_registry(simulation_id: str) -> ArtifactRegistry:
     return ArtifactRegistry(run_directory=str(run_directory), records=[])
 
 
-def persist_text_artifact(registry: ArtifactRegistry, artifact_type: str, name: str, content: str) -> tuple[ArtifactRegistry, str]:
+def persist_text_artifact(
+    registry: ArtifactRegistry,
+    artifact_type: str,
+    name: str,
+    content: str,
+    *,
+    simulation_provenance: SimulationProvenance | None = None,
+    validation_status: ValidationStatus | None = None,
+) -> tuple[ArtifactRegistry, str]:
     """Persist a text artifact and append it to the registry."""
 
     run_directory = Path(registry.run_directory)
@@ -31,14 +39,28 @@ def persist_text_artifact(registry: ArtifactRegistry, artifact_type: str, name: 
         update={
             "records": [
                 *registry.records,
-                ArtifactRecord(artifact_id=artifact_id, artifact_type=artifact_type, path=str(path)),
+                ArtifactRecord(
+                    artifact_id=artifact_id,
+                    artifact_type=artifact_type,
+                    path=str(path),
+                    simulation_provenance=simulation_provenance,
+                    validation_status=validation_status,
+                ),
             ]
         }
     )
     return updated, artifact_id
 
 
-def persist_json_artifact(registry: ArtifactRegistry, artifact_type: str, name: str, payload: dict[str, object]) -> tuple[ArtifactRegistry, str]:
+def persist_json_artifact(
+    registry: ArtifactRegistry,
+    artifact_type: str,
+    name: str,
+    payload: dict[str, object],
+    *,
+    simulation_provenance: SimulationProvenance | None = None,
+    validation_status: ValidationStatus | None = None,
+) -> tuple[ArtifactRegistry, str]:
     """Persist a JSON artifact and append it to the registry."""
 
     run_directory = Path(registry.run_directory)
@@ -49,14 +71,27 @@ def persist_json_artifact(registry: ArtifactRegistry, artifact_type: str, name: 
         update={
             "records": [
                 *registry.records,
-                ArtifactRecord(artifact_id=artifact_id, artifact_type=artifact_type, path=str(path)),
+                ArtifactRecord(
+                    artifact_id=artifact_id,
+                    artifact_type=artifact_type,
+                    path=str(path),
+                    simulation_provenance=simulation_provenance,
+                    validation_status=validation_status,
+                ),
             ]
         }
     )
     return updated, artifact_id
 
 
-def register_artifact(registry: ArtifactRegistry, artifact_type: str, path: str) -> tuple[ArtifactRegistry, str]:
+def register_artifact(
+    registry: ArtifactRegistry,
+    artifact_type: str,
+    path: str,
+    *,
+    simulation_provenance: SimulationProvenance | None = None,
+    validation_status: ValidationStatus | None = None,
+) -> tuple[ArtifactRegistry, str]:
     """Register an existing artifact path without copying it."""
 
     artifact_path = Path(path)
@@ -65,7 +100,13 @@ def register_artifact(registry: ArtifactRegistry, artifact_type: str, path: str)
         update={
             "records": [
                 *registry.records,
-                ArtifactRecord(artifact_id=artifact_id, artifact_type=artifact_type, path=str(artifact_path)),
+                ArtifactRecord(
+                    artifact_id=artifact_id,
+                    artifact_type=artifact_type,
+                    path=str(artifact_path),
+                    simulation_provenance=simulation_provenance,
+                    validation_status=validation_status,
+                ),
             ]
         }
     )

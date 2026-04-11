@@ -356,7 +356,11 @@ class WorldModelService:
         )
         updated_regions = list(self.bundle.calibration_state.usable_regions)
         if updated_regions:
-            updated_regions[0] = updated_regions[0].model_copy(update={"readiness": "rollout_ready" if updated_ood.high_risk_rate < 0.4 else "screening"})
+            if truth.truth_level == "configured_truth" and truth.validation_status == "strong" and updated_ood.high_risk_rate < 0.4:
+                readiness = "rollout_ready"
+            else:
+                readiness = "screening"
+            updated_regions[0] = updated_regions[0].model_copy(update={"readiness": readiness})
         else:
             updated_regions = [
                 UsableRegion(
@@ -380,6 +384,15 @@ class WorldModelService:
         updated_bundle = self.bundle.model_copy(update={"calibration_state": new_calibration_state})
         self.bundle = updated_bundle
         trust = self.predict_feasibility(state).trust_assessment
+        if truth.truth_level == "demonstrator_truth":
+            trust = trust.model_copy(
+                update={
+                    "trust_level": "low" if trust.trust_level != "blocked" else trust.trust_level,
+                    "service_tier": "screening_only" if trust.service_tier != "hard_block" else trust.service_tier,
+                    "confidence": _clip(trust.confidence * 0.8, 0.0, 1.0),
+                    "reasons": [*trust.reasons, "demonstrator_truth_calibration_boundary"],
+                }
+            )
         return CalibrationUpdateResponse(
             updated_bundle=updated_bundle,
             updated_metrics=updated_metric_summaries,
@@ -427,14 +440,17 @@ class WorldModelService:
                 }
             }
         )
+        confidence = 1.0 if verification_result.validation_status.truth_level == "configured_truth" and verification_result.validation_status.validity_state == "strong" else 0.75
+        epistemic = 0.02 if confidence == 1.0 else 0.12
+        aleatoric = 0.03 if confidence == 1.0 else 0.08
         uncertainty = state.uncertainty_context.model_copy(
             update={
                 "field_states": [
-                    item.model_copy(update={"source": "truth", "confidence": 1.0})
+                    item.model_copy(update={"source": "truth", "confidence": confidence})
                     for item in state.uncertainty_context.field_states
                 ],
-                "epistemic_score": 0.02,
-                "aleatoric_score": 0.03,
+                "epistemic_score": epistemic,
+                "aleatoric_score": aleatoric,
             }
         )
         return state.model_copy(

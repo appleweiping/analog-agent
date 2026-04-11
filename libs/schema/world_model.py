@@ -1149,12 +1149,15 @@ class TruthCalibrationRecord(BaseModel):
 
     simulator_signature: str
     analysis_fidelity: Literal["quick_screening", "partial_simulation", "full_ground_truth"]
+    truth_level: Literal["demonstrator_truth", "configured_truth"]
+    validation_status: Literal["strong", "weak", "invalid"]
     metrics: list[TruthMetric] = Field(default_factory=list)
     constraints: list[TruthConstraint] = Field(default_factory=list)
     artifact_refs: list[str] = Field(default_factory=list)
+    provenance_tags: list[str] = Field(default_factory=list)
     timestamp: str
 
-    @field_validator("artifact_refs")
+    @field_validator("artifact_refs", "provenance_tags")
     @classmethod
     def dedupe_artifacts(cls, values: list[str]) -> list[str]:
         return _ordered_unique(values)

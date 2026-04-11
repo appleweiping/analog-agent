@@ -96,6 +96,10 @@ MEASUREMENT_FAILURE_CODES = (
     "multiple_crossings",
     "partial_analysis_failure",
 )
+MODEL_TYPES = ("builtin", "external")
+MODEL_SOURCE_TYPES = ("path", "registry", "inline")
+MODEL_VALIDITY_TIERS = ("demonstrator_truth", "configured_truth")
+PHYSICAL_VALIDITY_STATES = ("strong", "weak", "invalid")
 ACCEPTANCE_FAILURE_CODES = (
     "schema_failure",
     "execution_failure",
@@ -179,16 +183,55 @@ class ParameterBinding(BaseModel):
     source: str
 
 
+class ModelSource(BaseModel):
+    """Structured model-source descriptor for physical verification."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_type: Literal["path", "registry", "inline"]
+    locator: str
+    registry_key: str | None = None
+    inline_signature: str | None = None
+
+
+class ModelValidityLevel(BaseModel):
+    """Structured physical-validity tier for one model binding."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    truth_level: Literal["demonstrator_truth", "configured_truth"]
+    detail: str
+    industrial_confidence: float
+
+    @field_validator("industrial_confidence")
+    @classmethod
+    def validate_confidence(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("industrial_confidence must be within [0, 1]")
+        return round(float(value), 4)
+
+
 class ModelBinding(BaseModel):
     """Physical model/environment binding for one simulation."""
 
     model_config = ConfigDict(extra="forbid")
 
+    model_type: Literal["builtin", "external"]
+    model_source: ModelSource
     process_node: str
     corner: str
     temperature_c: float
     supply_voltage_v: float | None = None
     backend_model_ref: str
+    binding_confidence: float
+    validity_level: ModelValidityLevel
+
+    @field_validator("binding_confidence")
+    @classmethod
+    def validate_binding_confidence(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("binding_confidence must be within [0, 1]")
+        return round(float(value), 4)
 
 
 class StimulusBinding(BaseModel):
@@ -452,6 +495,45 @@ class ArtifactRecord(BaseModel):
     artifact_id: str
     artifact_type: Literal["netlist", "stdout", "stderr", "raw_waveform", "measurement_table", "verification_report"]
     path: str
+    simulation_provenance: SimulationProvenance | None = None
+    validation_status: ValidationStatus | None = None
+
+
+class ValidationStatus(BaseModel):
+    """Physical-validity status for one simulation execution/result."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    truth_level: Literal["demonstrator_truth", "configured_truth"]
+    validity_state: Literal["strong", "weak", "invalid"]
+    model_binding_present: bool
+    summary: str
+    warnings: list[str] = Field(default_factory=list)
+
+    @field_validator("warnings")
+    @classmethod
+    def dedupe_warnings(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class SimulationProvenance(BaseModel):
+    """Structured provenance for fifth-layer truth results."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    backend: Literal["ngspice", "xyce", "spectre_compat"]
+    backend_version: str
+    invocation_mode: Literal["native", "compat", "mock_truth"]
+    fidelity_level: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
+    truth_level: Literal["demonstrator_truth", "configured_truth"]
+    model_binding: ModelBinding
+    artifact_lineage: list[str] = Field(default_factory=list)
+    provenance_tags: list[str] = Field(default_factory=list)
+
+    @field_validator("artifact_lineage", "provenance_tags")
+    @classmethod
+    def dedupe_lists(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
 
 
 class ArtifactRegistry(BaseModel):
@@ -718,6 +800,7 @@ class SimulationRequest(BaseModel):
     escalation_reason: str
     priority_class: Literal["low", "normal", "high", "critical"] = "normal"
     resource_budget: ResourceBudget
+    model_binding: ModelBinding | None = None
     provenance: list[str] = Field(default_factory=list)
 
     @field_validator("analysis_scope")
@@ -745,6 +828,8 @@ class SimulationBundle(BaseModel):
     candidate_id: str
     planner_context_ref: str
     backend_binding: BackendBinding
+    model_binding: ModelBinding
+    simulation_provenance: SimulationProvenance
     netlist_instance: NetlistInstance
     analysis_plan: AnalysisPlan
     measurement_contract: MeasurementContract
@@ -1013,6 +1098,8 @@ class VerificationResult(BaseModel):
     candidate_id: str
     executed_fidelity: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
     backend_signature: str
+    simulation_provenance: SimulationProvenance
+    validation_status: ValidationStatus
     execution_profile: VerificationExecutionProfile
     measurement_report: MeasurementReport
     constraint_assessment: list[ConstraintAssessmentRecord] = Field(default_factory=list)

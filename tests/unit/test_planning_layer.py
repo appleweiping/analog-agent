@@ -131,9 +131,12 @@ class PlanningLayerTests(unittest.TestCase):
         feedback = TruthCalibrationRecord(
             simulator_signature="fake-ngspice",
             analysis_fidelity="full_ground_truth",
+            truth_level="demonstrator_truth",
+            validation_status="weak",
             metrics=[TruthMetric(metric="gbw_hz", value=1e6)],
             constraints=[TruthConstraint(constraint_name="gbw_hz_min", constraint_group="bandwidth", is_satisfied=False, margin=-1.0)],
             artifact_refs=["artifact://feedback/ota"],
+            provenance_tags=["planning_fixture"],
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
         updated = service.ingest_simulation_feedback(state, candidate.candidate_id, feedback)
