@@ -8,6 +8,7 @@ from libs.schema.design_task import DesignTask
 from libs.schema.memory import EpisodeMemoryRecord, MemoryBundle
 from libs.schema.planning import CandidateRecord, PlanningBestResult, PlanningBundle, SearchState
 from libs.schema.simulation import SimulationExecutionResponse
+from libs.schema.stats import StatsAggregationResult, VerificationStatsRecord
 from libs.schema.world_model import (
     CalibrationUpdateResponse,
     DesignAction,
@@ -215,4 +216,6 @@ class SystemAcceptanceResult(BaseModel):
     step_traces: list[StepTrace] = Field(default_factory=list)
     cross_layer_traces: list[CrossLayerTrace] = Field(default_factory=list)
     artifact_traces: list[ArtifactTrace] = Field(default_factory=list)
+    verification_stats: list[VerificationStatsRecord] = Field(default_factory=list)
+    stats_summary: StatsAggregationResult | None = None
     acceptance_summary: AcceptanceSummary

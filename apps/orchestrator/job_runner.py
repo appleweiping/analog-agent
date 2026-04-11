@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from libs.eval.stats import aggregate_stats
 from libs.memory.compiler import compile_memory_bundle
 from libs.memory.service import MemoryService
 from libs.planner.compiler import compile_planning_bundle
@@ -397,6 +398,7 @@ def run_full_system_acceptance(task_config: AcceptanceTaskConfig) -> SystemAccep
     cross_layer_traces: list[CrossLayerTrace] = []
     artifact_traces: list[ArtifactTrace] = []
     simulation_executions: list[SimulationExecutionResponse] = []
+    verification_stats = []
     verification_by_candidate: dict[str, SimulationExecutionResponse] = {}
 
     for step_index in range(task_config.max_steps):
@@ -425,6 +427,7 @@ def run_full_system_acceptance(task_config: AcceptanceTaskConfig) -> SystemAccep
                 escalation_reason=f"{task_config.escalation_reason}:{requested_fidelity}",
             )
             simulation_executions.append(execution)
+            verification_stats.append(execution.verification_stats)
             verification_by_candidate[candidate.candidate_id] = execution
             verification_result_ids.append(execution.verification_result.result_id)
             measurement_statuses[candidate.candidate_id] = [
@@ -526,6 +529,8 @@ def run_full_system_acceptance(task_config: AcceptanceTaskConfig) -> SystemAccep
         step_traces=step_traces,
         cross_layer_traces=cross_layer_traces,
         artifact_traces=artifact_traces,
+        verification_stats=verification_stats,
+        stats_summary=None,
         acceptance_summary=AcceptanceSummary(
             schema_completeness_ok=False,
             backend_execution_validity_ok=False,
@@ -542,6 +547,7 @@ def run_full_system_acceptance(task_config: AcceptanceTaskConfig) -> SystemAccep
     )
     return provisional_result.model_copy(
         update={
+            "stats_summary": aggregate_stats(provisional_result),
             "acceptance_summary": _acceptance_summary(provisional_result, simulation_executions),
         }
     )

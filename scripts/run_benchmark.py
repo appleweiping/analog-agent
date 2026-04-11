@@ -12,6 +12,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from libs.eval.experiment_runner import run_experiment_suite
+from libs.eval.stats import export_stats_csv, export_stats_json
 from libs.schema.design_spec import DesignSpec, Environment, MetricRange, Objectives
 from libs.schema.experiment import ExperimentBudget
 from libs.tasking.compiler import compile_design_task
@@ -49,6 +50,8 @@ def main() -> None:
     parser.add_argument("--max-simulations", type=int, default=6)
     parser.add_argument("--max-candidates-per-step", type=int, default=3)
     parser.add_argument("--output", default="research/benchmarks/ota2_experiment_results.json")
+    parser.add_argument("--stats-json", default="research/benchmarks/ota2_stats_summary.json")
+    parser.add_argument("--stats-csv", default="research/benchmarks/ota2_stats_summary.csv")
     args = parser.parse_args()
     if args.benchmark != "ota2":
         raise ValueError("only ota2 is currently supported in the Day-4 benchmark runner")
@@ -68,7 +71,20 @@ def main() -> None:
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(suite.model_dump(), indent=2), encoding="utf-8")
-    print(json.dumps({"output": str(output_path), "run_count": len(suite.runs), "mode_count": len(suite.modes)}, indent=2))
+    stats_json = export_stats_json(suite, args.stats_json)
+    stats_csv = export_stats_csv(suite, args.stats_csv)
+    print(
+        json.dumps(
+            {
+                "output": str(output_path),
+                "stats_json": str(stats_json),
+                "stats_csv": str(stats_csv),
+                "run_count": len(suite.runs),
+                "mode_count": len(suite.modes),
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

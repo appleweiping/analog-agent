@@ -9,6 +9,7 @@ from libs.eval.metrics import (
     efficiency_score,
     feasible_hit_rate,
 )
+from libs.eval.stats import aggregate_stats, build_experiment_stats_record
 from libs.planner.budget_controller import initialize_budget_state, remaining_simulations
 from libs.planner.candidate_manager import append_decision_event, append_evaluation_event
 from libs.planner.candidate_manager import frontier_candidates, summarize_candidate, upsert_candidate
@@ -517,8 +518,9 @@ def run_experiment(task, mode: str, budget: ExperimentBudget, steps: int, *, run
         failure_type_distribution=dict(sorted(Counter(execution.verification_result.failure_attribution.primary_failure_class for execution in simulation_executions if execution.verification_result.failure_attribution.primary_failure_class != "none").items())),
         efficiency_score=efficiency_score(best_feasible_found, len(simulation_executions)),
         structured_log=logs,
+        verification_stats=[execution.verification_stats for execution in simulation_executions],
     )
-    return result
+    return result.model_copy(update={"stats_record": build_experiment_stats_record(result)})
 
 
 def run_experiment_suite(task, modes: list[str], budget: ExperimentBudget, steps: int, *, repeat_runs: int = 5, fidelity_level: str = "focused_validation", backend_preference: str = "ngspice") -> ExperimentSuiteResult:
@@ -564,4 +566,5 @@ def run_experiment_suite(task, modes: list[str], budget: ExperimentBudget, steps
                 failure_type_distribution=aggregate_failure_type_distribution(mode_runs),
             )
         )
-    return ExperimentSuiteResult(task_id=task.task_id, modes=modes, runs=runs, summaries=summaries)
+    suite = ExperimentSuiteResult(task_id=task.task_id, modes=modes, runs=runs, summaries=summaries)
+    return suite.model_copy(update={"aggregated_stats": aggregate_stats(suite)})

@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from libs.schema.design_task import DesignTask
+from libs.schema.stats import ExperimentStatsRecord, StatsAggregationResult, VerificationStatsRecord
 
 EXPERIMENT_MODES = (
     "full_simulation_baseline",
@@ -64,6 +65,8 @@ class ExperimentResult(BaseModel):
     failure_type_distribution: dict[str, int] = Field(default_factory=dict)
     efficiency_score: float = 0.0
     structured_log: list[ExperimentLogRecord] = Field(default_factory=list)
+    verification_stats: list[VerificationStatsRecord] = Field(default_factory=list)
+    stats_record: ExperimentStatsRecord | None = None
 
     @field_validator("simulation_selection_ratio", "feasible_hit_rate")
     @classmethod
@@ -126,3 +129,4 @@ class ExperimentSuiteResult(BaseModel):
     modes: list[Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]] = Field(default_factory=list)
     runs: list[ExperimentResult] = Field(default_factory=list)
     summaries: list[ExperimentAggregateSummary] = Field(default_factory=list)
+    aggregated_stats: StatsAggregationResult | None = None

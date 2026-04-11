@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from libs.planner.candidate_manager import find_candidate
+from libs.eval.stats import build_verification_stats_record
 from libs.schema.design_task import DesignTask
 from libs.schema.planning import PlanningBundle, SearchState
 from libs.schema.simulation import (
@@ -367,11 +368,17 @@ class SimulationService:
         )
         result_validation = validate_verification_result(result)
         simulation_bundle.validation_status = result_validation
+        verification_stats = build_verification_stats_record(
+            simulation_bundle,
+            simulation_request,
+            result,
+        )
         return SimulationExecutionResponse(
             simulation_bundle=simulation_bundle,
             simulation_request=simulation_request,
             backend_report=backend_report,
             verification_result=result,
+            verification_stats=verification_stats,
         )
 
     def verify_candidate(

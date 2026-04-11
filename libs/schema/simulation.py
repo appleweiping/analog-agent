@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from libs.schema.design_spec import CIRCUIT_FAMILIES
 from libs.schema.planning import CandidateRecord, PlanningBundle, SearchState
+from libs.schema.stats import VerificationStatsRecord
 from libs.schema.world_model import TruthCalibrationRecord
 
 SIMULATION_SCHEMA_VERSION = "simulation-schema-v1"
@@ -1179,6 +1180,7 @@ class SimulationExecutionResponse(BaseModel):
     simulation_request: SimulationRequest
     backend_report: BackendValidationReport
     verification_result: VerificationResult
+    verification_stats: VerificationStatsRecord
 
 
 class SimulationAcceptanceFailureRecord(BaseModel):
