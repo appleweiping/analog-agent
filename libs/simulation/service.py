@@ -271,6 +271,14 @@ class SimulationService:
         netlist_artifact = self.realize_netlist(simulation_bundle)
         simulation_bundle, backend_report, parsed_outputs = self.run_simulation(simulation_bundle, simulation_request)
         measurement_report = self.extract_measurements(simulation_bundle, parsed_outputs)
+        simulation_bundle.artifact_registry, measurement_artifact = persist_json_artifact(
+            simulation_bundle.artifact_registry,
+            "measurement_table",
+            "measurement_report.json",
+            measurement_report.model_dump(mode="json"),
+            simulation_provenance=simulation_bundle.simulation_provenance,
+            validation_status=_physical_validation_from_bundle(simulation_bundle),
+        )
         assessments = self.verify_constraints(measurement_report, simulation_bundle)
         robustness = self.certify_robustness(simulation_bundle.candidate_id, simulation_bundle)
         measurement_failures = [result for result in measurement_report.measurement_results if result.status.status != "measured"]
@@ -289,15 +297,6 @@ class SimulationService:
         calibration_feedback = self.emit_calibration_feedback(simulation_bundle, measurement_report, assessments)
         planner_feedback = self._planner_feedback(simulation_bundle, assessments, robustness, calibration_feedback, failure)
         physical_validation = _physical_validation_from_bundle(simulation_bundle, completion_status)
-        simulation_bundle.simulation_provenance = simulation_bundle.simulation_provenance.model_copy(
-            update={
-                "artifact_lineage": [record.artifact_id for record in simulation_bundle.artifact_registry.records],
-                "provenance_tags": [
-                    *simulation_bundle.simulation_provenance.provenance_tags,
-                    f"validation_state={physical_validation.validity_state}",
-                ],
-            }
-        )
         simulation_bundle.artifact_registry, verification_artifact = persist_json_artifact(
             simulation_bundle.artifact_registry,
             "verification_report",
@@ -312,6 +311,15 @@ class SimulationService:
             },
             simulation_provenance=simulation_bundle.simulation_provenance,
             validation_status=physical_validation,
+        )
+        simulation_bundle.simulation_provenance = simulation_bundle.simulation_provenance.model_copy(
+            update={
+                "artifact_lineage": [record.artifact_id for record in simulation_bundle.artifact_registry.records],
+                "provenance_tags": [
+                    *simulation_bundle.simulation_provenance.provenance_tags,
+                    f"validation_state={physical_validation.validity_state}",
+                ],
+            }
         )
         all_constraints_pass = all(item.is_satisfied for item in assessments if item.assessment_basis == "measurement_value")
         unavailable_assessments = [item for item in assessments if item.assessment_basis == "measurement_unavailable"]
@@ -352,7 +360,7 @@ class SimulationService:
                 "truth_level": physical_validation.truth_level,
                 "validation_state": physical_validation.validity_state,
             },
-            artifact_refs=[netlist_artifact, verification_artifact, *[record.artifact_id for record in simulation_bundle.artifact_registry.records]],
+            artifact_refs=[netlist_artifact, measurement_artifact, verification_artifact, *[record.artifact_id for record in simulation_bundle.artifact_registry.records]],
             calibration_payload=calibration_feedback,
             planner_feedback=planner_feedback,
             completion_status=completion_status,

@@ -30,6 +30,10 @@ def _timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _bounded_pressure(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
+
+
 def _candidate_summary(candidate: CandidateRecord | None, verification: VerificationResult | None) -> CandidateOutcomeSummary | None:
     if candidate is None:
         return None
@@ -231,7 +235,7 @@ def consolidate_episode(
             rollouts_used=search_state.budget_state.rollouts_used,
             simulations_used=search_state.budget_state.simulations_used,
             calibrations_used=search_state.budget_state.calibrations_used,
-            budget_pressure=search_state.budget_state.budget_pressure,
+            budget_pressure=_bounded_pressure(search_state.budget_state.budget_pressure),
         ),
         phase_transition_trace=phase_transitions,
         turning_points=_turning_points(search_state, verification),
