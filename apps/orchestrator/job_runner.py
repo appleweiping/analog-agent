@@ -14,6 +14,7 @@ from libs.schema.system_binding import (
     WorldModelTruthBindingResponse,
 )
 from libs.simulation.service import SimulationService
+from libs.simulation.compiler import normalize_fidelity_level
 from libs.world_model.action_builder import build_design_action
 from libs.world_model.compiler import compile_world_model_bundle
 from libs.world_model.service import WorldModelService
@@ -35,7 +36,7 @@ def run_world_model_truth_binding(
     design_task: DesignTask,
     *,
     candidate_id: str | None = None,
-    fidelity_level: str = "focused_validation",
+    fidelity_level: str = "focused_truth",
     backend_preference: str = "ngspice",
     escalation_reason: str = "world_model_truth_binding",
 ) -> WorldModelTruthBindingResponse:
@@ -186,7 +187,7 @@ def run_planning_truth_loop(
     design_task: DesignTask,
     *,
     max_steps: int = 3,
-    fidelity_level: str = "focused_validation",
+    fidelity_level: str = "quick_truth",
     backend_preference: str = "ngspice",
     escalation_reason: str = "planning_truth_loop",
 ) -> PlanningTruthLoopResponse:
@@ -217,11 +218,12 @@ def run_planning_truth_loop(
 
         simulated_candidate_ids: list[str] = []
         for candidate in selection.selected_candidates:
+            requested_fidelity = selection.requested_fidelity_map.get(candidate.candidate_id, normalize_fidelity_level(fidelity_level))
             execution = SimulationService(design_task, planning_bundle, search_state).verify_candidate(
                 candidate.candidate_id,
-                fidelity_level=fidelity_level,
+                fidelity_level=requested_fidelity,
                 backend_preference=backend_preference,
-                escalation_reason=escalation_reason,
+                escalation_reason=f"{escalation_reason}:{requested_fidelity}",
             )
             simulation_executions.append(execution)
             simulated_candidate_ids.append(candidate.candidate_id)
@@ -229,6 +231,7 @@ def run_planning_truth_loop(
                 search_state,
                 candidate.candidate_id,
                 execution.verification_result.calibration_payload.truth_record,
+                execution.verification_result.planner_feedback,
             )
             search_state = feedback.search_state
             planning_service.world_model_bundle = feedback.updated_world_model_bundle
@@ -243,6 +246,7 @@ def run_planning_truth_loop(
                 candidate_pool_size=len(search_state.candidate_pool_state.candidates),
                 selected_for_simulation=[candidate.candidate_id for candidate in selection.selected_candidates],
                 simulated_candidate_ids=simulated_candidate_ids,
+                requested_fidelity=dict(selection.requested_fidelity_map),
                 best_candidate_id=best_candidate.candidate_id if best_candidate is not None else None,
                 best_priority_score=best_candidate.priority_score if best_candidate is not None else 0.0,
                 simulation_calls_used=len(simulated_candidate_ids),

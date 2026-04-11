@@ -23,7 +23,7 @@ class SimulationCompileRequest(BaseModel):
     planning_bundle: PlanningBundle
     search_state: SearchState
     candidate_id: str
-    fidelity_level: str = "focused_validation"
+    fidelity_level: str = "quick_truth"
     backend_preference: str = "ngspice"
     escalation_reason: str = "planner_requested_truth_verification"
 

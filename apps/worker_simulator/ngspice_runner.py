@@ -195,6 +195,15 @@ def _analysis_block(analysis: AnalysisStatement) -> str:
                 ".print ac vdb(vout) vp(vout) vm(vout)",
             ]
         )
+    if analysis.analysis_type == "tran":
+        time_step = float(analysis.parameters.get("time_step_s", 1e-9))
+        stop_time = float(analysis.parameters.get("stop_time_s", 2e-7))
+        return "\n".join(
+            [
+                f".tran {time_step:.6e} {stop_time:.6e}",
+                ".print tran v(vout)",
+            ]
+        )
     raise ValueError(f"unsupported native ngspice analysis: {analysis.analysis_type}")
 
 
@@ -271,6 +280,40 @@ def _phase_margin_proxy(ugb_hz: float | None, p2_hint_hz: float) -> float | None
     return max(5.0, min(89.0, margin))
 
 
+def _parse_tran_rows(log_text: str) -> list[tuple[float, float]]:
+    rows: list[tuple[float, float]] = []
+    capture = False
+    for raw_line in log_text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("Index") and "v(vout)" in line:
+            capture = True
+            continue
+        if not capture or not line or line.startswith("-"):
+            continue
+        parts = line.split()
+        if len(parts) >= 3 and parts[0].isdigit():
+            try:
+                rows.append((float(parts[1]), float(parts[2])))
+            except ValueError:
+                continue
+    return rows
+
+
+def _slew_rate_proxy(rows: list[tuple[float, float]]) -> float | None:
+    if len(rows) < 2:
+        return None
+    best = 0.0
+    for index in range(1, len(rows)):
+        dt = rows[index][0] - rows[index - 1][0]
+        dv = rows[index][1] - rows[index - 1][1]
+        if dt <= 0:
+            continue
+        best = max(best, abs(dv / dt))
+    if best <= 0.0:
+        return None
+    return best / 1e6
+
+
 def run_ngspice_native_analysis(
     *,
     netlist: NetlistInstance,
@@ -335,6 +378,24 @@ def run_ngspice_native_analysis(
             "supply_voltage_v": float(netlist.model_binding.supply_voltage_v or 1.2),
             **({"output_dc_v": float(vout)} if vout is not None else {}),
             **({"first_stage_node_v": float(n1)} if n1 is not None else {}),
+        }
+        return payload
+    if analysis.analysis_type == "tran":
+        rows = _parse_tran_rows(log_text)
+        payload["tran_curve"] = [
+            {"time_s": float(time_s), "vout_v": float(vout_v)}
+            for time_s, vout_v in rows
+        ]
+        if not rows:
+            payload["status"] = "error"
+            payload["error_type"] = "measurement_error"
+            return payload
+        slew = _slew_rate_proxy(rows)
+        if slew is not None:
+            payload["metrics"] = {"slew_rate_v_per_us": float(slew)}
+        payload["op_diagnostics"] = {
+            "tran_row_count": len(rows),
+            "dynamic_span_v": max(row[1] for row in rows) - min(row[1] for row in rows),
         }
         return payload
 

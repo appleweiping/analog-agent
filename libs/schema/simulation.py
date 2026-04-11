@@ -24,6 +24,7 @@ ANALYSIS_TYPES = (
 )
 FIDELITY_LEVELS = (
     "quick_truth",
+    "focused_truth",
     "focused_validation",
     "full_robustness_certification",
     "targeted_failure_analysis",
@@ -267,7 +268,7 @@ class AnalysisPlan(BaseModel):
 
     ordered_analyses: list[AnalysisStatement] = Field(default_factory=list)
     analysis_dependencies: dict[str, list[str]] = Field(default_factory=dict)
-    fidelity_level: Literal["quick_truth", "focused_validation", "full_robustness_certification", "targeted_failure_analysis"]
+    fidelity_level: Literal["quick_truth", "focused_truth", "focused_validation", "full_robustness_certification", "targeted_failure_analysis"]
     execution_policy: Literal["serial", "phase_gated", "parallel_allowed"]
     early_termination_rules: list[str] = Field(default_factory=list)
 
@@ -499,6 +500,99 @@ class BackendRunResult(BaseModel):
         return value
 
 
+class FidelityLevel(BaseModel):
+    """Formal fidelity-level object used by the fifth layer."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Literal["quick_truth", "focused_truth", "focused_validation", "full_robustness_certification", "targeted_failure_analysis"]
+    canonical_name: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
+    purpose: str
+
+
+class FidelitySelectionReason(BaseModel):
+    """Structured reason for fidelity selection or escalation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason_code: str
+    detail: str | None = None
+
+
+class ExecutionPolicy(BaseModel):
+    """Formal execution policy derived from fidelity selection."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    policy_name: str
+    ordered_analysis_scope: list[str] = Field(default_factory=list)
+    measurement_targets: list[str] = Field(default_factory=list)
+    early_termination_rules: list[str] = Field(default_factory=list)
+
+    @field_validator("ordered_analysis_scope")
+    @classmethod
+    def validate_scope(cls, values: list[str]) -> list[str]:
+        invalid = [value for value in values if value not in ANALYSIS_TYPES]
+        if invalid:
+            raise ValueError(f"unsupported ordered_analysis_scope: {invalid}")
+        return _ordered_unique(values, ANALYSIS_TYPES)
+
+    @field_validator("measurement_targets", "early_termination_rules")
+    @classmethod
+    def dedupe_lists(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class FidelityPolicy(BaseModel):
+    """Formal policy describing supported fidelity levels and escalation behavior."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    default_fidelity: Literal["quick_truth", "focused_truth"]
+    supported_fidelities: list[FidelityLevel] = Field(default_factory=list)
+    escalation_rules: list[str] = Field(default_factory=list)
+
+    @field_validator("escalation_rules")
+    @classmethod
+    def dedupe_rules(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class VerificationExecutionProfile(BaseModel):
+    """Resolved execution profile attached to a compiled verification bundle/result."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    requested_fidelity: str
+    resolved_fidelity: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
+    execution_policy: ExecutionPolicy
+    selection_reason: FidelitySelectionReason
+    provenance: list[str] = Field(default_factory=list)
+
+    @field_validator("provenance")
+    @classmethod
+    def dedupe_provenance(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class EscalationAdvice(BaseModel):
+    """Structured advice emitted back to the planner about fidelity escalation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    advice: Literal["retain_current_fidelity", "upgrade_to_focused_truth", "repeat_focused_truth", "defer_escalation"]
+    recommended_fidelity: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
+    escalation_reason: str
+    confidence: float = 0.5
+
+    @field_validator("confidence")
+    @classmethod
+    def validate_confidence(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("confidence must be within [0, 1]")
+        return round(float(value), 4)
+
+
 class ServiceMethodSpec(BaseModel):
     """Formal service-method signature for the fifth layer."""
 
@@ -617,7 +711,7 @@ class SimulationRequest(BaseModel):
     world_state_ref: str
     planner_context_ref: str
     analysis_scope: list[str] = Field(default_factory=list)
-    fidelity_level: Literal["quick_truth", "focused_validation", "full_robustness_certification", "targeted_failure_analysis"]
+    fidelity_level: Literal["quick_truth", "focused_truth", "focused_validation", "full_robustness_certification", "targeted_failure_analysis"]
     backend_preference: Literal["ngspice", "xyce", "spectre_compat"]
     environment_overrides: dict[str, float | int | str | bool] = Field(default_factory=dict)
     measurement_targets: list[str] = Field(default_factory=list)
@@ -654,6 +748,8 @@ class SimulationBundle(BaseModel):
     netlist_instance: NetlistInstance
     analysis_plan: AnalysisPlan
     measurement_contract: MeasurementContract
+    fidelity_policy: FidelityPolicy
+    execution_profile: VerificationExecutionProfile
     verification_policy: VerificationPolicy
     robustness_policy: RobustnessPolicy
     artifact_registry: ArtifactRegistry
@@ -897,6 +993,9 @@ class PlannerFeedback(BaseModel):
     phase_hint: str | None = None
     trust_alerts: list[str] = Field(default_factory=list)
     feedback_basis: Literal["design_failure", "measurement_failure", "simulation_failure", "verification_success"] = "verification_success"
+    escalation_advice: list[EscalationAdvice] = Field(default_factory=list)
+    recommended_fidelity: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"] | None = None
+    escalation_reason: str | None = None
     artifact_refs: list[str] = Field(default_factory=list)
 
     @field_validator("strategy_correction", "trust_alerts", "artifact_refs")
@@ -912,8 +1011,9 @@ class VerificationResult(BaseModel):
 
     result_id: str
     candidate_id: str
-    executed_fidelity: Literal["quick_truth", "focused_validation", "full_robustness_certification", "targeted_failure_analysis"]
+    executed_fidelity: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
     backend_signature: str
+    execution_profile: VerificationExecutionProfile
     measurement_report: MeasurementReport
     constraint_assessment: list[ConstraintAssessmentRecord] = Field(default_factory=list)
     feasibility_status: Literal[

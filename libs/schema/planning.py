@@ -236,13 +236,17 @@ class EscalationPolicy(BaseModel):
     min_simulation_value: float
     allow_must_escalate_override: bool = True
     max_batch_size: int
+    default_fidelity: Literal["quick_truth"] = "quick_truth"
+    promoted_fidelity: Literal["focused_truth"] = "focused_truth"
+    near_feasible_margin_threshold: float = 0.1
+    focused_truth_batch_limit: int = 1
     allowed_service_tiers: list[str] = Field(default_factory=list)
 
-    @field_validator("min_simulation_value")
+    @field_validator("min_simulation_value", "near_feasible_margin_threshold")
     @classmethod
     def validate_simulation_value(cls, value: float) -> float:
         if value < 0.0 or value > 1.0:
-            raise ValueError("min_simulation_value must be within [0, 1]")
+            raise ValueError("escalation-policy scores must be within [0, 1]")
         return round(float(value), 4)
 
     @field_validator("allowed_service_tiers")
@@ -666,6 +670,7 @@ class SimulationDecision(BaseModel):
     decision: Literal["keep", "defer", "simulate", "prioritize", "drop"]
     candidate_ids: list[str] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
+    requested_fidelity: str | None = None
 
     @field_validator("candidate_ids", "reasons")
     @classmethod
@@ -853,6 +858,7 @@ class SimulationSelectionResponse(BaseModel):
 
     search_state: SearchState
     selected_candidates: list[CandidateRecord] = Field(default_factory=list)
+    requested_fidelity_map: dict[str, str] = Field(default_factory=dict)
     traces: list[OptimizationTrace] = Field(default_factory=list)
 
 

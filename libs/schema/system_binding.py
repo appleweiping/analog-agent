@@ -26,7 +26,7 @@ class WorldModelTruthBindingRequest(BaseModel):
 
     design_task: DesignTask
     candidate_id: str | None = None
-    fidelity_level: str = "focused_validation"
+    fidelity_level: str = "focused_truth"
     backend_preference: str = "ngspice"
     escalation_reason: str = "world_model_truth_binding"
 
@@ -54,7 +54,7 @@ class PlanningTruthLoopRequest(BaseModel):
 
     design_task: DesignTask
     max_steps: int = 3
-    fidelity_level: str = "focused_validation"
+    fidelity_level: str = "quick_truth"
     backend_preference: str = "ngspice"
     escalation_reason: str = "planning_truth_loop"
 
@@ -68,6 +68,7 @@ class PlanningStepSummary(BaseModel):
     candidate_pool_size: int
     selected_for_simulation: list[str] = Field(default_factory=list)
     simulated_candidate_ids: list[str] = Field(default_factory=list)
+    requested_fidelity: dict[str, str] = Field(default_factory=dict)
     best_candidate_id: str | None = None
     best_priority_score: float = 0.0
     simulation_calls_used: int = 0

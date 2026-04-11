@@ -16,6 +16,10 @@ from libs.schema.simulation import (
     ValidationCheck,
 )
 
+
+def _resolved_fidelity(fidelity_level: str) -> str:
+    return "focused_truth" if fidelity_level == "focused_validation" else fidelity_level
+
 def _analysis_statement(spec: AnalysisSpec) -> AnalysisStatement:
     return AnalysisStatement(
         analysis_type=spec.analysis_type,
@@ -28,6 +32,7 @@ def _analysis_statement(spec: AnalysisSpec) -> AnalysisStatement:
 def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> AnalysisPlan:
     """Build a structured analysis plan from DesignTask.evaluation_plan."""
 
+    fidelity_level = _resolved_fidelity(request.fidelity_level)
     base = [_analysis_statement(spec) for spec in sorted(task.evaluation_plan.analyses, key=lambda item: item.order)]
     if request.analysis_scope:
         base = [analysis for analysis in base if analysis.analysis_type in request.analysis_scope]
@@ -37,7 +42,7 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
     existing = {analysis.analysis_type for analysis in base}
     extras: list[AnalysisStatement] = []
     real_ota_native = request.backend_preference == "ngspice" and task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed"
-    if real_ota_native and request.fidelity_level in {"quick_truth", "focused_validation"}:
+    if real_ota_native and fidelity_level == "quick_truth":
         ordered = []
         for analysis in base:
             if analysis.analysis_type not in {"op", "ac"}:
@@ -48,17 +53,49 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
             ordered.append(analysis.model_copy(update={"required_metrics": required}))
         execution_policy = "serial"
         termination_rules = ["stop_on_netlist_failure", "stop_on_simulation_error", "stop_after_core_truth_violation"]
-    elif request.fidelity_level == "quick_truth":
+    elif real_ota_native and fidelity_level == "focused_truth":
+        ordered = []
+        for analysis in base:
+            if analysis.analysis_type not in {"op", "ac"}:
+                continue
+            required = list(analysis.required_metrics)
+            if analysis.analysis_type == "ac":
+                for metric in ["dc_gain_db", "gbw_hz", "phase_margin_deg"]:
+                    if metric not in required:
+                        required.append(metric)
+                ordered.append(
+                    analysis.model_copy(
+                        update={
+                            "required_metrics": required,
+                            "parameters": {**analysis.parameters, "points_per_dec": 60, "f_stop_hz": 2e10, "fidelity_mode": "focused_truth"},
+                        }
+                    )
+                )
+            else:
+                ordered.append(analysis)
+        ordered_types = {analysis.analysis_type for analysis in ordered}
+        if "tran" not in ordered_types:
+            extras.append(
+                AnalysisStatement(
+                    analysis_type="tran",
+                    order=max((analysis.order for analysis in ordered), default=0) + 1,
+                    parameters={"purpose": "focused_truth_dynamic_sanity", "time_step_s": 1e-9, "stop_time_s": 2e-7},
+                    required_metrics=["slew_rate_v_per_us"],
+                )
+            )
+        execution_policy = "phase_gated"
+        termination_rules = ["stop_on_netlist_failure", "stop_on_core_constraint_failure", "retain_tran_diagnostics_for_borderline_candidates"]
+    elif fidelity_level == "quick_truth":
         ordered = [analysis for analysis in base if analysis.analysis_type in {"op", "ac", "tran"}][:2]
         execution_policy = "serial"
         termination_rules = ["stop_on_critical_integrity_failure", "stop_after_first_core_constraint_violation"]
-    elif request.fidelity_level == "focused_validation":
+    elif fidelity_level == "focused_truth":
         ordered = [analysis for analysis in base if analysis.analysis_type in {"op", "ac", "tran", "noise"}]
         if "tran" not in existing:
-            extras.append(AnalysisStatement(analysis_type="tran", order=len(ordered), parameters={"purpose": "focused_validation"}, required_metrics=["slew_rate_v_per_us"]))
+            extras.append(AnalysisStatement(analysis_type="tran", order=len(ordered), parameters={"purpose": "focused_truth"}, required_metrics=["slew_rate_v_per_us"]))
         execution_policy = "phase_gated"
         termination_rules = ["stop_on_core_constraint_failure"]
-    elif request.fidelity_level == "targeted_failure_analysis":
+    elif fidelity_level == "targeted_failure_analysis":
         ordered = [analysis for analysis in base if analysis.analysis_type in {"op", "ac", "tran", "noise"}]
         if "noise" not in existing:
             extras.append(AnalysisStatement(analysis_type="noise", order=len(ordered), parameters={"purpose": "failure_analysis"}, required_metrics=["noise_nv_per_sqrt_hz"]))
@@ -90,7 +127,7 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
     return AnalysisPlan(
         ordered_analyses=ordered,
         analysis_dependencies=dependencies,
-        fidelity_level=request.fidelity_level,
+        fidelity_level=fidelity_level,
         execution_policy=execution_policy,
         early_termination_rules=termination_rules,
     )

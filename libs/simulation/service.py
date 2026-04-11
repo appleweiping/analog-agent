@@ -19,7 +19,7 @@ from libs.schema.simulation import (
 from libs.schema.world_model import WORLD_MODEL_METRICS, TruthCalibrationRecord, TruthConstraint, TruthMetric
 from libs.simulation.artifact_registry import persist_json_artifact, persist_text_artifact
 from libs.simulation.backend_router import execute_bundle, validate_backend
-from libs.simulation.compiler import build_simulation_request, compile_simulation_bundle
+from libs.simulation.compiler import build_simulation_request, compile_simulation_bundle, normalize_fidelity_level
 from libs.simulation.constraint_verifier import verify_constraints
 from libs.simulation.failure_analyzer import attribute_failures
 from libs.simulation.measurement_extractors import extract_measurement_report
@@ -33,9 +33,10 @@ def _timestamp() -> str:
 
 
 def _truth_fidelity(simulation_fidelity: str) -> str:
+    simulation_fidelity = normalize_fidelity_level(simulation_fidelity)
     mapping = {
         "quick_truth": "quick_screening",
-        "focused_validation": "partial_simulation",
+        "focused_truth": "partial_simulation",
         "full_robustness_certification": "full_ground_truth",
         "targeted_failure_analysis": "full_ground_truth",
     }
@@ -168,7 +169,8 @@ class SimulationService:
         else:
             all_pass = all(item.is_satisfied for item in assessments)
             robust_pass = robustness.certification_status in {"robust_certified", "partial_robust", "nominal_only"}
-            if all_pass and robust_pass and simulation_bundle.analysis_plan.fidelity_level == "full_robustness_certification":
+            resolved_fidelity = normalize_fidelity_level(simulation_bundle.analysis_plan.fidelity_level)
+            if all_pass and robust_pass and resolved_fidelity == "full_robustness_certification":
                 lifecycle = "verified"
             elif all_pass:
                 lifecycle = "needs_more_simulation"
@@ -182,6 +184,23 @@ class SimulationService:
             ]
             basis = "verification_success" if lifecycle == "verified" else "design_failure"
             phase_hint = "robustness_verification" if lifecycle == "verified" else self.search_state.phase_state.current_phase
+        resolved_fidelity = simulation_bundle.execution_profile.resolved_fidelity
+        if failure.primary_failure_class == "measurement_failure":
+            escalation_advice = ["upgrade_to_focused_truth"] if resolved_fidelity == "quick_truth" else ["repeat_focused_truth"]
+            recommended_fidelity = "focused_truth"
+            escalation_reason = "measurement_anomaly_requires_stronger_truth"
+        elif lifecycle == "boundary_candidate":
+            escalation_advice = ["upgrade_to_focused_truth"] if resolved_fidelity == "quick_truth" else ["retain_current_fidelity"]
+            recommended_fidelity = "focused_truth"
+            escalation_reason = "boundary_candidate_requires_higher_confidence"
+        elif lifecycle == "verified":
+            escalation_advice = ["retain_current_fidelity"]
+            recommended_fidelity = resolved_fidelity
+            escalation_reason = "verification_sufficient_for_current_phase"
+        else:
+            escalation_advice = ["defer_escalation"]
+            recommended_fidelity = "quick_truth"
+            escalation_reason = "default_screening_path"
         return PlannerFeedback(
             candidate_id=simulation_bundle.candidate_id,
             lifecycle_update=lifecycle,
@@ -189,6 +208,17 @@ class SimulationService:
             phase_hint=phase_hint,
             trust_alerts=list(calibration_feedback.trust_violation_flags),
             feedback_basis=basis,
+            escalation_advice=[
+                {
+                    "advice": advice,
+                    "recommended_fidelity": recommended_fidelity,
+                    "escalation_reason": escalation_reason,
+                    "confidence": 0.72 if advice != "defer_escalation" else 0.55,
+                }
+                for advice in escalation_advice
+            ],
+            recommended_fidelity=recommended_fidelity,
+            escalation_reason=escalation_reason,
             artifact_refs=[record.artifact_id for record in simulation_bundle.artifact_registry.records],
         )
 
@@ -248,8 +278,9 @@ class SimulationService:
         result = VerificationResult(
             result_id=f"vres_{stable_hash(f'{simulation_bundle.simulation_id}|{simulation_bundle.candidate_id}')[:12]}",
             candidate_id=simulation_bundle.candidate_id,
-            executed_fidelity=simulation_bundle.analysis_plan.fidelity_level,
+            executed_fidelity=simulation_bundle.execution_profile.resolved_fidelity,
             backend_signature=f"{simulation_bundle.backend_binding.backend}:{simulation_bundle.backend_binding.backend_version}",
+            execution_profile=simulation_bundle.execution_profile,
             measurement_report=measurement_report,
             constraint_assessment=assessments,
             feasibility_status=feasibility,
@@ -278,7 +309,7 @@ class SimulationService:
         self,
         candidate_id: str,
         *,
-        fidelity_level: str = "focused_validation",
+        fidelity_level: str = "quick_truth",
         backend_preference: str = "ngspice",
         escalation_reason: str = "planner_requested_truth_verification",
     ) -> SimulationExecutionResponse:

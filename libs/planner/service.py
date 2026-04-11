@@ -46,6 +46,7 @@ from libs.schema.planning import (
     TerminationDecision,
     WorldModelQueryRecord,
 )
+from libs.schema.simulation import PlannerFeedback
 from libs.schema.world_model import TruthCalibrationRecord, TrustAssessment, WorldModelBundle, WorldState
 from libs.utils.hashing import stable_hash
 from libs.world_model.service import WorldModelService
@@ -234,6 +235,27 @@ class PlanningService:
             ranking_scores=ranking_scores,
             policy=self.planning_bundle.selection_policy,
         )
+
+    def _minimum_constraint_margin(self, candidate: CandidateRecord) -> float | None:
+        if candidate.predicted_feasibility is None or not candidate.predicted_feasibility.per_group_constraints:
+            return None
+        return min(item.margin for item in candidate.predicted_feasibility.per_group_constraints)
+
+    def recommend_simulation_fidelity(self, candidate: CandidateRecord) -> tuple[str, str]:
+        """Recommend the simulation fidelity for one selected candidate."""
+
+        default_fidelity = self.planning_bundle.escalation_policy.default_fidelity
+        promoted_fidelity = self.planning_bundle.escalation_policy.promoted_fidelity
+        if candidate.predicted_feasibility is None or candidate.predicted_uncertainty is None:
+            return default_fidelity, "default_screening_path"
+        min_margin = self._minimum_constraint_margin(candidate)
+        if candidate.predicted_uncertainty.must_escalate and candidate.simulation_value_estimate is not None and candidate.simulation_value_estimate.estimated_value >= self.planning_bundle.escalation_policy.min_simulation_value:
+            return promoted_fidelity, "trust_or_measurement_recheck"
+        if candidate.predicted_feasibility.overall_feasibility >= 0.75:
+            return promoted_fidelity, "nominal_feasible_candidate"
+        if min_margin is not None and abs(min_margin) <= self.planning_bundle.escalation_policy.near_feasible_margin_threshold:
+            return promoted_fidelity, "near_feasible_boundary_candidate"
+        return default_fidelity, "default_screening_path"
 
     def _evaluate_records(self, candidates: list[CandidateRecord], budget_state):
         if not candidates:
@@ -500,13 +522,23 @@ class PlanningService:
         else:
             top_k = min(1, remaining_simulations(search_state.budget_state))
         selected = selectable[:top_k]
+        requested_fidelity_map: dict[str, str] = {}
+        promoted_count = 0
         pool_state = search_state.candidate_pool_state
         queued_selected: list[CandidateRecord] = []
         for candidate in selected:
+            requested_fidelity, fidelity_reason = self.recommend_simulation_fidelity(candidate)
+            if requested_fidelity == self.planning_bundle.escalation_policy.promoted_fidelity:
+                if promoted_count >= self.planning_bundle.escalation_policy.focused_truth_batch_limit:
+                    requested_fidelity = self.planning_bundle.escalation_policy.default_fidelity
+                    fidelity_reason = "focused_truth_budget_cap"
+                else:
+                    promoted_count += 1
+            requested_fidelity_map[candidate.candidate_id] = requested_fidelity
             updated = append_decision_event(
                 candidate.model_copy(update={"lifecycle_state": "queued_for_simulation", "lifecycle_status": "queued_for_simulation"}),
                 "simulate",
-                "selected by escalation policy",
+                f"selected by escalation policy ({requested_fidelity}:{fidelity_reason})",
             )
             queued_selected.append(updated)
             pool_state = upsert_candidate(pool_state, updated)
@@ -521,6 +553,7 @@ class PlanningService:
                 decision="simulate" if selected else "defer",
                 candidate_ids=[candidate.candidate_id for candidate in selected],
                 reasons=["budget-aware escalation"],
+                requested_fidelity=requested_fidelity_map.get(selected[0].candidate_id) if selected else None,
             ),
             decision_rationale=["selected candidates based on simulation value and trust tier"],
             reward_or_progress_signal=max((candidate.priority_score for candidate in selected), default=0.0),
@@ -534,13 +567,14 @@ class PlanningService:
             provenance_source="candidate_evaluation",
             traces=[trace],
         ).model_copy(update={"pending_simulation_refs": [*search_state.pending_simulation_refs, *[candidate.candidate_id for candidate in queued_selected]]})
-        return SimulationSelectionResponse(search_state=updated_state, selected_candidates=queued_selected, traces=[trace])
+        return SimulationSelectionResponse(search_state=updated_state, selected_candidates=queued_selected, requested_fidelity_map=requested_fidelity_map, traces=[trace])
 
     def ingest_simulation_feedback(
         self,
         search_state: SearchState,
         candidate_id: str,
         truth: TruthCalibrationRecord,
+        planner_feedback: PlannerFeedback | None = None,
     ) -> SimulationFeedbackResponse:
         """Ingest real simulator feedback for one candidate."""
 
@@ -552,7 +586,13 @@ class PlanningService:
         feasible = all(item.is_satisfied for item in truth.constraints) if truth.constraints else (
             candidate.predicted_feasibility.overall_feasibility >= 0.8 if candidate.predicted_feasibility else False
         )
-        lifecycle = "verified" if feasible else "rejected"
+        requested_lifecycle = planner_feedback.lifecycle_update if planner_feedback is not None else ("verified" if feasible else "rejected")
+        lifecycle = {
+            "verified": "verified",
+            "rejected": "rejected",
+            "needs_more_simulation": "frontier",
+            "boundary_candidate": "frontier",
+        }[requested_lifecycle]
         updated_candidate = append_evaluation_event(
             candidate.model_copy(
                 update={
@@ -566,8 +606,10 @@ class PlanningService:
         )
         updated_candidate = append_decision_event(
             updated_candidate,
-            "keep" if feasible else "drop",
-            "verified feasible by simulator" if feasible else "simulator feedback rejected candidate",
+            "keep" if requested_lifecycle in {"verified", "boundary_candidate", "needs_more_simulation"} else "drop",
+            planner_feedback.escalation_reason if planner_feedback is not None and planner_feedback.escalation_reason else (
+                "verified feasible by simulator" if feasible else "simulator feedback rejected candidate"
+            ),
         )
         pool_state = upsert_candidate(search_state.candidate_pool_state, updated_candidate)
         budget_state = consume_calibrations(search_state.budget_state, 1)

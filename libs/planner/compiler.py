@@ -80,6 +80,10 @@ def _escalation_policy(task: DesignTask) -> EscalationPolicy:
         min_simulation_value=threshold,
         allow_must_escalate_override=True,
         max_batch_size=1 if task.solver_hint.budget_hint == "low" else 2,
+        default_fidelity="quick_truth",
+        promoted_fidelity="focused_truth",
+        near_feasible_margin_threshold=0.08 if task.solver_hint.needs_feasibility_first else 0.12,
+        focused_truth_batch_limit=1,
         allowed_service_tiers=["ranking_ready", "rollout_ready", "must_escalate"],
     )
 

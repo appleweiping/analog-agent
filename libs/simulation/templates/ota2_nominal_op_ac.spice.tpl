@@ -6,6 +6,7 @@
 
 .param vdd=${vdd}
 .param vin_cm=${vin_cm}
+.param vin_step_high=${vin_step_high}
 .param ibias=${ibias}
 .param cc=${cc}
 .param cload=${cload}
@@ -17,7 +18,7 @@
 
 VDD vdd 0 {vdd}
 VCM vcm 0 {vin_cm}
-VINP vinp 0 DC {vin_cm} AC 1
+VINP vinp 0 DC {vin_cm} AC 1 PULSE({vin_cm} {vin_step_high} 20n 1n 1n 80n 200n)
 VINN vinn 0 DC {vin_cm}
 
 * First stage proxy: differential transconductor into a high-gain node.

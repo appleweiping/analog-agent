@@ -55,7 +55,7 @@ class SimulationBadSampleIntegrationTests(unittest.TestCase):
         task, planning_bundle, search_state, candidate_id = self._context()
         execution = SimulationService(task, planning_bundle, search_state).verify_candidate(
             candidate_id,
-            fidelity_level="focused_validation",
+            fidelity_level="quick_truth",
             backend_preference="ngspice",
         )
 

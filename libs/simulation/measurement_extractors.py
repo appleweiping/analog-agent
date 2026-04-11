@@ -451,6 +451,23 @@ def _extract_power(op_output: dict[str, object]) -> MeasurementResult:
     return _result("power_w", "si", "op", status="indeterminate", reason="power_unavailable", detail="missing_power_source")
 
 
+def _extract_slew_rate(tran_output: dict[str, object]) -> MeasurementResult:
+    if not _analysis_success(tran_output):
+        return _result("slew_rate_v_per_us", "si", "tran", status="analysis_failed", reason="analysis_failure", detail="tran_analysis_failed")
+    direct = _metric_from_direct_source("slew_rate_v_per_us", "tran", tran_output, confidence=0.82)
+    if direct is not None:
+        return direct
+    return _result(
+        "slew_rate_v_per_us",
+        "si",
+        "tran",
+        status="indeterminate",
+        reason="no_metric_source",
+        detail="missing_tran_slew_source",
+        confidence=0.2,
+    )
+
+
 def extract_measurement_report(
     simulation_bundle: SimulationBundle,
     parsed_outputs: list[dict[str, object]],
@@ -483,11 +500,13 @@ def extract_measurement_report(
 
     op_output = outputs_by_analysis.get("op", {})
     ac_output = outputs_by_analysis.get("ac", {})
+    tran_output = outputs_by_analysis.get("tran", {})
     extractor_map = {
         "dc_gain_db": lambda: _extract_dc_gain(ac_output),
         "gbw_hz": lambda: _extract_gbw(ac_output),
         "phase_margin_deg": None,
         "power_w": lambda: _extract_power(op_output),
+        "slew_rate_v_per_us": lambda: _extract_slew_rate(tran_output),
     }
 
     gbw_result: MeasurementResult | None = None

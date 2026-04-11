@@ -64,6 +64,7 @@ def _demonstrator_ota2_bindings(task: DesignTask, candidate: CandidateRecord) ->
     load_cap_f = float(env.load_cap_f or 2e-12)
     supply_v = float(env.supply_voltage_v or 1.2)
     vin_cm = round(supply_v / 2.0, 6)
+    vin_step_high = round(min(supply_v * 0.7, vin_cm + 0.08), 6)
 
     width_ratio_in = max(w_in / l_in, 0.5)
     width_ratio_tail = max(w_tail / l_tail, 0.5)
@@ -89,6 +90,7 @@ def _demonstrator_ota2_bindings(task: DesignTask, candidate: CandidateRecord) ->
         ParameterBinding(variable_name="ro2", netlist_target="param::ro2", value_si=ro2, units="ohm", source="system_inferred"),
         ParameterBinding(variable_name="cp1", netlist_target="param::cp1", value_si=cp1, units="F", source="system_inferred"),
         ParameterBinding(variable_name="p2_hint_hz", netlist_target="hint::p2_hz", value_si=p2_hint_hz, units="Hz", source="system_inferred"),
+        ParameterBinding(variable_name="vin_step_high", netlist_target="param::vin_step_high", value_si=vin_step_high, units="V", source="system_inferred"),
     ]
     model_binding = ModelBinding(
         process_node=task.parent_spec_id,
@@ -109,6 +111,7 @@ def _demonstrator_ota2_bindings(task: DesignTask, candidate: CandidateRecord) ->
         p2_hint_hz=f"{p2_hint_hz:.6e}",
         vdd=f"{supply_v:.6e}",
         vin_cm=f"{vin_cm:.6e}",
+        vin_step_high=f"{vin_step_high:.6e}",
         ibias=f"{ibias:.6e}",
         cc=f"{cc:.6e}",
         cload=f"{load_cap_f:.6e}",

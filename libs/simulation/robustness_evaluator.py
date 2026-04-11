@@ -41,7 +41,8 @@ def certify_robustness(
 ) -> RobustnessCertificate:
     """Evaluate robustness according to fidelity and policy."""
 
-    if fidelity_level not in {"full_robustness_certification", "focused_validation"}:
+    resolved_fidelity = "focused_truth" if fidelity_level == "focused_validation" else fidelity_level
+    if resolved_fidelity not in {"full_robustness_certification", "focused_truth"}:
         return RobustnessCertificate(
             certificate_id=f"rob_{stable_hash(candidate.candidate_id)[:12]}",
             certification_status="nominal_only",
@@ -67,7 +68,7 @@ def certify_robustness(
                 metrics = compute_truth_metrics(
                     task,
                     candidate,
-                    analysis_type="pvt_sweep" if fidelity_level == "full_robustness_certification" else "ac",
+                    analysis_type="pvt_sweep" if resolved_fidelity == "full_robustness_certification" else "ac",
                     corner=corner,
                     temperature_c=float(temperature),
                     load_cap_f=float(load),
@@ -82,12 +83,12 @@ def certify_robustness(
 
     total = len(conditions) or 1
     pass_rate = pass_count / total
-    if fidelity_level == "full_robustness_certification":
+    if resolved_fidelity == "full_robustness_certification":
         status = "robust_certified" if pass_rate == 1.0 else "robustness_failed"
     else:
         status = "partial_robust" if pass_rate >= 0.5 else "robustness_failed"
     return RobustnessCertificate(
-        certificate_id=f"rob_{stable_hash(f'{candidate.candidate_id}|{fidelity_level}')[:12]}",
+        certificate_id=f"rob_{stable_hash(f'{candidate.candidate_id}|{resolved_fidelity}')[:12]}",
         certification_status=status,
         evaluated_conditions=conditions,
         pass_rate=round(pass_rate, 4),
