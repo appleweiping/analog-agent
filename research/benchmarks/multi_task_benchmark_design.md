@@ -55,10 +55,10 @@ This task is now the second runnable vertical slice and tests whether the system
 - Benchmark id: `ldo_v1`
 - Family: `ldo`
 - Role: `generalization_probe`
-- Readiness: `spec_ready`
+- Readiness: `frozen_runnable`
 - Purpose: move from amplifier synthesis to regulator synthesis and stress the benchmark stack with family-specific regulation metrics
 
-This is the first benchmark that meaningfully broadens the task distribution beyond OTA-family design.
+This is the first runnable benchmark that meaningfully broadens the task distribution beyond OTA-family design.
 
 ### 4. Bandgap v1
 
@@ -89,18 +89,17 @@ This tier supports:
 
 `ota2_v1` remains the paper-primary path, while `folded_cascode_v1` is the secondary runnable amplifier benchmark used for generalization evidence.
 
-### Tier B: Near-term generalization
+### Tier B: Runnable cross-family generalization
 
 - `ldo_v1`
 
 This tier supports:
 
 - benchmark configuration
-- task semantics
-- metric contracts
-- fidelity/default truth declarations
-
-It does not yet claim a complete frozen executable vertical slice.
+- fixed `DesignTask -> Candidate -> Simulation -> Verification -> Memory` object flow
+- frozen fidelity/default truth declarations
+- acceptance and experiment entry points
+- benchmark/stats exports aligned with OTA and folded cascode
 
 ### Tier C: Future extension
 
@@ -144,12 +143,14 @@ Auxiliary metrics:
 
 Primary metrics:
 
+- `gbw_hz`
 - `phase_margin_deg`
 - `power_w`
 - `output_swing_v`
 
 Auxiliary metrics:
 
+- `slew_rate_v_per_us`
 - `psrr_db`
 - `line_regulation_mv_per_v`
 - `load_regulation_mv_per_ma`
@@ -171,7 +172,7 @@ Auxiliary metrics:
 This benchmark design already supports a strong paper structure:
 
 - main result on `ota2_v1`
-- secondary generalization claim on folded cascode and/or LDO once their vertical slices are implemented
+- secondary generalization claim on folded cascode and LDO with runnable vertical slices
 - honest statement that the suite is broader than the currently frozen executable path
 - direct alignment between benchmark configs, stats aggregation, and future tables/figures
 
@@ -179,9 +180,8 @@ This benchmark design already supports a strong paper structure:
 
 The benchmark suite is now formally designed, but not fully executable across every task. The following still needs implementation work:
 
-- at least one non-OTA runnable regulator path
-- family-aware templates and measurement contracts in the simulation main path for LDO and bandgap
-- cross-task baselines beyond OTA
+- family-aware templates and measurement contracts in the simulation main path for bandgap
+- cross-task baselines beyond OTA/folded-cascode/LDO
 
 ## Conference-Ready Interpretation
 
@@ -189,7 +189,7 @@ The benchmark suite should currently be described as:
 
 - one paper-primary runnable benchmark (`ota2_v1`)
 - one paper-secondary runnable benchmark (`folded_cascode_v1`)
-- one spec-ready generalization target (`ldo_v1`)
+- one runnable cross-family regulator benchmark (`ldo_v1`)
 - one formal future extension (`bandgap_v1`)
 
 This is strong enough to organize the next phase of top-conference experimentation without overclaiming current execution maturity.

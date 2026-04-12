@@ -1,26 +1,21 @@
 {
-  "benchmark_id": "ldo_v1",
   "version": "ldo_v1",
   "family": "ldo",
-  "category": "regulator",
-  "benchmark_role": "generalization_probe",
-  "execution_readiness": "spec_ready",
-  "vertical_slice_bound": false,
-  "physical_validity_target": "demonstrator_truth",
   "freeze_policy": {
     "frozen_version": "ldo_v1",
     "paper_track": true,
-    "change_rule": "create_v2_or_preserve_v1_semantics"
+    "change_rule": "create_v2_or_preserve_v1"
   },
   "task": {
     "task_id": "ldo_v1",
     "process_node": "65nm",
     "supply_voltage_v": 1.2,
     "objectives": {
-      "maximize": ["phase_margin_deg"],
+      "maximize": ["gbw_hz"],
       "minimize": ["power_w"]
     },
     "hard_constraints": {
+      "gbw_hz": {"min": 2000000.0},
       "phase_margin_deg": {"min": 60.0},
       "power_w": {"max": 0.002},
       "output_swing_v": {"min": 1.0}
@@ -28,33 +23,71 @@
     "environment": {
       "temperature_c": [27.0],
       "corners": ["tt"],
-      "output_load_ohm": 120.0,
+      "output_load_ohm": 1200.0,
+      "load_cap_f": 5.0e-12,
       "supply_voltage_v": 1.2
     },
     "testbench_plan": ["op", "ac", "tran"],
     "design_variables": ["w_pass", "l_pass", "w_err", "l_err", "ibias", "c_comp"]
   },
-  "measurement_contract": {
-    "primary_metrics": ["phase_margin_deg", "power_w", "output_swing_v"],
-    "auxiliary_metrics": ["psrr_db", "line_regulation_mv_per_v", "load_regulation_mv_per_ma"],
-    "reporting_metrics": ["phase_margin_deg", "power_w", "output_swing_v", "psrr_db", "line_regulation_mv_per_v", "load_regulation_mv_per_ma"]
+  "design_variables": {
+    "w_pass": {
+      "units": "m",
+      "role": "pass_device_width",
+      "description": "PMOS pass device width"
+    },
+    "l_pass": {
+      "units": "m",
+      "role": "pass_device_length",
+      "description": "PMOS pass device channel length"
+    },
+    "w_err": {
+      "units": "m",
+      "role": "error_amplifier_width",
+      "description": "error amplifier effective width proxy"
+    },
+    "l_err": {
+      "units": "m",
+      "role": "error_amplifier_length",
+      "description": "error amplifier effective length proxy"
+    },
+    "ibias": {
+      "units": "A",
+      "role": "bias_current",
+      "description": "LDO total quiescent bias current proxy"
+    },
+    "c_comp": {
+      "units": "F",
+      "role": "compensation_capacitance",
+      "description": "LDO loop compensation capacitance"
+    }
   },
-  "execution_defaults": {
-    "backend_preference": "ngspice",
-    "default_fidelity": "quick_truth",
-    "promoted_fidelity": "focused_truth",
-    "truth_level": "demonstrator_truth",
-    "model_type": "builtin"
-  },
-  "intended_templates": {
+  "measurement_targets": ["gbw_hz", "phase_margin_deg", "power_w", "output_swing_v"],
+  "paths": {
     "netlist_template": "templates/netlist/ldo/v1/ldo_demonstrator_truth.spice.tpl",
     "quick_truth_testbench": "templates/testbench/ldo/v1/quick_truth.yaml",
     "focused_truth_testbench": "templates/testbench/ldo/v1/focused_truth.yaml",
     "measurement_contract": "templates/testbench/ldo/v1/measurement_contract.yaml"
   },
-  "notes": [
-    "regulator_generalization_probe",
-    "extends_benchmark_beyond_amplifier_family",
-    "family_specific_metrics_are_defined_even_before_vertical_slice_is_implemented"
-  ]
+  "defaults": {
+    "backend_preference": "ngspice",
+    "fidelity_policy": {
+      "default_fidelity": "quick_truth",
+      "promoted_fidelity": "focused_truth",
+      "quick_truth_analyses": ["op", "ac"],
+      "focused_truth_analyses": ["op", "ac", "tran"],
+      "escalation_thresholds": {
+        "predicted_feasible_probability_min": 0.68,
+        "near_feasible_margin_abs_max": 0.12,
+        "focused_truth_batch_limit": 1,
+        "measurement_recheck_enabled": true
+      }
+    },
+    "model_binding": {
+      "model_type": "builtin",
+      "truth_level": "demonstrator_truth",
+      "default_builtin_model": "builtin_demo_ldo_loop_v1",
+      "external_model_card_path": ""
+    }
+  }
 }

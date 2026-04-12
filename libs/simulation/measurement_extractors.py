@@ -451,6 +451,38 @@ def _extract_power(op_output: dict[str, object]) -> MeasurementResult:
     return _result("power_w", "si", "op", status="indeterminate", reason="power_unavailable", detail="missing_power_source")
 
 
+def _extract_output_swing(op_output: dict[str, object]) -> MeasurementResult:
+    if not _analysis_success(op_output):
+        return _result("output_swing_v", "si", "op", status="analysis_failed", reason="analysis_failure", detail="op_analysis_failed")
+    diagnostics = op_output.get("op_diagnostics", {})
+    if isinstance(diagnostics, dict):
+        output_dc_v = _numeric(diagnostics.get("output_dc_v"))
+        if output_dc_v is not None:
+            return _result(
+                "output_swing_v",
+                "si",
+                "op",
+                status="measured",
+                value=output_dc_v,
+                raw_value=output_dc_v,
+                postprocessed_value=output_dc_v,
+                confidence=0.88,
+                provenance=["op_diagnostics:output_dc_v"],
+            )
+    direct = _metric_from_direct_source("output_swing_v", "op", op_output, confidence=0.74)
+    if direct is not None:
+        return direct
+    return _result(
+        "output_swing_v",
+        "si",
+        "op",
+        status="indeterminate",
+        reason="measurement_failure",
+        detail="missing_output_voltage_source",
+        confidence=0.2,
+    )
+
+
 def _extract_slew_rate(tran_output: dict[str, object]) -> MeasurementResult:
     if not _analysis_success(tran_output):
         return _result("slew_rate_v_per_us", "si", "tran", status="analysis_failed", reason="analysis_failure", detail="tran_analysis_failed")
@@ -506,6 +538,7 @@ def extract_measurement_report(
         "gbw_hz": lambda: _extract_gbw(ac_output),
         "phase_margin_deg": None,
         "power_w": lambda: _extract_power(op_output),
+        "output_swing_v": lambda: _extract_output_swing(op_output),
         "slew_rate_v_per_us": lambda: _extract_slew_rate(tran_output),
     }
 

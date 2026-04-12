@@ -13,7 +13,7 @@ The current repository is organized around four principles:
 - simulator-grounded verification, where final decisions remain constrained by executable testbench logic;
 - traceable evaluation, where validation, repair, and benchmark flows are treated as first-class artifacts.
 
-The immediate benchmark focus is analog blocks such as OTA variants, LDOs, and bandgap references, under a full six-layer agent architecture. At the current stage, the canonical paper-facing vertical slice is a frozen `two_stage_ota` path (`ota2_v1`) backed by real `ngspice` verification, with `folded_cascode_v1` now available as a second runnable amplifier benchmark.
+The immediate benchmark focus is analog blocks such as OTA variants, LDOs, and bandgap references, under a full six-layer agent architecture. At the current stage, the canonical paper-facing vertical slice is a frozen `two_stage_ota` path (`ota2_v1`) backed by real `ngspice` verification, with `folded_cascode_v1` and `ldo_v1` now available as additional runnable generalization benchmarks.
 
 ## Current Capabilities
 
@@ -29,6 +29,7 @@ At the current stage, the repository includes:
 - automated unit, integration, and regression tests spanning interaction, tasking, world model, planning, simulation, and memory/reflection routes.
 - a frozen OTA vertical slice (`ota2_v1`) with canonical config, netlist/testbench templates, fixed measurement targets, default fidelity policy, default demonstrator model binding, and CI-backed regression fixtures.
 - a second runnable amplifier vertical slice (`folded_cascode_v1`) that reuses the same system contracts while changing topology, headroom behavior, and benchmark role.
+- a runnable regulator vertical slice (`ldo_v1`) that extends the same contracts into output regulation, loop stability, and output-voltage verification.
 
 This is still an active research codebase rather than a finished release. The first six system layers are now present in formal schema-and-service form, while research-tuned backend details and later experimental extensions remain under active iteration.
 
@@ -131,10 +132,11 @@ uvicorn apps.api_server.main:app --reload
 
 ## Frozen Vertical Slices
 
-The repository now ships with two frozen amplifier-facing runnable slices:
+The repository now ships with three frozen runnable slices:
 
 - `ota2_v1`: the paper-primary physical closure path
 - `folded_cascode_v1`: the paper-secondary runnable generalization path
+- `ldo_v1`: the runnable regulator generalization path
 
 The `ota2_v1` path fixes:
 
@@ -172,6 +174,20 @@ py -3.12 scripts\run_folded_cascode_acceptance.py
 py -3.12 scripts\run_folded_cascode_experiment_suite.py
 ```
 
+The corresponding LDO entrypoints are:
+
+```bash
+python scripts/run_ldo_acceptance.py
+python scripts/run_ldo_experiment_suite.py
+```
+
+Windows equivalents:
+
+```powershell
+py -3.12 scripts\run_ldo_acceptance.py
+py -3.12 scripts\run_ldo_experiment_suite.py
+```
+
 These entrypoints execute the main system contracts rather than test-only helpers, and they are protected by dedicated regression fixtures in CI.
 
 ## Layered System
@@ -185,7 +201,7 @@ The repository currently exposes a six-layer execution spine:
 - Layer 5: ground-truth simulation, verification, robustness certification, and structured truth feedback.
 - Layer 6: cross-episode memory, reflection, governed retrieval, and advisory strategy feedback.
 
-The current most stable end-to-end paths across these six layers are `ota2_v1` and `folded_cascode_v1`, with `ota2_v1` retained as the primary submission-facing path.
+The current most stable end-to-end paths across these six layers are `ota2_v1`, `folded_cascode_v1`, and `ldo_v1`, with `ota2_v1` retained as the primary submission-facing path.
 
 This repository intentionally exposes stable system boundaries more than research-sensitive internals. In particular, the public implementation is meant to communicate:
 

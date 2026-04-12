@@ -7,6 +7,7 @@ from pathlib import Path
 
 from libs.schema.benchmark import BenchmarkSuiteDefinition, BenchmarkTaskDefinition
 from libs.vertical_slices.folded_cascode_spec import load_folded_cascode_v1_config
+from libs.vertical_slices.ldo_spec import load_ldo_v1_config
 from libs.vertical_slices.ota2_spec import load_ota2_v1_config
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -102,6 +103,45 @@ def _load_folded_cascode_as_benchmark_task() -> BenchmarkTaskDefinition:
     )
 
 
+def _load_ldo_as_benchmark_task() -> BenchmarkTaskDefinition:
+    config = load_ldo_v1_config()
+    return BenchmarkTaskDefinition(
+        benchmark_id=config.version,
+        version=config.version,
+        family=config.family,
+        category="regulator",
+        benchmark_role="generalization_probe",
+        execution_readiness="frozen_runnable",
+        vertical_slice_bound=True,
+        physical_validity_target=config.defaults.model_binding.truth_level,
+        freeze_policy=config.freeze_policy.model_dump(),
+        task=config.task.model_dump(),
+        measurement_contract={
+            "primary_metrics": list(config.measurement_targets),
+            "auxiliary_metrics": ["slew_rate_v_per_us"],
+            "reporting_metrics": list(config.measurement_targets),
+        },
+        execution_defaults={
+            "backend_preference": config.defaults.backend_preference,
+            "default_fidelity": config.defaults.fidelity_policy.default_fidelity,
+            "promoted_fidelity": config.defaults.fidelity_policy.promoted_fidelity,
+            "truth_level": config.defaults.model_binding.truth_level,
+            "model_type": config.defaults.model_binding.model_type,
+        },
+        intended_templates={
+            "netlist_template": config.paths.netlist_template,
+            "quick_truth_testbench": config.paths.quick_truth_testbench,
+            "focused_truth_testbench": config.paths.focused_truth_testbench,
+            "measurement_contract": config.paths.measurement_contract,
+        },
+        notes=[
+            "first_regulator_family_generalization_task",
+            "ldo_v1_is_now_runnable",
+            "shares_agentic_contract_with_ota_v1_and_folded_cascode_v1",
+        ],
+    )
+
+
 def load_benchmark_task_definition(benchmark_name: str) -> BenchmarkTaskDefinition:
     """Load one benchmark-task definition by its public benchmark name."""
 
@@ -109,6 +149,8 @@ def load_benchmark_task_definition(benchmark_name: str) -> BenchmarkTaskDefiniti
         return _load_ota2_as_benchmark_task()
     if benchmark_name in {"folded_cascode", "folded_cascode_v1"}:
         return _load_folded_cascode_as_benchmark_task()
+    if benchmark_name in {"ldo", "ldo_v1"}:
+        return _load_ldo_as_benchmark_task()
     config_path = BENCHMARK_CONFIG_ROOT / f"{benchmark_name}.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"unknown benchmark config: {benchmark_name}")

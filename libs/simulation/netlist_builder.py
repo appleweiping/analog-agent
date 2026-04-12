@@ -22,6 +22,7 @@ from libs.schema.simulation import (
 )
 from libs.utils.hashing import stable_hash
 from libs.vertical_slices.folded_cascode_spec import folded_cascode_v1_netlist_template_path
+from libs.vertical_slices.ldo_spec import ldo_v1_netlist_template_path
 from libs.vertical_slices.ota2_spec import ota2_v1_netlist_template_path
 
 CONFIG_ROOT = Path(__file__).resolve().parents[2] / "configs" / "simulator"
@@ -279,6 +280,83 @@ def _demonstrator_folded_cascode_bindings(task: DesignTask, candidate: Candidate
     return bindings, model_binding, stimulus, rendered
 
 
+def _demonstrator_ldo_bindings(task: DesignTask, candidate: CandidateRecord) -> tuple[list[ParameterBinding], ModelBinding, list[StimulusBinding], str]:
+    values = _parameter_map(candidate)
+    env = candidate.world_state_snapshot.environment_state
+    w_pass = values.get("w_pass", 200e-6)
+    l_pass = max(values.get("l_pass", 0.5e-6), 1e-9)
+    w_err = values.get("w_err", 8e-6)
+    l_err = max(values.get("l_err", 1e-6), 1e-9)
+    ibias = max(values.get("ibias", 1.0e-4), 1e-7)
+    c_comp = max(values.get("c_comp", 5e-12), 1e-14)
+    load_cap_f = float(env.load_cap_f or 5e-12)
+    output_load_ohm = float(env.output_load_ohm or 1200.0)
+    supply_v = float(env.supply_voltage_v or 1.2)
+
+    width_ratio_pass = max(w_pass / l_pass, 1.0)
+    width_ratio_err = max(w_err / l_err, 0.5)
+    gm_pass = 0.025 * (ibias * width_ratio_pass) ** 0.5
+    gm_err = 0.007 * (ibias * width_ratio_err) ** 0.5
+    ro_err = max(3.5e5 * (l_err / max(w_err, 1e-9)) * (1e-4 / ibias) ** 0.4, 6e4)
+    c_eff = max(load_cap_f + 0.3 * c_comp, 1e-15)
+    p2_hint_hz = gm_pass / (2.0 * 3.141592653589793 * c_eff)
+    vref_dc = round(min(0.7, supply_v * 0.5), 6)
+    vref_step_high = round(min(vref_dc + 0.03, supply_v * 0.65), 6)
+    rfb_bot = 60e3
+    rfb_top = rfb_bot * max((1.0 / max(vref_dc, 1e-3)) - 1.0, 0.4)
+    quiescent_current = max(1.8 * ibias, 1.2e-4)
+
+    bindings = [
+        ParameterBinding(variable_name="w_pass", netlist_target="param::w_pass", value_si=w_pass, units="m", source="user_override"),
+        ParameterBinding(variable_name="l_pass", netlist_target="param::l_pass", value_si=l_pass, units="m", source="user_override"),
+        ParameterBinding(variable_name="w_err", netlist_target="param::w_err", value_si=w_err, units="m", source="user_override"),
+        ParameterBinding(variable_name="l_err", netlist_target="param::l_err", value_si=l_err, units="m", source="user_override"),
+        ParameterBinding(variable_name="ibias", netlist_target="param::ibias", value_si=ibias, units="A", source="user_override"),
+        ParameterBinding(variable_name="c_comp", netlist_target="param::c_comp", value_si=c_comp, units="F", source="user_override"),
+        ParameterBinding(variable_name="cload", netlist_target="param::cload", value_si=load_cap_f, units="F", source="system_inferred"),
+        ParameterBinding(variable_name="rload", netlist_target="param::rload", value_si=output_load_ohm, units="ohm", source="system_inferred"),
+        ParameterBinding(variable_name="gm_pass", netlist_target="param::gm_pass", value_si=gm_pass, units="A/V", source="system_inferred"),
+        ParameterBinding(variable_name="gm_err", netlist_target="param::gm_err", value_si=gm_err, units="A/V", source="system_inferred"),
+        ParameterBinding(variable_name="ro_err", netlist_target="param::ro_err", value_si=ro_err, units="ohm", source="system_inferred"),
+        ParameterBinding(variable_name="rfb_top", netlist_target="param::rfb_top", value_si=rfb_top, units="ohm", source="system_inferred"),
+        ParameterBinding(variable_name="rfb_bot", netlist_target="param::rfb_bot", value_si=rfb_bot, units="ohm", source="system_inferred"),
+        ParameterBinding(variable_name="p2_hint_hz", netlist_target="hint::p2_hz", value_si=p2_hint_hz, units="Hz", source="system_inferred"),
+        ParameterBinding(variable_name="vref_step_high", netlist_target="param::vref_step_high", value_si=vref_step_high, units="V", source="system_inferred"),
+        ParameterBinding(variable_name="quiescent_current", netlist_target="param::iquiescent", value_si=quiescent_current, units="A", source="system_inferred"),
+    ]
+    model_binding = _model_binding_from_config(
+        backend="ngspice",
+        process_node=task.parent_spec_id,
+        corner=env.corner,
+        temperature_c=env.temperature_c,
+        supply_voltage_v=supply_v,
+        default_builtin_ref="builtin_demo_ldo_loop_v1",
+    )
+    stimulus = [
+        StimulusBinding(source_name="VDD", stimulus_type="supply", parameters={"value": supply_v}),
+        StimulusBinding(source_name="VREF", stimulus_type="ac_input", parameters={"dc_value": vref_dc, "ac_amplitude": 1.0}),
+    ]
+    template = Template(ldo_v1_netlist_template_path().read_text(encoding="utf-8"))
+    rendered = template.safe_substitute(
+        truth_mode="demonstrator_truth",
+        template_id=task.topology.template_id or "ldo_nominal_op_ac",
+        p2_hint_hz=f"{p2_hint_hz:.6e}",
+        vdd=f"{supply_v:.6e}",
+        vref_dc=f"{vref_dc:.6e}",
+        vref_step_high=f"{vref_step_high:.6e}",
+        gm_err=f"{gm_err:.6e}",
+        ro_err=f"{ro_err:.6e}",
+        gm_pass=f"{gm_pass:.6e}",
+        c_comp=f"{c_comp:.6e}",
+        cload=f"{load_cap_f:.6e}",
+        rload=f"{output_load_ohm:.6e}",
+        rfb_top=f"{rfb_top:.6e}",
+        rfb_bot=f"{rfb_bot:.6e}",
+        quiescent_current=f"{quiescent_current:.6e}",
+    )
+    return bindings, model_binding, stimulus, rendered
+
+
 def realize_netlist_instance(
     task: DesignTask,
     candidate: CandidateRecord,
@@ -304,6 +382,18 @@ def realize_netlist_instance(
             )
     elif backend == "ngspice" and task.circuit_family == "folded_cascode_ota" and task.topology.topology_mode == "fixed":
         bindings, model_binding, stimulus, rendered_netlist = _demonstrator_folded_cascode_bindings(task, candidate)
+        if model_binding_overrides:
+            model_binding = _model_binding_from_config(
+                backend="ngspice",
+                process_node=task.parent_spec_id,
+                corner=world_state.environment_state.corner,
+                temperature_c=world_state.environment_state.temperature_c,
+                supply_voltage_v=world_state.environment_state.supply_voltage_v,
+                default_builtin_ref=model_binding.backend_model_ref,
+                overrides=model_binding_overrides,
+            )
+    elif backend == "ngspice" and task.circuit_family == "ldo" and task.topology.topology_mode == "fixed":
+        bindings, model_binding, stimulus, rendered_netlist = _demonstrator_ldo_bindings(task, candidate)
         if model_binding_overrides:
             model_binding = _model_binding_from_config(
                 backend="ngspice",

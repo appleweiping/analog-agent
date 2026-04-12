@@ -1,0 +1,29 @@
+{
+  "version": "ldo_v1",
+  "fidelity_level": "quick_truth",
+  "execution_policy": "serial",
+  "early_termination_rules": [
+    "stop_on_netlist_failure",
+    "stop_on_simulation_error",
+    "stop_after_core_truth_violation"
+  ],
+  "ordered_analyses": [
+    {
+      "analysis_type": "op",
+      "order": 0,
+      "parameters": {"purpose": "ldo_nominal_bias_check"},
+      "required_metrics": ["power_w", "output_swing_v"]
+    },
+    {
+      "analysis_type": "ac",
+      "order": 1,
+      "parameters": {
+        "f_start_hz": 1.0,
+        "f_stop_hz": 1000000000.0,
+        "points_per_dec": 50,
+        "fidelity_mode": "quick_truth"
+      },
+      "required_metrics": ["gbw_hz", "phase_margin_deg"]
+    }
+  ]
+}

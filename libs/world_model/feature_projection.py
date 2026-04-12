@@ -57,6 +57,7 @@ FAMILY_BASES: dict[str, dict[str, float]] = {
         "area_um2": 1200.0,
     },
     "ldo": {
+        "gbw_hz": 3.2e6,
         "phase_margin_deg": 64.0,
         "power_w": 1.2e-3,
         "psrr_db": 52.0,
@@ -170,6 +171,13 @@ def project_metrics(task: DesignTask, state: WorldState) -> tuple[dict[str, floa
 
     elif family == "ldo":
         regulation_strength = 0.7 + 1.1 * score["pass_score"] + 0.4 * score["comp_score"]
+        metrics["gbw_hz"] = (
+            base.get("gbw_hz", 3.0e6)
+            * (0.65 + 0.8 * score["pass_score"] + 0.55 * score["bias_score"])
+            * score["corner_factor"]
+            * score["temperature_factor"]
+            / (0.8 + 0.7 * score["comp_score"] + 0.6 * score["load_penalty"])
+        )
         metrics["phase_margin_deg"] = base.get("phase_margin_deg", 62.0) + 11.0 * score["comp_score"] + 6.0 * score["bias_score"] - 8.0 * score["load_penalty"]
         metrics["power_w"] = base.get("power_w", 1.2e-3) * (0.8 + 1.2 * score["bias_score"] + 0.4 * score["pass_score"]) * (score["supply"] / 1.8)
         metrics["psrr_db"] = base.get("psrr_db", 48.0) + 8.0 * score["length_score"] + 6.0 * score["comp_score"] - 6.5 * score["load_penalty"]

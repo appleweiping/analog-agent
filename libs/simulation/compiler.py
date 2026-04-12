@@ -61,6 +61,15 @@ def normalize_fidelity_level(fidelity_level: str) -> str:
     return fidelity_level
 
 
+def _supports_native_ngspice(task: DesignTask, analysis_types: set[str]) -> bool:
+    return (
+        native_ngspice_available()
+        and task.topology.topology_mode == "fixed"
+        and task.circuit_family in {"two_stage_ota", "folded_cascode_ota", "ldo"}
+        and analysis_types.issubset({"op", "ac", "tran"})
+    )
+
+
 def _fidelity_policy() -> FidelityPolicy:
     return FidelityPolicy(
         default_fidelity="quick_truth",
@@ -298,12 +307,9 @@ def compile_simulation_bundle(
     )
     signature = stable_hash(f"{task.task_id}|{candidate_id}|{fidelity_level}|{backend_preference}")
     resolved_fidelity = normalize_fidelity_level(fidelity_level)
-    native_ngspice = (
-        backend_preference == "ngspice"
-        and native_ngspice_available()
-        and task.circuit_family == "two_stage_ota"
-        and task.topology.topology_mode == "fixed"
-        and {analysis.analysis_type for analysis in analysis_plan.ordered_analyses}.issubset({"op", "ac", "tran"})
+    native_ngspice = backend_preference == "ngspice" and _supports_native_ngspice(
+        task,
+        {analysis.analysis_type for analysis in analysis_plan.ordered_analyses},
     )
     request = request.model_copy(update={"model_binding": netlist.model_binding})
     backend_binding = BackendBinding(
@@ -351,7 +357,7 @@ def compile_simulation_bundle(
                 "verification outputs are emitted as structured objects for planner and world-model feedback",
                 f"truth_level={physical_validation.truth_level}",
                 f"validation_state={physical_validation.validity_state}",
-                "native ngspice is currently enabled for two_stage_ota fixed-topology quick/focused truth verification" if native_ngspice else "bundle currently executes in mock_truth mode",
+                f"native ngspice is currently enabled for {task.circuit_family} fixed-topology quick/focused truth verification" if native_ngspice else "bundle currently executes in mock_truth mode",
             ],
             provenance=[
                 "task_formalization_layer",
