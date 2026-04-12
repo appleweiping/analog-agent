@@ -13,7 +13,7 @@ The current repository is organized around four principles:
 - simulator-grounded verification, where final decisions remain constrained by executable testbench logic;
 - traceable evaluation, where validation, repair, and benchmark flows are treated as first-class artifacts.
 
-The immediate benchmark focus is analog blocks such as OTA variants, LDOs, and bandgap references, under a full six-layer agent architecture.
+The immediate benchmark focus is analog blocks such as OTA variants, LDOs, and bandgap references, under a full six-layer agent architecture. At the current stage, the canonical paper-facing vertical slice is a frozen `two_stage_ota` path (`ota2_v1`) backed by real `ngspice` verification.
 
 ## Current Capabilities
 
@@ -27,6 +27,7 @@ At the current stage, the repository includes:
 - a memory and reflection layer that consolidates full episodes into evidence-backed knowledge objects, mines cross-episode patterns, emits governed strategy feedback, and controls long-term knowledge decay;
 - deterministic normalization, validation, repair, testbench-planning, acceptance reporting, retrieval, governance, and API workflows across the implemented layers;
 - automated unit, integration, and regression tests spanning interaction, tasking, world model, planning, simulation, and memory/reflection routes.
+- a frozen OTA vertical slice (`ota2_v1`) with canonical config, netlist/testbench templates, fixed measurement targets, default fidelity policy, default demonstrator model binding, and CI-backed regression fixtures.
 
 This is still an active research codebase rather than a finished release. The first six system layers are now present in formal schema-and-service form, while research-tuned backend details and later experimental extensions remain under active iteration.
 
@@ -35,6 +36,7 @@ This is still an active research codebase rather than a finished release. The fi
 - `apps/`: service entrypoints and worker-facing application modules.
 - `configs/`: benchmark, simulator, model, and runtime configuration.
 - `libs/`: core schemas, interaction logic, task compilers, world-model services, planning services, simulation/verification services, memory utilities, and evaluation code.
+- `templates/`: frozen family-aware netlist, testbench, and measurement-contract assets for canonical verification paths.
 - `research/`: experiment assets, datasets, baselines, and paper-facing material.
 - `scripts/`: command-line utilities for dataset, training, benchmarking, and export workflows.
 - `tests/`: unit, integration, and regression coverage.
@@ -126,6 +128,32 @@ To launch the API locally:
 uvicorn apps.api_server.main:app --reload
 ```
 
+## OTA v1 Path
+
+The repository now ships with a frozen `ota2_v1` vertical slice intended to serve as the first paper-grade physical closure path. This path fixes:
+
+- the benchmark definition in `configs/benchmarks/ota2.yaml`;
+- the canonical netlist and testbench templates under `templates/netlist/ota2/v1/` and `templates/testbench/ota2/v1/`;
+- the core measurement contract for `dc_gain_db`, `gbw_hz`, `phase_margin_deg`, and `power_w`;
+- the default fidelity ladder of `quick_truth -> focused_truth`;
+- the default physical validity declaration of `builtin + demonstrator_truth`.
+
+The standard OTA entrypoints are:
+
+```bash
+python scripts/run_ota_acceptance.py
+python scripts/run_ota_experiment_suite.py
+```
+
+Windows equivalents:
+
+```powershell
+py -3.12 scripts\run_ota_acceptance.py
+py -3.12 scripts\run_ota_experiment_suite.py
+```
+
+These entrypoints execute the main system contracts rather than test-only helpers, and they are protected by dedicated OTA regression fixtures in CI.
+
 ## Layered System
 
 The repository currently exposes a six-layer execution spine:
@@ -136,6 +164,8 @@ The repository currently exposes a six-layer execution spine:
 - Layer 4: budget-aware, uncertainty-aware planning over explicit search state and candidate records.
 - Layer 5: ground-truth simulation, verification, robustness certification, and structured truth feedback.
 - Layer 6: cross-episode memory, reflection, governed retrieval, and advisory strategy feedback.
+
+The current most stable end-to-end path across these six layers is `ota2_v1`: `DesignTask -> CandidateRecord -> SimulationBundle -> VerificationResult -> Memory`.
 
 This repository intentionally exposes stable system boundaries more than research-sensitive internals. In particular, the public implementation is meant to communicate:
 
@@ -148,4 +178,4 @@ It intentionally does not attempt to publish every modeling choice, prompt strat
 
 ## Status
 
-The project is under active construction, but it is no longer only a front-end scaffold. The repository now contains formal implementations for the first six layers of the system architecture, along with API routes and acceptance-oriented test coverage. What remains intentionally lightweight in the public tree are research-tuned backend details, deeper learned-backend integrations, and some production-grade simulator bindings that will continue to evolve as the research pipeline is expanded.
+The project is under active construction, but it is no longer only a front-end scaffold. The repository now contains formal implementations for the first six layers of the system architecture, along with API routes, acceptance-oriented test coverage, and a frozen OTA `v1` vertical slice for reproducible end-to-end physical closure. What remains intentionally lightweight in the public tree are research-tuned backend details, deeper learned-backend integrations, broader circuit-family support, and stronger configured-truth simulator/model integrations that will continue to evolve as the research pipeline is expanded.

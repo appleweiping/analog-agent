@@ -21,8 +21,8 @@ from libs.schema.simulation import (
     TemplateBinding,
 )
 from libs.utils.hashing import stable_hash
+from libs.vertical_slices.ota2_spec import ota2_v1_netlist_template_path
 
-TEMPLATE_ROOT = Path(__file__).resolve().parent / "templates"
 CONFIG_ROOT = Path(__file__).resolve().parents[2] / "configs" / "simulator"
 
 
@@ -185,7 +185,7 @@ def _demonstrator_ota2_bindings(task: DesignTask, candidate: CandidateRecord) ->
         StimulusBinding(source_name="VINP", stimulus_type="ac_input", parameters={"dc_value": vin_cm, "ac_amplitude": 1.0}),
         StimulusBinding(source_name="VINN", stimulus_type="bias", parameters={"value": vin_cm}),
     ]
-    template = Template((TEMPLATE_ROOT / "ota2_nominal_op_ac.spice.tpl").read_text(encoding="utf-8"))
+    template = Template(ota2_v1_netlist_template_path().read_text(encoding="utf-8"))
     rendered = template.safe_substitute(
         truth_mode="demonstrator_truth",
         template_id=task.topology.template_id or "ota2_nominal_op_ac",

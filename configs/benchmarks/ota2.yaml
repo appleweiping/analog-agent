@@ -1,6 +1,92 @@
-name: ota2
-category: amplifier
-targets:
-  gain_db: 60
-  unity_gain_bandwidth_hz: 10000000
-  phase_margin_deg: 60
+{
+  "version": "ota2_v1",
+  "family": "two_stage_ota",
+  "freeze_policy": {
+    "frozen_version": "ota2_v1",
+    "paper_track": true,
+    "change_rule": "create_v2_or_preserve_v1"
+  },
+  "task": {
+    "task_id": "ota2_v1",
+    "process_node": "65nm",
+    "supply_voltage_v": 1.2,
+    "objectives": {
+      "maximize": ["gbw_hz"],
+      "minimize": ["power_w"]
+    },
+    "hard_constraints": {
+      "dc_gain_db": {"min": 60.0},
+      "gbw_hz": {"min": 80000000.0},
+      "phase_margin_deg": {"min": 55.0},
+      "power_w": {"max": 0.0015}
+    },
+    "environment": {
+      "temperature_c": [27.0],
+      "corners": ["tt"],
+      "load_cap_f": 2.0e-12,
+      "supply_voltage_v": 1.2
+    },
+    "testbench_plan": ["op", "ac", "tran"],
+    "design_variables": ["w_in", "l_in", "w_tail", "l_tail", "ibias", "cc"]
+  },
+  "design_variables": {
+    "w_in": {
+      "units": "m",
+      "role": "input_pair_width",
+      "description": "input differential pair device width"
+    },
+    "l_in": {
+      "units": "m",
+      "role": "input_pair_length",
+      "description": "input differential pair device length"
+    },
+    "w_tail": {
+      "units": "m",
+      "role": "second_stage_or_tail_width",
+      "description": "second-stage proxy gm device width"
+    },
+    "l_tail": {
+      "units": "m",
+      "role": "second_stage_or_tail_length",
+      "description": "second-stage proxy gm device length"
+    },
+    "ibias": {
+      "units": "A",
+      "role": "bias_current",
+      "description": "OTA total bias current proxy"
+    },
+    "cc": {
+      "units": "F",
+      "role": "miller_compensation_capacitance",
+      "description": "Miller compensation capacitor"
+    }
+  },
+  "measurement_targets": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w"],
+  "paths": {
+    "netlist_template": "templates/netlist/ota2/v1/ota2_demonstrator_truth.spice.tpl",
+    "quick_truth_testbench": "templates/testbench/ota2/v1/quick_truth.yaml",
+    "focused_truth_testbench": "templates/testbench/ota2/v1/focused_truth.yaml",
+    "measurement_contract": "templates/testbench/ota2/v1/measurement_contract.yaml"
+  },
+  "defaults": {
+    "backend_preference": "ngspice",
+    "fidelity_policy": {
+      "default_fidelity": "quick_truth",
+      "promoted_fidelity": "focused_truth",
+      "quick_truth_analyses": ["op", "ac"],
+      "focused_truth_analyses": ["op", "ac", "tran"],
+      "escalation_thresholds": {
+        "predicted_feasible_probability_min": 0.72,
+        "near_feasible_margin_abs_max": 0.08,
+        "focused_truth_batch_limit": 1,
+        "measurement_recheck_enabled": true
+      }
+    },
+    "model_binding": {
+      "model_type": "builtin",
+      "truth_level": "demonstrator_truth",
+      "default_builtin_model": "builtin_demo_ota2_small_signal_v1",
+      "external_model_card_path": ""
+    }
+  }
+}

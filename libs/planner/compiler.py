@@ -30,6 +30,7 @@ from libs.schema.world_model import WorldModelBundle
 from libs.utils.hashing import stable_hash
 from libs.planner.phase_controller import determine_initial_phase
 from libs.planner.validation import validate_planning_bundle
+from libs.vertical_slices.ota2_spec import load_ota2_v1_config
 
 
 def _search_policy(task: DesignTask) -> SearchPolicy:
@@ -75,6 +76,19 @@ def _selection_policy(task: DesignTask) -> SelectionPolicy:
 
 
 def _escalation_policy(task: DesignTask) -> EscalationPolicy:
+    if task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed":
+        ota2 = load_ota2_v1_config()
+        thresholds = ota2.defaults.fidelity_policy.escalation_thresholds
+        return EscalationPolicy(
+            min_simulation_value=thresholds.predicted_feasible_probability_min,
+            allow_must_escalate_override=True,
+            max_batch_size=1 if task.solver_hint.budget_hint == "low" else 2,
+            default_fidelity=ota2.defaults.fidelity_policy.default_fidelity,
+            promoted_fidelity=ota2.defaults.fidelity_policy.promoted_fidelity,
+            near_feasible_margin_threshold=thresholds.near_feasible_margin_abs_max,
+            focused_truth_batch_limit=thresholds.focused_truth_batch_limit,
+            allowed_service_tiers=["ranking_ready", "rollout_ready", "must_escalate"],
+        )
     threshold = 0.55 if task.difficulty_profile.evaluation_cost == "expensive" else 0.65
     return EscalationPolicy(
         min_simulation_value=threshold,

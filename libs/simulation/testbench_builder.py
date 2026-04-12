@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from libs.schema.design_task import AnalysisSpec, DesignTask
 from libs.schema.simulation import (
     ANALYSIS_TYPES,
@@ -15,6 +17,7 @@ from libs.schema.simulation import (
     SimulationRequest,
     ValidationCheck,
 )
+from libs.vertical_slices.ota2_spec import ota2_v1_measurement_contract_path, ota2_v1_testbench_path
 
 
 def _resolved_fidelity(fidelity_level: str) -> str:
@@ -26,6 +29,85 @@ def _analysis_statement(spec: AnalysisSpec) -> AnalysisStatement:
         order=spec.order,
         parameters=dict(spec.config.parameters),
         required_metrics=list(spec.required_metrics),
+    )
+
+
+def _load_structured_config(path) -> dict[str, object]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_ota2_analysis_plan(fidelity_level: str) -> tuple[list[AnalysisStatement], str, list[str]]:
+    payload = _load_structured_config(ota2_v1_testbench_path(fidelity_level))
+    analyses = [
+        AnalysisStatement(
+            analysis_type=item["analysis_type"],
+            order=int(item["order"]),
+            parameters=dict(item.get("parameters", {})),
+            required_metrics=list(item.get("required_metrics", [])),
+        )
+        for item in payload.get("ordered_analyses", [])
+    ]
+    return analyses, str(payload.get("execution_policy", "serial")), list(payload.get("early_termination_rules", []))
+
+
+def _build_ota2_measurement_contract(analysis_plan: AnalysisPlan) -> MeasurementContract:
+    payload = _load_structured_config(ota2_v1_measurement_contract_path())
+    active_analyses = {analysis.analysis_type for analysis in analysis_plan.ordered_analyses}
+    active_metrics = {metric for analysis in analysis_plan.ordered_analyses for metric in analysis.required_metrics}
+    definitions: list[MeasurementDefinition] = []
+    methods: list[ExtractionMethod] = []
+    for item in payload.get("measurement_targets", []):
+        required_types = [analysis for analysis in item.get("required_analysis_types", []) if analysis in active_analyses]
+        if not required_types or item["metric"] not in active_metrics:
+            continue
+        definitions.append(
+            MeasurementDefinition(
+                metric=item["metric"],
+                units=item["units"],
+                required_analysis_types=required_types,
+                semantic_role=item["semantic_role"],
+                expected_range=[],
+            )
+        )
+        extraction = dict(item.get("extraction", {}))
+        methods.append(
+            ExtractionMethod(
+                metric=item["metric"],
+                method=str(extraction.get("method", "direct")),
+                from_analysis=required_types[0],
+                preferred_source_field=str(extraction.get("preferred_source_field", "metrics")),
+                failure_conditions=list(extraction.get("failure_conditions", [])),
+            )
+        )
+    return MeasurementContract(
+        measurement_definitions=definitions,
+        extraction_methods=methods,
+        postprocessing_rules=[
+            PostprocessingRule(
+                rule_name=item["rule_name"],
+                applies_to_metrics=list(item.get("applies_to_metrics", [])),
+                parameters=dict(item.get("parameters", {})),
+            )
+            for item in payload.get("postprocessing_rules", [])
+        ],
+        fallback_strategies=[
+            FallbackStrategy(
+                strategy_name=item["strategy_name"],
+                applies_to_metrics=list(item.get("applies_to_metrics", [])),
+                trigger_condition=item["trigger_condition"],
+                action=item["action"],
+            )
+            for item in payload.get("fallback_strategies", [])
+        ],
+        validation_checks=[
+            ValidationCheck(
+                check_name=item["check_name"],
+                applies_to_metrics=list(item.get("applies_to_metrics", [])),
+                failure_severity=item.get("failure_severity", "medium"),
+                parameters=dict(item.get("parameters", {})),
+            )
+            for item in payload.get("validation_checks", [])
+        ],
     )
 
 
@@ -42,49 +124,8 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
     existing = {analysis.analysis_type for analysis in base}
     extras: list[AnalysisStatement] = []
     real_ota_native = request.backend_preference == "ngspice" and task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed"
-    if real_ota_native and fidelity_level == "quick_truth":
-        ordered = []
-        for analysis in base:
-            if analysis.analysis_type not in {"op", "ac"}:
-                continue
-            required = list(analysis.required_metrics)
-            if analysis.analysis_type == "ac" and "dc_gain_db" not in required:
-                required = ["dc_gain_db", *required]
-            ordered.append(analysis.model_copy(update={"required_metrics": required}))
-        execution_policy = "serial"
-        termination_rules = ["stop_on_netlist_failure", "stop_on_simulation_error", "stop_after_core_truth_violation"]
-    elif real_ota_native and fidelity_level == "focused_truth":
-        ordered = []
-        for analysis in base:
-            if analysis.analysis_type not in {"op", "ac"}:
-                continue
-            required = list(analysis.required_metrics)
-            if analysis.analysis_type == "ac":
-                for metric in ["dc_gain_db", "gbw_hz", "phase_margin_deg"]:
-                    if metric not in required:
-                        required.append(metric)
-                ordered.append(
-                    analysis.model_copy(
-                        update={
-                            "required_metrics": required,
-                            "parameters": {**analysis.parameters, "points_per_dec": 60, "f_stop_hz": 2e10, "fidelity_mode": "focused_truth"},
-                        }
-                    )
-                )
-            else:
-                ordered.append(analysis)
-        ordered_types = {analysis.analysis_type for analysis in ordered}
-        if "tran" not in ordered_types:
-            extras.append(
-                AnalysisStatement(
-                    analysis_type="tran",
-                    order=max((analysis.order for analysis in ordered), default=0) + 1,
-                    parameters={"purpose": "focused_truth_dynamic_sanity", "time_step_s": 1e-9, "stop_time_s": 2e-7},
-                    required_metrics=["slew_rate_v_per_us"],
-                )
-            )
-        execution_policy = "phase_gated"
-        termination_rules = ["stop_on_netlist_failure", "stop_on_core_constraint_failure", "retain_tran_diagnostics_for_borderline_candidates"]
+    if real_ota_native and fidelity_level in {"quick_truth", "focused_truth"}:
+        ordered, execution_policy, termination_rules = _load_ota2_analysis_plan(fidelity_level)
     elif fidelity_level == "quick_truth":
         ordered = [analysis for analysis in base if analysis.analysis_type in {"op", "ac", "tran"}][:2]
         execution_policy = "serial"
@@ -135,6 +176,9 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
 
 def build_measurement_contract(task: DesignTask, analysis_plan: AnalysisPlan) -> MeasurementContract:
     """Build a formal measurement extraction contract."""
+
+    if task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed":
+        return _build_ota2_measurement_contract(analysis_plan)
 
     definitions: dict[str, MeasurementDefinition] = {}
     methods: list[ExtractionMethod] = []
