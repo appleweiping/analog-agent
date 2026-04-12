@@ -1,6 +1,92 @@
-name: folded_cascode
-category: amplifier
-targets:
-  gain_db: 70
-  output_swing_v: 1.2
-  power_mw: 2.0
+{
+  "version": "folded_cascode_v1",
+  "family": "folded_cascode_ota",
+  "freeze_policy": {
+    "frozen_version": "folded_cascode_v1",
+    "paper_track": true,
+    "change_rule": "create_v2_or_preserve_v1"
+  },
+  "task": {
+    "task_id": "folded_cascode_v1",
+    "process_node": "65nm",
+    "supply_voltage_v": 1.2,
+    "objectives": {
+      "maximize": ["gbw_hz"],
+      "minimize": ["power_w"]
+    },
+    "hard_constraints": {
+      "dc_gain_db": {"min": 68.0},
+      "gbw_hz": {"min": 100000000.0},
+      "phase_margin_deg": {"min": 58.0},
+      "power_w": {"max": 0.0018}
+    },
+    "environment": {
+      "temperature_c": [27.0],
+      "corners": ["tt"],
+      "load_cap_f": 2.5e-12,
+      "supply_voltage_v": 1.2
+    },
+    "testbench_plan": ["op", "ac", "tran"],
+    "design_variables": ["w_in", "l_in", "w_cas", "l_cas", "ibias", "cc"]
+  },
+  "design_variables": {
+    "w_in": {
+      "units": "m",
+      "role": "input_pair_width",
+      "description": "folded-cascode input pair device width"
+    },
+    "l_in": {
+      "units": "m",
+      "role": "input_pair_length",
+      "description": "folded-cascode input pair device length"
+    },
+    "w_cas": {
+      "units": "m",
+      "role": "folded_branch_width",
+      "description": "folded branch and cascode gm proxy width"
+    },
+    "l_cas": {
+      "units": "m",
+      "role": "folded_branch_length",
+      "description": "folded branch and cascode gm proxy length"
+    },
+    "ibias": {
+      "units": "A",
+      "role": "bias_current",
+      "description": "folded-cascode total bias current proxy"
+    },
+    "cc": {
+      "units": "F",
+      "role": "stability_capacitance",
+      "description": "stability capacitor used for demonstrator truth shaping"
+    }
+  },
+  "measurement_targets": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w"],
+  "paths": {
+    "netlist_template": "templates/netlist/folded_cascode/v1/folded_cascode_demonstrator_truth.spice.tpl",
+    "quick_truth_testbench": "templates/testbench/folded_cascode/v1/quick_truth.yaml",
+    "focused_truth_testbench": "templates/testbench/folded_cascode/v1/focused_truth.yaml",
+    "measurement_contract": "templates/testbench/folded_cascode/v1/measurement_contract.yaml"
+  },
+  "defaults": {
+    "backend_preference": "ngspice",
+    "fidelity_policy": {
+      "default_fidelity": "quick_truth",
+      "promoted_fidelity": "focused_truth",
+      "quick_truth_analyses": ["op", "ac"],
+      "focused_truth_analyses": ["op", "ac", "tran"],
+      "escalation_thresholds": {
+        "predicted_feasible_probability_min": 0.7,
+        "near_feasible_margin_abs_max": 0.09,
+        "focused_truth_batch_limit": 1,
+        "measurement_recheck_enabled": true
+      }
+    },
+    "model_binding": {
+      "model_type": "builtin",
+      "truth_level": "demonstrator_truth",
+      "default_builtin_model": "builtin_demo_folded_cascode_small_signal_v1",
+      "external_model_card_path": ""
+    }
+  }
+}

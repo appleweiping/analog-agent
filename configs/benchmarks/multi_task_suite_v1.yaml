@@ -1,0 +1,37 @@
+{
+  "suite_id": "analog_agent_multitask_suite_v1",
+  "version": "1.0",
+  "primary_benchmark_id": "ota2",
+  "benchmark_ids": ["ota2", "folded_cascode", "ldo", "bandgap"],
+  "paper_claim_scope": [
+    "closed_loop_analog_design_agent",
+    "ota_primary_path",
+    "cross_family_benchmark_design",
+    "methodology_ablation_ready",
+    "simulator_grounded_statistics_ready"
+  ],
+  "reporting_axes": [
+    "task_family",
+    "execution_readiness",
+    "truth_level",
+    "fidelity_level",
+    "simulation_budget",
+    "feasible_hit_rate",
+    "prediction_gap",
+    "failure_mode_distribution"
+  ],
+  "supported_modes": [
+    "full_simulation_baseline",
+    "no_world_model_baseline",
+    "full_system",
+    "no_world_model",
+    "no_calibration",
+    "no_fidelity_escalation"
+  ],
+  "notes": [
+    "ota2_is_the_only_frozen_runnable_vertical_slice_today",
+    "folded_cascode_and_ldo_are_spec_ready_generalization_targets",
+    "bandgap_is_included_as_a_future_extension_benchmark",
+    "suite_is_designed_for_top_conference_reporting_not_for_mvp_demoing"
+  ]
+}

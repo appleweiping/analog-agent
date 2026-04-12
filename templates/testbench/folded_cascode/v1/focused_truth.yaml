@@ -1,0 +1,39 @@
+{
+  "version": "folded_cascode_v1",
+  "fidelity_level": "focused_truth",
+  "execution_policy": "phase_gated",
+  "early_termination_rules": [
+    "stop_on_netlist_failure",
+    "stop_on_core_constraint_failure",
+    "retain_tran_diagnostics_for_borderline_candidates"
+  ],
+  "ordered_analyses": [
+    {
+      "analysis_type": "op",
+      "order": 0,
+      "parameters": {"purpose": "folded_cascode_nominal_bias_check"},
+      "required_metrics": []
+    },
+    {
+      "analysis_type": "ac",
+      "order": 1,
+      "parameters": {
+        "f_start_hz": 1.0,
+        "f_stop_hz": 20000000000.0,
+        "points_per_dec": 70,
+        "fidelity_mode": "focused_truth"
+      },
+      "required_metrics": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w"]
+    },
+    {
+      "analysis_type": "tran",
+      "order": 2,
+      "parameters": {
+        "purpose": "focused_truth_dynamic_sanity",
+        "time_step_s": 1.0e-9,
+        "stop_time_s": 2.0e-7
+      },
+      "required_metrics": ["slew_rate_v_per_us"]
+    }
+  ]
+}

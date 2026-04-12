@@ -17,6 +17,10 @@ from libs.schema.simulation import (
     SimulationRequest,
     ValidationCheck,
 )
+from libs.vertical_slices.folded_cascode_spec import (
+    folded_cascode_v1_measurement_contract_path,
+    folded_cascode_v1_testbench_path,
+)
 from libs.vertical_slices.ota2_spec import ota2_v1_measurement_contract_path, ota2_v1_testbench_path
 
 
@@ -36,8 +40,8 @@ def _load_structured_config(path) -> dict[str, object]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _load_ota2_analysis_plan(fidelity_level: str) -> tuple[list[AnalysisStatement], str, list[str]]:
-    payload = _load_structured_config(ota2_v1_testbench_path(fidelity_level))
+def _load_family_analysis_plan(config_path) -> tuple[list[AnalysisStatement], str, list[str]]:
+    payload = _load_structured_config(config_path)
     analyses = [
         AnalysisStatement(
             analysis_type=item["analysis_type"],
@@ -50,8 +54,8 @@ def _load_ota2_analysis_plan(fidelity_level: str) -> tuple[list[AnalysisStatemen
     return analyses, str(payload.get("execution_policy", "serial")), list(payload.get("early_termination_rules", []))
 
 
-def _build_ota2_measurement_contract(analysis_plan: AnalysisPlan) -> MeasurementContract:
-    payload = _load_structured_config(ota2_v1_measurement_contract_path())
+def _build_family_measurement_contract(contract_path, analysis_plan: AnalysisPlan) -> MeasurementContract:
+    payload = _load_structured_config(contract_path)
     active_analyses = {analysis.analysis_type for analysis in analysis_plan.ordered_analyses}
     active_metrics = {metric for analysis in analysis_plan.ordered_analyses for metric in analysis.required_metrics}
     definitions: list[MeasurementDefinition] = []
@@ -111,6 +115,22 @@ def _build_ota2_measurement_contract(analysis_plan: AnalysisPlan) -> Measurement
     )
 
 
+def _load_ota2_analysis_plan(fidelity_level: str) -> tuple[list[AnalysisStatement], str, list[str]]:
+    return _load_family_analysis_plan(ota2_v1_testbench_path(fidelity_level))
+
+
+def _load_folded_cascode_analysis_plan(fidelity_level: str) -> tuple[list[AnalysisStatement], str, list[str]]:
+    return _load_family_analysis_plan(folded_cascode_v1_testbench_path(fidelity_level))
+
+
+def _build_ota2_measurement_contract(analysis_plan: AnalysisPlan) -> MeasurementContract:
+    return _build_family_measurement_contract(ota2_v1_measurement_contract_path(), analysis_plan)
+
+
+def _build_folded_cascode_measurement_contract(analysis_plan: AnalysisPlan) -> MeasurementContract:
+    return _build_family_measurement_contract(folded_cascode_v1_measurement_contract_path(), analysis_plan)
+
+
 def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> AnalysisPlan:
     """Build a structured analysis plan from DesignTask.evaluation_plan."""
 
@@ -124,8 +144,11 @@ def build_analysis_plan(task: DesignTask, request: SimulationRequest) -> Analysi
     existing = {analysis.analysis_type for analysis in base}
     extras: list[AnalysisStatement] = []
     real_ota_native = request.backend_preference == "ngspice" and task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed"
+    real_folded_native = request.backend_preference == "ngspice" and task.circuit_family == "folded_cascode_ota" and task.topology.topology_mode == "fixed"
     if real_ota_native and fidelity_level in {"quick_truth", "focused_truth"}:
         ordered, execution_policy, termination_rules = _load_ota2_analysis_plan(fidelity_level)
+    elif real_folded_native and fidelity_level in {"quick_truth", "focused_truth"}:
+        ordered, execution_policy, termination_rules = _load_folded_cascode_analysis_plan(fidelity_level)
     elif fidelity_level == "quick_truth":
         ordered = [analysis for analysis in base if analysis.analysis_type in {"op", "ac", "tran"}][:2]
         execution_policy = "serial"
@@ -179,6 +202,8 @@ def build_measurement_contract(task: DesignTask, analysis_plan: AnalysisPlan) ->
 
     if task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed":
         return _build_ota2_measurement_contract(analysis_plan)
+    if task.circuit_family == "folded_cascode_ota" and task.topology.topology_mode == "fixed":
+        return _build_folded_cascode_measurement_contract(analysis_plan)
 
     definitions: dict[str, MeasurementDefinition] = {}
     methods: list[ExtractionMethod] = []

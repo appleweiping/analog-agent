@@ -1,6 +1,56 @@
-name: bandgap
-category: reference
-targets:
-  vref_v: 1.2
-  tempco_ppm: 50
-  line_regulation_mv: 5
+{
+  "benchmark_id": "bandgap_v1",
+  "version": "bandgap_v1",
+  "family": "bandgap",
+  "category": "reference",
+  "benchmark_role": "future_extension",
+  "execution_readiness": "spec_ready",
+  "vertical_slice_bound": false,
+  "physical_validity_target": "demonstrator_truth",
+  "freeze_policy": {
+    "frozen_version": "bandgap_v1",
+    "paper_track": true,
+    "change_rule": "create_v2_or_preserve_v1_semantics"
+  },
+  "task": {
+    "task_id": "bandgap_v1",
+    "process_node": "65nm",
+    "supply_voltage_v": 1.2,
+    "objectives": {
+      "minimize": ["power_w"]
+    },
+    "hard_constraints": {
+      "power_w": {"max": 0.0005}
+    },
+    "environment": {
+      "temperature_c": [-20.0, 27.0, 85.0],
+      "corners": ["tt"],
+      "supply_voltage_v": 1.2
+    },
+    "testbench_plan": ["op", "tran"],
+    "design_variables": ["area_ratio", "r1", "r2", "w_core", "l_core", "ibias"]
+  },
+  "measurement_contract": {
+    "primary_metrics": ["power_w"],
+    "auxiliary_metrics": ["temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v", "noise_nv_per_sqrt_hz"],
+    "reporting_metrics": ["power_w", "temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v", "noise_nv_per_sqrt_hz"]
+  },
+  "execution_defaults": {
+    "backend_preference": "ngspice",
+    "default_fidelity": "quick_truth",
+    "promoted_fidelity": "focused_truth",
+    "truth_level": "demonstrator_truth",
+    "model_type": "builtin"
+  },
+  "intended_templates": {
+    "netlist_template": "templates/netlist/bandgap/v1/bandgap_demonstrator_truth.spice.tpl",
+    "quick_truth_testbench": "templates/testbench/bandgap/v1/quick_truth.yaml",
+    "focused_truth_testbench": "templates/testbench/bandgap/v1/focused_truth.yaml",
+    "measurement_contract": "templates/testbench/bandgap/v1/measurement_contract.yaml"
+  },
+  "notes": [
+    "reference_family_extension_task",
+    "designed_for_later_temperature_and_line_regulation_studies",
+    "included_now_to widen_benchmark_claim_scope_without faking execution readiness"
+  ]
+}

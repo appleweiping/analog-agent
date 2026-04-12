@@ -1,0 +1,95 @@
+{
+  "version": "folded_cascode_v1",
+  "measurement_targets": [
+    {
+      "metric": "dc_gain_db",
+      "units": "si",
+      "required_analysis_types": ["ac"],
+      "semantic_role": "stability",
+      "extraction": {
+        "method": "ac_low_frequency_gain",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "measurement_failure", "insufficient_curve_quality"]
+      }
+    },
+    {
+      "metric": "gbw_hz",
+      "units": "si",
+      "required_analysis_types": ["ac"],
+      "semantic_role": "stability",
+      "extraction": {
+        "method": "ac_unity_gain_crossing",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "curve_exists_but_no_crossing", "multiple_crossings", "insufficient_curve_quality"]
+      }
+    },
+    {
+      "metric": "phase_margin_deg",
+      "units": "si",
+      "required_analysis_types": ["ac"],
+      "semantic_role": "stability",
+      "extraction": {
+        "method": "ac_phase_margin_at_unity_crossing",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "curve_exists_but_no_crossing", "invalid_phase_readout", "insufficient_curve_quality"]
+      }
+    },
+    {
+      "metric": "power_w",
+      "units": "si",
+      "required_analysis_types": ["op"],
+      "semantic_role": "power",
+      "extraction": {
+        "method": "aggregate_supply_power",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "power_supply_missing", "current_direction_ambiguous", "power_unavailable"]
+      }
+    },
+    {
+      "metric": "slew_rate_v_per_us",
+      "units": "si",
+      "required_analysis_types": ["tran"],
+      "semantic_role": "diagnostic",
+      "extraction": {
+        "method": "tran_slew_rate_proxy",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "measurement_failure", "partial_analysis_failure"]
+      }
+    }
+  ],
+  "postprocessing_rules": [
+    {
+      "rule_name": "normalize_to_si_units",
+      "applies_to_metrics": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w", "slew_rate_v_per_us"]
+    },
+    {
+      "rule_name": "prefer_highest_confidence_observation",
+      "applies_to_metrics": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w", "slew_rate_v_per_us"]
+    }
+  ],
+  "fallback_strategies": [
+    {
+      "strategy_name": "flag_missing_metric",
+      "applies_to_metrics": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w", "slew_rate_v_per_us"],
+      "trigger_condition": "metric_not_extractable",
+      "action": "emit_structured_measurement_failure"
+    }
+  ],
+  "validation_checks": [
+    {
+      "check_name": "all_required_metrics_accounted_for",
+      "applies_to_metrics": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w", "slew_rate_v_per_us"],
+      "failure_severity": "critical"
+    },
+    {
+      "check_name": "analysis_sources_resolved",
+      "applies_to_metrics": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w", "slew_rate_v_per_us"],
+      "failure_severity": "high"
+    },
+    {
+      "check_name": "no_metric_conflict",
+      "applies_to_metrics": ["dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w", "slew_rate_v_per_us"],
+      "failure_severity": "medium"
+    }
+  ]
+}

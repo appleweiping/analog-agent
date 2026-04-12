@@ -21,6 +21,7 @@ from libs.schema.simulation import (
     TemplateBinding,
 )
 from libs.utils.hashing import stable_hash
+from libs.vertical_slices.folded_cascode_spec import folded_cascode_v1_netlist_template_path
 from libs.vertical_slices.ota2_spec import ota2_v1_netlist_template_path
 
 CONFIG_ROOT = Path(__file__).resolve().parents[2] / "configs" / "simulator"
@@ -205,6 +206,79 @@ def _demonstrator_ota2_bindings(task: DesignTask, candidate: CandidateRecord) ->
     return bindings, model_binding, stimulus, rendered
 
 
+def _demonstrator_folded_cascode_bindings(task: DesignTask, candidate: CandidateRecord) -> tuple[list[ParameterBinding], ModelBinding, list[StimulusBinding], str]:
+    values = _parameter_map(candidate)
+    env = candidate.world_state_snapshot.environment_state
+    w_in = values.get("w_in", 10e-6)
+    l_in = max(values.get("l_in", 1.5e-6), 1e-9)
+    w_cas = values.get("w_cas", 8e-6)
+    l_cas = max(values.get("l_cas", 1.5e-6), 1e-9)
+    ibias = max(values.get("ibias", 8e-5), 1e-7)
+    cc = max(values.get("cc", 0.5e-12), 5e-14)
+    load_cap_f = float(env.load_cap_f or 2.5e-12)
+    supply_v = float(env.supply_voltage_v or 1.2)
+    vin_cm = round(supply_v / 2.0, 6)
+    vin_step_high = round(min(supply_v * 0.7, vin_cm + 0.075), 6)
+
+    width_ratio_in = max(w_in / l_in, 0.5)
+    width_ratio_cas = max(w_cas / l_cas, 0.5)
+    gm_in = 0.09 * (ibias * width_ratio_in) ** 0.5
+    gm_fold = 0.11 * (ibias * width_ratio_cas) ** 0.5
+    ro_in = max(3.6e6 * (l_in / max(w_in, 1e-9)) * (8e-5 / ibias) ** 0.45, 1.0e5)
+    ro_fold = max(6.4e6 * (l_cas / max(w_cas, 1e-9)) * (8e-5 / ibias) ** 0.42, 2.0e5)
+    c_fold = max(0.1 * cc, 2e-14)
+    effective_secondary_cap = max(0.06 * cc + 0.18 * load_cap_f, 1e-15)
+    p2_hint_hz = gm_fold / (2.0 * 3.141592653589793 * effective_secondary_cap)
+
+    bindings = [
+        ParameterBinding(variable_name="w_in", netlist_target="param::w_in", value_si=w_in, units="m", source="user_override"),
+        ParameterBinding(variable_name="l_in", netlist_target="param::l_in", value_si=l_in, units="m", source="user_override"),
+        ParameterBinding(variable_name="w_cas", netlist_target="param::w_cas", value_si=w_cas, units="m", source="user_override"),
+        ParameterBinding(variable_name="l_cas", netlist_target="param::l_cas", value_si=l_cas, units="m", source="user_override"),
+        ParameterBinding(variable_name="ibias", netlist_target="param::ibias", value_si=ibias, units="A", source="user_override"),
+        ParameterBinding(variable_name="cc", netlist_target="param::cc", value_si=cc, units="F", source="user_override"),
+        ParameterBinding(variable_name="cload", netlist_target="param::cload", value_si=load_cap_f, units="F", source="system_inferred"),
+        ParameterBinding(variable_name="gm_in", netlist_target="param::gm_in", value_si=gm_in, units="A/V", source="system_inferred"),
+        ParameterBinding(variable_name="gm_fold", netlist_target="param::gm_fold", value_si=gm_fold, units="A/V", source="system_inferred"),
+        ParameterBinding(variable_name="ro_in", netlist_target="param::ro_in", value_si=ro_in, units="ohm", source="system_inferred"),
+        ParameterBinding(variable_name="ro_fold", netlist_target="param::ro_fold", value_si=ro_fold, units="ohm", source="system_inferred"),
+        ParameterBinding(variable_name="c_fold", netlist_target="param::c_fold", value_si=c_fold, units="F", source="system_inferred"),
+        ParameterBinding(variable_name="p2_hint_hz", netlist_target="hint::p2_hz", value_si=p2_hint_hz, units="Hz", source="system_inferred"),
+        ParameterBinding(variable_name="vin_step_high", netlist_target="param::vin_step_high", value_si=vin_step_high, units="V", source="system_inferred"),
+    ]
+    model_binding = _model_binding_from_config(
+        backend="ngspice",
+        process_node=task.parent_spec_id,
+        corner=env.corner,
+        temperature_c=env.temperature_c,
+        supply_voltage_v=supply_v,
+        default_builtin_ref="builtin_demo_folded_cascode_small_signal_v1",
+    )
+    stimulus = [
+        StimulusBinding(source_name="VDD", stimulus_type="supply", parameters={"value": supply_v}),
+        StimulusBinding(source_name="VINP", stimulus_type="ac_input", parameters={"dc_value": vin_cm, "ac_amplitude": 1.0}),
+        StimulusBinding(source_name="VINN", stimulus_type="bias", parameters={"value": vin_cm}),
+    ]
+    template = Template(folded_cascode_v1_netlist_template_path().read_text(encoding="utf-8"))
+    rendered = template.safe_substitute(
+        truth_mode="demonstrator_truth",
+        template_id=task.topology.template_id or "folded_cascode_nominal_op_ac",
+        p2_hint_hz=f"{p2_hint_hz:.6e}",
+        vdd=f"{supply_v:.6e}",
+        vin_cm=f"{vin_cm:.6e}",
+        vin_step_high=f"{vin_step_high:.6e}",
+        ibias=f"{ibias:.6e}",
+        cc=f"{cc:.6e}",
+        cload=f"{load_cap_f:.6e}",
+        gm_in=f"{gm_in:.6e}",
+        gm_fold=f"{gm_fold:.6e}",
+        ro_in=f"{ro_in:.6e}",
+        ro_fold=f"{ro_fold:.6e}",
+        c_fold=f"{c_fold:.6e}",
+    )
+    return bindings, model_binding, stimulus, rendered
+
+
 def realize_netlist_instance(
     task: DesignTask,
     candidate: CandidateRecord,
@@ -218,6 +292,18 @@ def realize_netlist_instance(
     world_state = candidate.world_state_snapshot
     if backend == "ngspice" and task.circuit_family == "two_stage_ota" and task.topology.topology_mode == "fixed":
         bindings, model_binding, stimulus, rendered_netlist = _demonstrator_ota2_bindings(task, candidate)
+        if model_binding_overrides:
+            model_binding = _model_binding_from_config(
+                backend="ngspice",
+                process_node=task.parent_spec_id,
+                corner=world_state.environment_state.corner,
+                temperature_c=world_state.environment_state.temperature_c,
+                supply_voltage_v=world_state.environment_state.supply_voltage_v,
+                default_builtin_ref=model_binding.backend_model_ref,
+                overrides=model_binding_overrides,
+            )
+    elif backend == "ngspice" and task.circuit_family == "folded_cascode_ota" and task.topology.topology_mode == "fixed":
+        bindings, model_binding, stimulus, rendered_netlist = _demonstrator_folded_cascode_bindings(task, candidate)
         if model_binding_overrides:
             model_binding = _model_binding_from_config(
                 backend="ngspice",
