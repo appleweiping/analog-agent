@@ -1,4 +1,4 @@
-"""Formal experiment schemas for Day-4 evaluation and baseline comparisons."""
+"""Formal experiment schemas for baseline and methodology comparisons."""
 
 from __future__ import annotations
 
@@ -9,11 +9,35 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from libs.schema.design_task import DesignTask
 from libs.schema.stats import ExperimentStatsRecord, StatsAggregationResult, VerificationStatsRecord
 
+ExperimentMode = Literal[
+    "full_simulation_baseline",
+    "no_world_model_baseline",
+    "full_system",
+    "no_world_model",
+    "no_calibration",
+    "no_fidelity_escalation",
+]
+
 EXPERIMENT_MODES = (
     "full_simulation_baseline",
     "no_world_model_baseline",
     "full_system",
+    "no_world_model",
+    "no_calibration",
+    "no_fidelity_escalation",
 )
+
+
+class MethodComponentConfig(BaseModel):
+    """Formal execution-component switches for controlled experiments."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: ExperimentMode
+    use_world_model: bool
+    use_calibration: bool
+    use_fidelity_escalation: bool
+    use_full_simulation_baseline: bool = False
 
 
 class ExperimentBudget(BaseModel):
@@ -31,12 +55,17 @@ class ExperimentLogRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     step_index: int
-    mode: Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]
+    mode: ExperimentMode
     candidate_ids: list[str] = Field(default_factory=list)
     predicted_truth_gap: dict[str, float] = Field(default_factory=dict)
     simulation_selection_ratio: float = 0.0
     feasible_hit: bool = False
     failure_type_distribution: dict[str, int] = Field(default_factory=dict)
+    fidelity_usage: dict[str, int] = Field(default_factory=dict)
+    calibration_updates_applied: int = 0
+    world_model_enabled: bool = True
+    calibration_enabled: bool = True
+    fidelity_escalation_enabled: bool = True
 
     @field_validator("simulation_selection_ratio")
     @classmethod
@@ -52,8 +81,9 @@ class ExperimentResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     run_id: str
-    mode: Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]
+    mode: ExperimentMode
     task_id: str
+    component_config: MethodComponentConfig
     simulation_call_count: int
     candidate_count: int
     best_feasible_found: bool
@@ -64,6 +94,9 @@ class ExperimentResult(BaseModel):
     feasible_hit_rate: float = 0.0
     failure_type_distribution: dict[str, int] = Field(default_factory=dict)
     efficiency_score: float = 0.0
+    prediction_gap_by_step: list[dict[str, float]] = Field(default_factory=list)
+    calibration_update_count: int = 0
+    focused_truth_call_count: int = 0
     structured_log: list[ExperimentLogRecord] = Field(default_factory=list)
     verification_stats: list[VerificationStatsRecord] = Field(default_factory=list)
     stats_record: ExperimentStatsRecord | None = None
@@ -82,7 +115,7 @@ class ExperimentRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     design_task: DesignTask
-    mode: Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]
+    mode: ExperimentMode
     budget: ExperimentBudget
     steps: int = 3
     run_index: int = 0
@@ -96,7 +129,7 @@ class ExperimentSuiteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     design_task: DesignTask
-    modes: list[Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]] = Field(default_factory=list)
+    modes: list[ExperimentMode] = Field(default_factory=list)
     budget: ExperimentBudget
     steps: int = 3
     repeat_runs: int = 5
@@ -109,7 +142,7 @@ class ExperimentAggregateSummary(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mode: Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]
+    mode: ExperimentMode
     run_count: int
     average_simulation_call_count: float
     feasible_hit_rate: float
@@ -118,6 +151,66 @@ class ExperimentAggregateSummary(BaseModel):
     average_selection_ratio: float
     average_best_metrics: dict[str, float] = Field(default_factory=dict)
     failure_type_distribution: dict[str, int] = Field(default_factory=dict)
+    average_prediction_gap: dict[str, float] = Field(default_factory=dict)
+    average_calibration_update_count: float = 0.0
+    average_focused_truth_call_count: float = 0.0
+
+
+class MethodModeSummary(BaseModel):
+    """Aggregated methodology-facing summary for one execution mode."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: ExperimentMode
+    component_config: MethodComponentConfig
+    run_count: int
+    simulation_call_count: float
+    feasible_hit_rate: float
+    average_prediction_gap: dict[str, float] = Field(default_factory=dict)
+    average_best_metrics: dict[str, float] = Field(default_factory=dict)
+    average_convergence_step: float
+    average_calibration_update_count: float = 0.0
+    focused_truth_ratio: float = 0.0
+    escalation_count: int = 0
+    failure_type_distribution: dict[str, int] = Field(default_factory=dict)
+
+
+class MethodDeltaSummary(BaseModel):
+    """Pairwise delta between two methodology modes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    baseline_mode: ExperimentMode
+    compared_mode: ExperimentMode
+    simulation_call_delta: float
+    feasible_hit_rate_delta: float
+    prediction_gap_delta: dict[str, float] = Field(default_factory=dict)
+    best_metric_delta: dict[str, float] = Field(default_factory=dict)
+    focused_truth_ratio_delta: float = 0.0
+    calibration_update_delta: float = 0.0
+
+
+class MethodConclusionSummary(BaseModel):
+    """Auto-generated methodology conclusions for Day-11 comparisons."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    world_model_effective: bool
+    calibration_effective: bool
+    fidelity_effective: bool
+    conclusion_notes: list[str] = Field(default_factory=list)
+
+
+class MethodComparisonResult(BaseModel):
+    """Structured methodology-comparison result over several modes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str
+    modes: list[ExperimentMode] = Field(default_factory=list)
+    mode_summaries: list[MethodModeSummary] = Field(default_factory=list)
+    deltas: list[MethodDeltaSummary] = Field(default_factory=list)
+    conclusions: MethodConclusionSummary
 
 
 class ExperimentSuiteResult(BaseModel):
@@ -126,7 +219,8 @@ class ExperimentSuiteResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_id: str
-    modes: list[Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]] = Field(default_factory=list)
+    modes: list[ExperimentMode] = Field(default_factory=list)
     runs: list[ExperimentResult] = Field(default_factory=list)
     summaries: list[ExperimentAggregateSummary] = Field(default_factory=list)
     aggregated_stats: StatsAggregationResult | None = None
+    comparison: MethodComparisonResult | None = None

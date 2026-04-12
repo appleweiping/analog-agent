@@ -117,7 +117,14 @@ class ExperimentStatsRecord(BaseModel):
 
     run_id: str
     task_id: str
-    mode: Literal["full_simulation_baseline", "no_world_model_baseline", "full_system"]
+    mode: Literal[
+        "full_simulation_baseline",
+        "no_world_model_baseline",
+        "full_system",
+        "no_world_model",
+        "no_calibration",
+        "no_fidelity_escalation",
+    ]
     simulation_call_count: int
     candidate_count: int
     best_feasible_found: bool

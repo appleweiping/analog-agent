@@ -1,4 +1,4 @@
-"""Unified experiment runner for Day-4 baseline comparisons."""
+"""Unified experiment runner for baseline and methodology comparisons."""
 
 from __future__ import annotations
 
@@ -22,8 +22,14 @@ from libs.schema.experiment import (
     ExperimentAggregateSummary,
     ExperimentBudget,
     ExperimentLogRecord,
+    ExperimentMode,
     ExperimentResult,
     ExperimentSuiteResult,
+    MethodComparisonResult,
+    MethodComponentConfig,
+    MethodConclusionSummary,
+    MethodDeltaSummary,
+    MethodModeSummary,
 )
 from libs.schema.planning import CandidatePoolState, FrontierState, SearchProvenance, SearchState, SimulationDecision, SimulationSelectionResponse, StrategyContext
 from libs.schema.world_model import FeasibilityPrediction, MetricEstimate, MetricsPrediction, SimulationValueEstimate, TrustAssessment
@@ -169,6 +175,65 @@ def _baseline_predictions(task, candidate, mode: str, run_index: int):
             trust_assessment=trust,
         )
     return metrics_prediction, feasibility_prediction, simulation_value
+
+
+def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
+    if mode == "full_system":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=True,
+            use_calibration=True,
+            use_fidelity_escalation=True,
+            use_full_simulation_baseline=False,
+        )
+    if mode in {"no_world_model", "no_world_model_baseline"}:
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=False,
+            use_calibration=False,
+            use_fidelity_escalation=True,
+            use_full_simulation_baseline=False,
+        )
+    if mode == "no_calibration":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=True,
+            use_calibration=False,
+            use_fidelity_escalation=True,
+            use_full_simulation_baseline=False,
+        )
+    if mode == "no_fidelity_escalation":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=True,
+            use_calibration=True,
+            use_fidelity_escalation=False,
+            use_full_simulation_baseline=False,
+        )
+    if mode == "full_simulation_baseline":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=False,
+            use_calibration=False,
+            use_fidelity_escalation=False,
+            use_full_simulation_baseline=True,
+        )
+    raise ValueError(f"unsupported experiment mode: {mode}")
+
+
+def _uses_baseline_predictions(config: MethodComponentConfig) -> bool:
+    return config.use_full_simulation_baseline or not config.use_world_model
+
+
+def _requested_fidelity(
+    config: MethodComponentConfig,
+    selection,
+    candidate,
+    default_fidelity: str,
+) -> str:
+    if not config.use_fidelity_escalation:
+        return "quick_truth"
+    return selection.requested_fidelity_map.get(candidate.candidate_id, default_fidelity)
 
 
 def _initialize_baseline_state(service: PlanningService, mode: str, run_index: int) -> SearchState:
@@ -389,43 +454,76 @@ def _best_metrics(executions) -> dict[str, float]:
     return dict(sorted(best.items()))
 
 
-def run_experiment(task, mode: str, budget: ExperimentBudget, steps: int, *, run_index: int = 0, fidelity_level: str = "focused_validation", backend_preference: str = "ngspice") -> ExperimentResult:
+def run_experiment(
+    task,
+    mode: ExperimentMode,
+    budget: ExperimentBudget,
+    steps: int,
+    *,
+    run_index: int = 0,
+    fidelity_level: str = "focused_validation",
+    backend_preference: str = "ngspice",
+) -> ExperimentResult:
     """Run one structured experiment under a unified execution mode."""
 
+    component_config = _mode_config(mode)
     world_model_bundle = compile_world_model_bundle(task).world_model_bundle
     assert world_model_bundle is not None
     planning_bundle = compile_planning_bundle(task, world_model_bundle).planning_bundle
     assert planning_bundle is not None
+    if not component_config.use_fidelity_escalation:
+        planning_bundle = planning_bundle.model_copy(
+            update={
+                "escalation_policy": planning_bundle.escalation_policy.model_copy(
+                    update={
+                        "default_fidelity": "quick_truth",
+                        "promoted_fidelity": "quick_truth",
+                        "max_batch_size": 0,
+                    }
+                )
+            }
+        )
     planning_bundle = planning_bundle.model_copy(
         update={
             "budget_controller": planning_bundle.budget_controller.model_copy(
                 update={
                     "max_real_simulations": budget.max_simulations,
-                    "max_proxy_evaluations": max(planning_bundle.budget_controller.max_proxy_evaluations, budget.max_candidates_per_step * steps),
+                    "max_proxy_evaluations": max(
+                        planning_bundle.budget_controller.max_proxy_evaluations,
+                        budget.max_candidates_per_step * steps,
+                    ),
                     "batch_size": min(planning_bundle.budget_controller.batch_size, budget.max_candidates_per_step),
                 }
             ),
             "escalation_policy": planning_bundle.escalation_policy.model_copy(
                 update={"max_batch_size": max(1, min(planning_bundle.escalation_policy.max_batch_size, budget.max_candidates_per_step))}
             ),
-            "termination_policy": planning_bundle.termination_policy.model_copy(update={"max_iterations": max(steps * 4, planning_bundle.termination_policy.max_iterations)}),
+            "termination_policy": planning_bundle.termination_policy.model_copy(
+                update={"max_iterations": max(steps * 4, planning_bundle.termination_policy.max_iterations)}
+            ),
         }
     )
     service = PlanningService(planning_bundle, task, world_model_bundle)
-    search_state = service.initialize_search().search_state if mode == "full_system" else _initialize_baseline_state(service, mode, run_index)
+    if _uses_baseline_predictions(component_config):
+        search_state = _initialize_baseline_state(service, mode, run_index)
+    else:
+        search_state = service.initialize_search().search_state
 
     simulation_executions = []
     logs: list[ExperimentLogRecord] = []
     convergence_step: int | None = None
     total_selectable_candidates = 0
     total_selected_candidates = 0
+    calibration_update_count = 0
+    focused_truth_call_count = 0
+    prediction_gap_by_step: list[dict[str, float]] = []
 
     for step_index in range(steps):
-        if mode == "full_system":
+        if _uses_baseline_predictions(component_config):
+            search_state = _propose_baseline_candidates(service, search_state, mode, run_index)
+        else:
             search_state = service.propose_candidates(search_state).search_state
             search_state = service.evaluate_candidates(search_state).search_state
-        else:
-            search_state = _propose_baseline_candidates(service, search_state, mode, run_index)
 
         selectable_count = max(
             1,
@@ -442,20 +540,31 @@ def run_experiment(task, mode: str, budget: ExperimentBudget, steps: int, *, run
         search_state = selection.search_state
         total_selected_candidates += len(selection.selected_candidates)
         step_executions = []
+        step_fidelity_usage: Counter[str] = Counter()
+        step_calibration_updates = 0
         for candidate in selection.selected_candidates:
+            requested_fidelity = _requested_fidelity(component_config, selection, candidate, fidelity_level)
             execution = SimulationService(task, planning_bundle, search_state).verify_candidate(
                 candidate.candidate_id,
-                fidelity_level=fidelity_level,
+                fidelity_level=requested_fidelity,
                 backend_preference=backend_preference,
                 escalation_reason=f"experiment_{mode}",
             )
+            if requested_fidelity == "focused_truth":
+                focused_truth_call_count += 1
+            step_fidelity_usage[requested_fidelity] += 1
             simulation_executions.append(execution)
             step_executions.append(execution)
             feedback = service.ingest_simulation_feedback(
                 search_state,
                 candidate.candidate_id,
                 execution.verification_result.calibration_payload.truth_record,
+                planner_feedback=execution.verification_result.planner_feedback,
+                apply_calibration=component_config.use_calibration,
             )
+            if component_config.use_calibration:
+                step_calibration_updates += 1
+                calibration_update_count += 1
             search_state = feedback.search_state
             service.world_model_bundle = feedback.updated_world_model_bundle
             service.world_model_service.bundle = feedback.updated_world_model_bundle
@@ -464,6 +573,8 @@ def run_experiment(task, mode: str, budget: ExperimentBudget, steps: int, *, run
         if convergence_step is None and search_state.best_known_feasible is not None:
             convergence_step = step_index
 
+        step_gap_summary = _gap_summary(step_executions)
+        prediction_gap_by_step.append(step_gap_summary)
         failure_counter = Counter(
             execution.verification_result.failure_attribution.primary_failure_class
             for execution in step_executions
@@ -478,17 +589,22 @@ def run_experiment(task, mode: str, budget: ExperimentBudget, steps: int, *, run
                 step_index=step_index,
                 mode=mode,
                 candidate_ids=[candidate.candidate_id for candidate in selection.selected_candidates],
-                predicted_truth_gap=_gap_summary(step_executions),
+                predicted_truth_gap=step_gap_summary,
                 simulation_selection_ratio=round(len(selection.selected_candidates) / selectable_count, 6),
                 feasible_hit=step_feasible_hit,
                 failure_type_distribution=dict(sorted(failure_counter.items())),
+                fidelity_usage=dict(sorted(step_fidelity_usage.items())),
+                calibration_updates_applied=step_calibration_updates,
+                world_model_enabled=component_config.use_world_model,
+                calibration_enabled=component_config.use_calibration,
+                fidelity_escalation_enabled=component_config.use_fidelity_escalation,
             )
         )
         if mode != "full_simulation_baseline" and step_feasible_hit:
             break
-        if mode == "full_system" and service.should_terminate(search_state).should_terminate:
+        if not _uses_baseline_predictions(component_config) and service.should_terminate(search_state).should_terminate:
             break
-        if mode != "full_system" and remaining_simulations(search_state.budget_state) <= 0:
+        if _uses_baseline_predictions(component_config) and remaining_simulations(search_state.budget_state) <= 0:
             break
 
     feasible_truth_executions = [
@@ -507,6 +623,7 @@ def run_experiment(task, mode: str, budget: ExperimentBudget, steps: int, *, run
         run_id=f"{mode}_{task.task_id}_{run_index}",
         mode=mode,
         task_id=task.task_id,
+        component_config=component_config,
         simulation_call_count=len(simulation_executions),
         candidate_count=len(search_state.candidate_pool_state.candidates),
         best_feasible_found=best_feasible_found,
@@ -515,15 +632,148 @@ def run_experiment(task, mode: str, budget: ExperimentBudget, steps: int, *, run
         predicted_truth_gap=_gap_summary(simulation_executions),
         simulation_selection_ratio=round(total_selected_candidates / max(1, total_selectable_candidates), 6),
         feasible_hit_rate=1.0 if best_feasible_found else 0.0,
-        failure_type_distribution=dict(sorted(Counter(execution.verification_result.failure_attribution.primary_failure_class for execution in simulation_executions if execution.verification_result.failure_attribution.primary_failure_class != "none").items())),
+        failure_type_distribution=dict(
+            sorted(
+                Counter(
+                    execution.verification_result.failure_attribution.primary_failure_class
+                    for execution in simulation_executions
+                    if execution.verification_result.failure_attribution.primary_failure_class != "none"
+                ).items()
+            )
+        ),
         efficiency_score=efficiency_score(best_feasible_found, len(simulation_executions)),
+        prediction_gap_by_step=prediction_gap_by_step,
+        calibration_update_count=calibration_update_count,
+        focused_truth_call_count=focused_truth_call_count,
         structured_log=logs,
         verification_stats=[execution.verification_stats for execution in simulation_executions],
     )
     return result.model_copy(update={"stats_record": build_experiment_stats_record(result)})
 
 
-def run_experiment_suite(task, modes: list[str], budget: ExperimentBudget, steps: int, *, repeat_runs: int = 5, fidelity_level: str = "focused_validation", backend_preference: str = "ngspice") -> ExperimentSuiteResult:
+def _method_mode_summary(mode: ExperimentMode, runs: list[ExperimentResult], steps: int) -> MethodModeSummary:
+    metric_accumulator: defaultdict[str, list[float]] = defaultdict(list)
+    gap_accumulator: defaultdict[str, list[float]] = defaultdict(list)
+    escalation_count = 0
+    for result in runs:
+        for metric, value in result.best_metrics.items():
+            metric_accumulator[metric].append(value)
+        for metric, value in result.predicted_truth_gap.items():
+            gap_accumulator[metric].append(value)
+        escalation_count += result.focused_truth_call_count
+    component_config = runs[0].component_config if runs else _mode_config(mode)
+    total_sim_calls = sum(result.simulation_call_count for result in runs)
+    return MethodModeSummary(
+        mode=mode,
+        component_config=component_config,
+        run_count=len(runs),
+        simulation_call_count=round(total_sim_calls / max(1, len(runs)), 6),
+        feasible_hit_rate=feasible_hit_rate(runs),
+        average_prediction_gap={metric: round(sum(values) / len(values), 6) for metric, values in sorted(gap_accumulator.items()) if values},
+        average_best_metrics={metric: round(sum(values) / len(values), 6) for metric, values in sorted(metric_accumulator.items()) if values},
+        average_convergence_step=round(
+            sum((result.convergence_step if result.convergence_step is not None else steps) for result in runs) / max(1, len(runs)),
+            6,
+        ),
+        average_calibration_update_count=round(sum(result.calibration_update_count for result in runs) / max(1, len(runs)), 6),
+        focused_truth_ratio=round(
+            sum(result.focused_truth_call_count for result in runs) / max(1, total_sim_calls),
+            6,
+        ) if total_sim_calls else 0.0,
+        escalation_count=escalation_count,
+        failure_type_distribution=aggregate_failure_type_distribution(runs),
+    )
+
+
+def _delta(best_metrics_a: dict[str, float], best_metrics_b: dict[str, float]) -> dict[str, float]:
+    keys = sorted(set(best_metrics_a) | set(best_metrics_b))
+    return {
+        key: round(best_metrics_b.get(key, 0.0) - best_metrics_a.get(key, 0.0), 6)
+        for key in keys
+    }
+
+
+def _gap_delta(gap_a: dict[str, float], gap_b: dict[str, float]) -> dict[str, float]:
+    keys = sorted(set(gap_a) | set(gap_b))
+    return {
+        key: round(gap_b.get(key, 0.0) - gap_a.get(key, 0.0), 6)
+        for key in keys
+    }
+
+
+def _build_method_comparison(task_id: str, summaries: list[MethodModeSummary]) -> MethodComparisonResult | None:
+    summary_map = {summary.mode: summary for summary in summaries}
+    if "full_system" not in summary_map:
+        return None
+    full = summary_map["full_system"]
+    deltas: list[MethodDeltaSummary] = []
+    comparison_modes = [mode for mode in ("no_world_model", "no_calibration", "no_fidelity_escalation") if mode in summary_map]
+    for mode in comparison_modes:
+        compared = summary_map[mode]
+        deltas.append(
+            MethodDeltaSummary(
+                baseline_mode=mode,
+                compared_mode="full_system",
+                simulation_call_delta=round(full.simulation_call_count - compared.simulation_call_count, 6),
+                feasible_hit_rate_delta=round(full.feasible_hit_rate - compared.feasible_hit_rate, 6),
+                prediction_gap_delta=_gap_delta(compared.average_prediction_gap, full.average_prediction_gap),
+                best_metric_delta=_delta(compared.average_best_metrics, full.average_best_metrics),
+                focused_truth_ratio_delta=round(full.focused_truth_ratio - compared.focused_truth_ratio, 6),
+                calibration_update_delta=round(full.average_calibration_update_count - compared.average_calibration_update_count, 6),
+            )
+        )
+    world_model_effective = "no_world_model" not in summary_map or (
+        full.simulation_call_count <= summary_map["no_world_model"].simulation_call_count
+        and full.feasible_hit_rate >= summary_map["no_world_model"].feasible_hit_rate
+    )
+    calibration_effective = "no_calibration" not in summary_map or (
+        full.average_calibration_update_count > 0.0
+        and (
+            full.average_prediction_gap.get("gbw_hz", 0.0)
+            <= summary_map["no_calibration"].average_prediction_gap.get("gbw_hz", float("inf"))
+        )
+    )
+    fidelity_effective = "no_fidelity_escalation" not in summary_map or (
+        full.focused_truth_ratio > 0.0
+        and full.simulation_call_count <= summary_map["no_fidelity_escalation"].simulation_call_count
+    )
+    notes: list[str] = []
+    if "no_world_model" in summary_map:
+        notes.append(
+            f"world_model_delta_sim_calls={round(summary_map['no_world_model'].simulation_call_count - full.simulation_call_count, 6)}"
+        )
+    if "no_calibration" in summary_map:
+        notes.append(
+            f"calibration_delta_gbw_gap={round(summary_map['no_calibration'].average_prediction_gap.get('gbw_hz', 0.0) - full.average_prediction_gap.get('gbw_hz', 0.0), 6)}"
+        )
+    if "no_fidelity_escalation" in summary_map:
+        notes.append(
+            f"fidelity_delta_focused_ratio={round(full.focused_truth_ratio - summary_map['no_fidelity_escalation'].focused_truth_ratio, 6)}"
+        )
+    return MethodComparisonResult(
+        task_id=task_id,
+        modes=[summary.mode for summary in summaries],
+        mode_summaries=summaries,
+        deltas=deltas,
+        conclusions=MethodConclusionSummary(
+            world_model_effective=world_model_effective,
+            calibration_effective=calibration_effective,
+            fidelity_effective=fidelity_effective,
+            conclusion_notes=notes,
+        ),
+    )
+
+
+def run_experiment_suite(
+    task,
+    modes: list[ExperimentMode],
+    budget: ExperimentBudget,
+    steps: int,
+    *,
+    repeat_runs: int = 5,
+    fidelity_level: str = "focused_validation",
+    backend_preference: str = "ngspice",
+) -> ExperimentSuiteResult:
     """Run repeated experiments for several execution modes."""
 
     runs = [
@@ -540,12 +790,16 @@ def run_experiment_suite(task, modes: list[str], budget: ExperimentBudget, steps
         for run_index in range(repeat_runs)
     ]
     summaries = []
+    method_summaries: list[MethodModeSummary] = []
     for mode in modes:
         mode_runs = [result for result in runs if result.mode == mode]
         metric_accumulator: defaultdict[str, list[float]] = defaultdict(list)
+        gap_accumulator: defaultdict[str, list[float]] = defaultdict(list)
         for result in mode_runs:
             for metric, value in result.best_metrics.items():
                 metric_accumulator[metric].append(value)
+            for metric, value in result.predicted_truth_gap.items():
+                gap_accumulator[metric].append(value)
         summaries.append(
             ExperimentAggregateSummary(
                 mode=mode,
@@ -564,7 +818,18 @@ def run_experiment_suite(task, modes: list[str], budget: ExperimentBudget, steps
                     if values
                 },
                 failure_type_distribution=aggregate_failure_type_distribution(mode_runs),
+                average_prediction_gap={
+                    metric: round(sum(values) / len(values), 6)
+                    for metric, values in sorted(gap_accumulator.items())
+                    if values
+                },
+                average_calibration_update_count=round(sum(result.calibration_update_count for result in mode_runs) / max(1, len(mode_runs)), 6),
+                average_focused_truth_call_count=round(sum(result.focused_truth_call_count for result in mode_runs) / max(1, len(mode_runs)), 6),
             )
         )
+        if mode in {"full_system", "no_world_model", "no_calibration", "no_fidelity_escalation"}:
+            method_summaries.append(_method_mode_summary(mode, mode_runs, steps))
     suite = ExperimentSuiteResult(task_id=task.task_id, modes=modes, runs=runs, summaries=summaries)
-    return suite.model_copy(update={"aggregated_stats": aggregate_stats(suite)})
+    suite = suite.model_copy(update={"aggregated_stats": aggregate_stats(suite)})
+    comparison = _build_method_comparison(task.task_id, method_summaries)
+    return suite.model_copy(update={"comparison": comparison})

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from apps.orchestrator.job_runner import run_full_system_acceptance
 from libs.eval.experiment_runner import run_experiment_suite
@@ -40,15 +41,23 @@ def run_ota_experiment_suite(
     budget: ExperimentBudget | None = None,
     backend_preference: str | None = None,
     fidelity_level: str | None = None,
+    comparison_profile: str = "baseline",
+    modes: list[str] | None = None,
     export_directory: str | Path | None = None,
     task_id: str = "benchmark-ota2-v1",
 ) -> ExperimentSuiteResult:
     """Run the frozen OTA v1 experiment suite and optionally export stats."""
 
     config = load_ota2_v1_config()
+    selected_modes = modes
+    if selected_modes is None:
+        if comparison_profile == "methodology":
+            selected_modes = ["full_system", "no_world_model", "no_calibration", "no_fidelity_escalation"]
+        else:
+            selected_modes = ["full_simulation_baseline", "no_world_model_baseline", "full_system"]
     suite = run_experiment_suite(
         build_ota2_v1_design_task(task_id=task_id),
-        modes=["full_simulation_baseline", "no_world_model_baseline", "full_system"],
+        modes=selected_modes,
         budget=budget or ExperimentBudget(max_simulations=6, max_candidates_per_step=3),
         steps=steps,
         repeat_runs=repeat_runs,
@@ -68,4 +77,9 @@ def run_ota_experiment_suite(
         output_root.mkdir(parents=True, exist_ok=True)
         export_stats_json(suite, output_root / "ota2_stats_summary.json")
         export_stats_csv(suite, output_root / "ota2_stats_summary.csv")
+        if suite.comparison is not None:
+            (output_root / "ota2_method_comparison.json").write_text(
+                json.dumps(suite.comparison.model_dump(mode="json"), indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
     return suite

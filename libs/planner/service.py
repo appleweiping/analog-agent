@@ -575,14 +575,18 @@ class PlanningService:
         candidate_id: str,
         truth: TruthCalibrationRecord,
         planner_feedback: PlannerFeedback | None = None,
+        *,
+        apply_calibration: bool = True,
     ) -> SimulationFeedbackResponse:
         """Ingest real simulator feedback for one candidate."""
 
         candidate = find_candidate(search_state.candidate_pool_state, candidate_id)
         if candidate is None:
             raise ValueError(f"unknown candidate_id: {candidate_id}")
-        calibration = self.world_model_service.calibrate_with_truth(candidate.world_state_snapshot, truth)
-        self.world_model_bundle = calibration.updated_bundle
+        calibration = None
+        if apply_calibration:
+            calibration = self.world_model_service.calibrate_with_truth(candidate.world_state_snapshot, truth)
+            self.world_model_bundle = calibration.updated_bundle
         feasible = all(item.is_satisfied for item in truth.constraints) if truth.constraints else (
             candidate.predicted_feasibility.overall_feasibility >= 0.8 if candidate.predicted_feasibility else False
         )
@@ -614,7 +618,7 @@ class PlanningService:
             ),
         )
         pool_state = upsert_candidate(search_state.candidate_pool_state, updated_candidate)
-        budget_state = consume_calibrations(search_state.budget_state, 1)
+        budget_state = consume_calibrations(search_state.budget_state, 1) if apply_calibration else search_state.budget_state
         mismatch = bool(
             not feasible
             and (
@@ -629,9 +633,19 @@ class PlanningService:
             outcome_tag="simulation_feedback_ingested",
             selected_candidate_id=candidate_id,
             executed_action_chain=updated_candidate.proposal_action_chain,
-            world_model_queries=[WorldModelQueryRecord(method="calibrate_with_truth", state_id=updated_candidate.world_state_ref, timestamp=_timestamp())],
+            world_model_queries=[
+                WorldModelQueryRecord(
+                    method="calibrate_with_truth" if apply_calibration else "planner_feedback_only",
+                    state_id=updated_candidate.world_state_ref,
+                    timestamp=_timestamp(),
+                )
+            ],
             simulation_decision=SimulationDecision(decision="simulate", candidate_ids=[candidate_id], reasons=["feedback ingested"]),
-            decision_rationale=["updated candidate lifecycle and calibrated world model with simulator truth"],
+            decision_rationale=[
+                "updated candidate lifecycle and calibrated world model with simulator truth"
+                if apply_calibration
+                else "updated candidate lifecycle without world-model calibration"
+            ],
             reward_or_progress_signal=1.0 if feasible else -0.25,
             simulation_result_ref=truth.artifact_refs[0] if truth.artifact_refs else None,
             trust_snapshot=updated_candidate.predicted_uncertainty,

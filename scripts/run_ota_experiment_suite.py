@@ -21,6 +21,7 @@ def main() -> None:
     parser.add_argument("--repeat-runs", type=int, default=5)
     parser.add_argument("--max-simulations", type=int, default=6)
     parser.add_argument("--max-candidates-per-step", type=int, default=3)
+    parser.add_argument("--comparison-profile", choices=["baseline", "methodology"], default="baseline")
     parser.add_argument("--output", default="research/benchmarks/ota2_experiment_results.json")
     parser.add_argument("--export-dir", default="research/benchmarks")
     args = parser.parse_args()
@@ -32,6 +33,7 @@ def main() -> None:
             max_simulations=args.max_simulations,
             max_candidates_per_step=args.max_candidates_per_step,
         ),
+        comparison_profile=args.comparison_profile,
         export_directory=args.export_dir,
     )
     output_path = Path(args.output)
