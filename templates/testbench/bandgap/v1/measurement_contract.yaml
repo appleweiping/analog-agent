@@ -1,0 +1,73 @@
+{
+  "version": "bandgap_v1",
+  "measurement_targets": [
+    {
+      "metric": "power_w",
+      "units": "si",
+      "required_analysis_types": ["op"],
+      "semantic_role": "power",
+      "extraction": {
+        "method": "aggregate_supply_power",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "power_supply_missing", "current_direction_ambiguous", "power_unavailable"]
+      }
+    },
+    {
+      "metric": "temperature_coefficient_ppm_per_c",
+      "units": "si",
+      "required_analysis_types": ["op"],
+      "semantic_role": "performance",
+      "extraction": {
+        "method": "op_bandgap_tempco_proxy",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "measurement_failure", "power_unavailable"]
+      }
+    },
+    {
+      "metric": "line_regulation_mv_per_v",
+      "units": "si",
+      "required_analysis_types": ["tran"],
+      "semantic_role": "performance",
+      "extraction": {
+        "method": "tran_line_regulation_proxy",
+        "preferred_source_field": "metrics",
+        "failure_conditions": ["analysis_failure", "measurement_failure", "partial_analysis_failure"]
+      }
+    }
+  ],
+  "postprocessing_rules": [
+    {
+      "rule_name": "normalize_to_si_units",
+      "applies_to_metrics": ["power_w", "temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v"]
+    },
+    {
+      "rule_name": "prefer_highest_confidence_observation",
+      "applies_to_metrics": ["power_w", "temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v"]
+    }
+  ],
+  "fallback_strategies": [
+    {
+      "strategy_name": "flag_missing_metric",
+      "applies_to_metrics": ["power_w", "temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v"],
+      "trigger_condition": "metric_not_extractable",
+      "action": "emit_structured_measurement_failure"
+    }
+  ],
+  "validation_checks": [
+    {
+      "check_name": "all_required_metrics_accounted_for",
+      "applies_to_metrics": ["power_w", "temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v"],
+      "failure_severity": "critical"
+    },
+    {
+      "check_name": "analysis_sources_resolved",
+      "applies_to_metrics": ["power_w", "temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v"],
+      "failure_severity": "high"
+    },
+    {
+      "check_name": "no_metric_conflict",
+      "applies_to_metrics": ["power_w", "temperature_coefficient_ppm_per_c", "line_regulation_mv_per_v"],
+      "failure_severity": "medium"
+    }
+  ]
+}

@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 from libs.eval.stats import export_stats_csv, export_stats_json
 from libs.eval.benchmark_registry import list_benchmark_definitions, load_benchmark_task_definition, load_benchmark_suite_definition
 from libs.schema.experiment import ExperimentBudget
+from libs.vertical_slices.bandgap import run_bandgap_experiment_suite
 from libs.vertical_slices.folded_cascode import run_folded_cascode_experiment_suite
 from libs.vertical_slices.ldo import run_ldo_experiment_suite
 from libs.vertical_slices.ota2 import run_ota_experiment_suite
@@ -64,6 +65,8 @@ def main() -> None:
         else "folded_cascode"
         if benchmark_definition.benchmark_id == "folded_cascode_v1"
         else "ldo"
+        if benchmark_definition.benchmark_id == "ldo_v1"
+        else "bandgap"
     )
     if benchmark_definition.benchmark_id == "ota2_v1":
         suite = run_ota_experiment_suite(
@@ -85,6 +88,13 @@ def main() -> None:
             steps=args.steps,
             repeat_runs=args.repeat_runs,
             task_id="benchmark-ldo-v1",
+        )
+    elif benchmark_definition.benchmark_id == "bandgap_v1":
+        suite = run_bandgap_experiment_suite(
+            budget=budget,
+            steps=args.steps,
+            repeat_runs=args.repeat_runs,
+            task_id="benchmark-bandgap-v1",
         )
     else:
         raise ValueError(f"benchmark '{benchmark_definition.benchmark_id}' is frozen_runnable but not yet wired into run_benchmark.py")

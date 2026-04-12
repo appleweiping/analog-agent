@@ -29,9 +29,9 @@
     "no_fidelity_escalation"
   ],
   "notes": [
-    "ota2_is_the_only_frozen_runnable_vertical_slice_today",
-    "folded_cascode_and_ldo_are_spec_ready_generalization_targets",
-    "bandgap_is_included_as_a_future_extension_benchmark",
+    "ota2_is_the_paper_primary_frozen_runnable_vertical_slice",
+    "folded_cascode_ldo_and_bandgap_are_runnable_generalization_targets",
+    "bandgap_extends_the_suite_into_reference_generation_tasks",
     "suite_is_designed_for_top_conference_reporting_not_for_mvp_demoing"
   ]
 }

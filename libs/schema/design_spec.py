@@ -24,6 +24,8 @@ OBJECTIVE_METRICS = (
     "power_w",
     "area_um2",
     "noise_nv_per_sqrt_hz",
+    "temperature_coefficient_ppm_per_c",
+    "line_regulation_mv_per_v",
 )
 
 CONSTRAINT_METRICS = (
@@ -35,6 +37,8 @@ CONSTRAINT_METRICS = (
     "input_referred_noise_nv_per_sqrt_hz",
     "output_swing_v",
     "input_common_mode_v",
+    "temperature_coefficient_ppm_per_c",
+    "line_regulation_mv_per_v",
 )
 
 CORNER_ORDER = ("tt", "ss", "ff", "sf", "fs")

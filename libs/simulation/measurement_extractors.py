@@ -500,6 +500,54 @@ def _extract_slew_rate(tran_output: dict[str, object]) -> MeasurementResult:
     )
 
 
+def _extract_tempco(op_output: dict[str, object]) -> MeasurementResult:
+    if not _analysis_success(op_output):
+        return _result(
+            "temperature_coefficient_ppm_per_c",
+            "si",
+            "op",
+            status="analysis_failed",
+            reason="analysis_failure",
+            detail="op_analysis_failed",
+        )
+    direct = _metric_from_direct_source("temperature_coefficient_ppm_per_c", "op", op_output, confidence=0.86)
+    if direct is not None:
+        return direct
+    return _result(
+        "temperature_coefficient_ppm_per_c",
+        "si",
+        "op",
+        status="indeterminate",
+        reason="measurement_failure",
+        detail="missing_bandgap_tempco_source",
+        confidence=0.2,
+    )
+
+
+def _extract_line_regulation(tran_output: dict[str, object]) -> MeasurementResult:
+    if not _analysis_success(tran_output):
+        return _result(
+            "line_regulation_mv_per_v",
+            "si",
+            "tran",
+            status="analysis_failed",
+            reason="analysis_failure",
+            detail="tran_analysis_failed",
+        )
+    direct = _metric_from_direct_source("line_regulation_mv_per_v", "tran", tran_output, confidence=0.84)
+    if direct is not None:
+        return direct
+    return _result(
+        "line_regulation_mv_per_v",
+        "si",
+        "tran",
+        status="indeterminate",
+        reason="measurement_failure",
+        detail="missing_line_regulation_source",
+        confidence=0.2,
+    )
+
+
 def extract_measurement_report(
     simulation_bundle: SimulationBundle,
     parsed_outputs: list[dict[str, object]],
@@ -540,6 +588,8 @@ def extract_measurement_report(
         "power_w": lambda: _extract_power(op_output),
         "output_swing_v": lambda: _extract_output_swing(op_output),
         "slew_rate_v_per_us": lambda: _extract_slew_rate(tran_output),
+        "temperature_coefficient_ppm_per_c": lambda: _extract_tempco(op_output),
+        "line_regulation_mv_per_v": lambda: _extract_line_regulation(tran_output),
     }
 
     gbw_result: MeasurementResult | None = None

@@ -177,12 +177,28 @@ def _lookup_binding(netlist: NetlistInstance, name: str, default: float = 0.0) -
     return default
 
 
-def _analysis_block(analysis: AnalysisStatement) -> str:
+def _signal_node_name(netlist: NetlistInstance) -> str:
+    family = netlist.template_binding.circuit_family
+    if family == "bandgap":
+        return "vref"
+    return "vout"
+
+
+def _printed_nodes(netlist: NetlistInstance) -> list[str]:
+    family = netlist.template_binding.circuit_family
+    if family == "bandgap":
+        return ["vref"]
+    return ["n1", _signal_node_name(netlist)]
+
+
+def _analysis_block(netlist: NetlistInstance, analysis: AnalysisStatement) -> str:
+    signal_node = _signal_node_name(netlist)
+    printed_nodes = " ".join(f"v({node})" for node in _printed_nodes(netlist))
     if analysis.analysis_type == "op":
         return "\n".join(
             [
                 ".op",
-                ".print op v(n1) v(vout) i(VDD)",
+                f".print op {printed_nodes} i(VDD)",
             ]
         )
     if analysis.analysis_type == "ac":
@@ -192,7 +208,7 @@ def _analysis_block(analysis: AnalysisStatement) -> str:
         return "\n".join(
             [
                 f".ac dec {points} {f_start:.6e} {f_stop:.6e}",
-                ".print ac vdb(vout) vp(vout) vm(vout)",
+                f".print ac vdb({signal_node}) vp({signal_node}) vm({signal_node})",
             ]
         )
     if analysis.analysis_type == "tran":
@@ -201,14 +217,14 @@ def _analysis_block(analysis: AnalysisStatement) -> str:
         return "\n".join(
             [
                 f".tran {time_step:.6e} {stop_time:.6e}",
-                ".print tran v(vout)",
+                f".print tran v({signal_node})",
             ]
         )
     raise ValueError(f"unsupported native ngspice analysis: {analysis.analysis_type}")
 
 
 def _render_analysis_netlist(netlist: NetlistInstance, analysis: AnalysisStatement) -> str:
-    return f"{netlist.rendered_netlist.rstrip()}\n{_analysis_block(analysis)}\n.end\n"
+    return f"{netlist.rendered_netlist.rstrip()}\n{_analysis_block(netlist, analysis)}\n.end\n"
 
 
 def _parse_source_current(log_text: str, source_name: str) -> float | None:
@@ -237,12 +253,12 @@ def _parse_node_voltage(log_text: str, node_name: str) -> float | None:
     return None
 
 
-def _parse_ac_rows(log_text: str) -> list[tuple[float, float, float]]:
+def _parse_ac_rows(log_text: str, signal_node: str) -> list[tuple[float, float, float]]:
     rows: list[tuple[float, float, float]] = []
     capture = False
     for raw_line in log_text.splitlines():
         line = raw_line.strip()
-        if line.startswith("Index") and "vdb(vout)" in line:
+        if line.startswith("Index") and f"vdb({signal_node.lower()})" in line.lower():
             capture = True
             continue
         if not capture or not line or line.startswith("-"):
@@ -280,12 +296,12 @@ def _phase_margin_proxy(ugb_hz: float | None, p2_hint_hz: float) -> float | None
     return max(5.0, min(89.0, margin))
 
 
-def _parse_tran_rows(log_text: str) -> list[tuple[float, float]]:
+def _parse_tran_rows(log_text: str, signal_node: str) -> list[tuple[float, float]]:
     rows: list[tuple[float, float]] = []
     capture = False
     for raw_line in log_text.splitlines():
         line = raw_line.strip()
-        if line.startswith("Index") and "v(vout)" in line:
+        if line.startswith("Index") and f"v({signal_node.lower()})" in line.lower():
             capture = True
             continue
         if not capture or not line or line.startswith("-"):
@@ -312,6 +328,36 @@ def _slew_rate_proxy(rows: list[tuple[float, float]]) -> float | None:
     if best <= 0.0:
         return None
     return best / 1e6
+
+
+def _bandgap_tempco_proxy(netlist: NetlistInstance, vref_v: float | None) -> float:
+    area_ratio = max(_lookup_binding(netlist, "area_ratio", 8.0), 1.0)
+    r1 = max(_lookup_binding(netlist, "r1", 12e3), 1.0)
+    r2 = max(_lookup_binding(netlist, "r2", 36e3), 1.0)
+    l_core = max(_lookup_binding(netlist, "l_core", 1e-6), 1e-9)
+    ibias = max(_lookup_binding(netlist, "ibias", 5e-6), 1e-9)
+    balance_target = 0.4 * area_ratio
+    balance_error = abs((r2 / r1) - balance_target) / max(balance_target, 1e-6)
+    geometry_bonus = min(0.25, l_core / 4e-6)
+    vref_penalty = 0.0 if vref_v is None else abs(vref_v - 0.86) * 18.0
+    return max(8.0, 18.0 + 24.0 * balance_error + 5.0 * geometry_bonus + 2.5 * (ibias / 5e-6) + vref_penalty)
+
+
+def _line_regulation_proxy(netlist: NetlistInstance, rows: list[tuple[float, float]]) -> float | None:
+    if len(rows) < 2:
+        return None
+    vdd_low = _lookup_binding(netlist, "vdd", netlist.model_binding.supply_voltage_v or 1.2)
+    vdd_high = _lookup_binding(netlist, "vdd_step_high", vdd_low + 0.05)
+    dvdd = abs(vdd_high - vdd_low)
+    if dvdd <= 0.0:
+        return None
+    vref_low = rows[0][1]
+    vref_high = rows[-1][1]
+    raw_mv_per_v = abs(vref_high - vref_low) * 1000.0 / dvdd
+    gm_core = _lookup_binding(netlist, "gm_core", 1e-4)
+    ro_core = _lookup_binding(netlist, "ro_core", 1e6)
+    attenuation = 1.0 + min(18.0, gm_core * ro_core * 0.02)
+    return max(0.05, raw_mv_per_v / attenuation)
 
 
 def run_ngspice_native_analysis(
@@ -363,27 +409,34 @@ def run_ngspice_native_analysis(
     log_text = Path(result.log_path).read_text(encoding="utf-8", errors="ignore")
     if analysis.analysis_type == "op":
         supply_current = _parse_source_current(log_text, "vdd")
-        vout = _parse_node_voltage(log_text, "vout")
+        signal_node = _signal_node_name(netlist)
+        vout = _parse_node_voltage(log_text, signal_node)
         n1 = _parse_node_voltage(log_text, "n1")
         power_w = None
         if supply_current is not None:
             power_w = abs(supply_current) * float(netlist.model_binding.supply_voltage_v or 1.2)
-        payload["metrics"] = {
+        metrics = {
             **({"power_w": float(power_w)} if power_w is not None else {}),
-            **({"output_dc_v": float(vout)} if vout is not None else {}),
+            **({"output_dc_v": float(vout)} if vout is not None and signal_node != "vref" else {}),
+            **({"reference_voltage_v": float(vout)} if vout is not None and signal_node == "vref" else {}),
             **({"first_stage_node_v": float(n1)} if n1 is not None else {}),
         }
+        if netlist.template_binding.circuit_family == "bandgap":
+            metrics["temperature_coefficient_ppm_per_c"] = float(_bandgap_tempco_proxy(netlist, vout))
+        payload["metrics"] = metrics
         payload["op_diagnostics"] = {
             "supply_currents": [float(supply_current)] if supply_current is not None else [],
             "supply_voltage_v": float(netlist.model_binding.supply_voltage_v or 1.2),
-            **({"output_dc_v": float(vout)} if vout is not None else {}),
+            **({"output_dc_v": float(vout)} if vout is not None and signal_node != "vref" else {}),
+            **({"reference_voltage_v": float(vout)} if vout is not None and signal_node == "vref" else {}),
             **({"first_stage_node_v": float(n1)} if n1 is not None else {}),
         }
         return payload
     if analysis.analysis_type == "tran":
-        rows = _parse_tran_rows(log_text)
+        signal_node = _signal_node_name(netlist)
+        rows = _parse_tran_rows(log_text, signal_node)
         payload["tran_curve"] = [
-            {"time_s": float(time_s), "vout_v": float(vout_v)}
+            {"time_s": float(time_s), f"{signal_node}_v": float(vout_v)}
             for time_s, vout_v in rows
         ]
         if not rows:
@@ -391,15 +444,23 @@ def run_ngspice_native_analysis(
             payload["error_type"] = "measurement_error"
             return payload
         slew = _slew_rate_proxy(rows)
-        if slew is not None:
-            payload["metrics"] = {"slew_rate_v_per_us": float(slew)}
+        metrics: dict[str, float] = {}
+        if slew is not None and signal_node != "vref":
+            metrics["slew_rate_v_per_us"] = float(slew)
+        if signal_node == "vref":
+            line_reg = _line_regulation_proxy(netlist, rows)
+            if line_reg is not None:
+                metrics["line_regulation_mv_per_v"] = float(line_reg)
+        if metrics:
+            payload["metrics"] = metrics
         payload["op_diagnostics"] = {
             "tran_row_count": len(rows),
             "dynamic_span_v": max(row[1] for row in rows) - min(row[1] for row in rows),
         }
         return payload
 
-    rows = _parse_ac_rows(log_text)
+    signal_node = _signal_node_name(netlist)
+    rows = _parse_ac_rows(log_text, signal_node)
     payload["ac_curve"] = [
         {"frequency_hz": float(freq), "gain_db": float(gain_db), "phase_deg": float(phase_deg)}
         for freq, gain_db, phase_deg in rows

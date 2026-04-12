@@ -65,7 +65,7 @@ def _supports_native_ngspice(task: DesignTask, analysis_types: set[str]) -> bool
     return (
         native_ngspice_available()
         and task.topology.topology_mode == "fixed"
-        and task.circuit_family in {"two_stage_ota", "folded_cascode_ota", "ldo"}
+        and task.circuit_family in {"two_stage_ota", "folded_cascode_ota", "ldo", "bandgap"}
         and analysis_types.issubset({"op", "ac", "tran"})
     )
 

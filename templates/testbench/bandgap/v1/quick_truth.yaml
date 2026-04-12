@@ -1,0 +1,18 @@
+{
+  "version": "bandgap_v1",
+  "fidelity_level": "quick_truth",
+  "execution_policy": "serial",
+  "early_termination_rules": [
+    "stop_on_netlist_failure",
+    "stop_on_simulation_error",
+    "stop_after_core_truth_violation"
+  ],
+  "ordered_analyses": [
+    {
+      "analysis_type": "op",
+      "order": 0,
+      "parameters": {"purpose": "bandgap_nominal_reference_check"},
+      "required_metrics": ["power_w", "temperature_coefficient_ppm_per_c"]
+    }
+  ]
+}

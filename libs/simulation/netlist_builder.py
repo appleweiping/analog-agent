@@ -21,6 +21,7 @@ from libs.schema.simulation import (
     TemplateBinding,
 )
 from libs.utils.hashing import stable_hash
+from libs.vertical_slices.bandgap_spec import bandgap_v1_netlist_template_path
 from libs.vertical_slices.folded_cascode_spec import folded_cascode_v1_netlist_template_path
 from libs.vertical_slices.ldo_spec import ldo_v1_netlist_template_path
 from libs.vertical_slices.ota2_spec import ota2_v1_netlist_template_path
@@ -357,6 +358,69 @@ def _demonstrator_ldo_bindings(task: DesignTask, candidate: CandidateRecord) -> 
     return bindings, model_binding, stimulus, rendered
 
 
+def _demonstrator_bandgap_bindings(task: DesignTask, candidate: CandidateRecord) -> tuple[list[ParameterBinding], ModelBinding, list[StimulusBinding], str]:
+    values = _parameter_map(candidate)
+    env = candidate.world_state_snapshot.environment_state
+    area_ratio = max(int(round(values.get("area_ratio", 8.0))), 1)
+    r1 = max(values.get("r1", 12e3), 1e3)
+    r2 = max(values.get("r2", 36e3), r1)
+    w_core = values.get("w_core", 4e-6)
+    l_core = max(values.get("l_core", 1e-6), 1e-9)
+    ibias = max(values.get("ibias", 5e-6), 1e-8)
+    supply_v = float(env.supply_voltage_v or 1.2)
+    vdd_step_high = round(min(supply_v + 0.05, supply_v * 1.08), 6)
+
+    width_ratio_core = max(w_core / l_core, 0.5)
+    gm_core = 0.004 * (ibias * width_ratio_core) ** 0.5
+    ro_core = max(1.5e6 * (l_core / max(w_core, 1e-9)) * (5e-6 / ibias) ** 0.35, 1.2e5)
+    c_ref = max(0.08e-12 * area_ratio + 0.02e-12 * (r2 / max(r1, 1.0)), 5e-14)
+    balance_target = 0.4 * area_ratio
+    balance_error = abs((r2 / max(r1, 1.0)) - balance_target) / max(balance_target, 1e-6)
+    tempco_hint = 18.0 + 18.0 * balance_error + 3.0 * max(0.0, 1.2 - width_ratio_core)
+
+    bindings = [
+        ParameterBinding(variable_name="area_ratio", netlist_target="param::area_ratio", value_si=area_ratio, units="ratio", source="user_override"),
+        ParameterBinding(variable_name="r1", netlist_target="param::r1", value_si=r1, units="ohm", source="user_override"),
+        ParameterBinding(variable_name="r2", netlist_target="param::r2", value_si=r2, units="ohm", source="user_override"),
+        ParameterBinding(variable_name="w_core", netlist_target="param::w_core", value_si=w_core, units="m", source="user_override"),
+        ParameterBinding(variable_name="l_core", netlist_target="param::l_core", value_si=l_core, units="m", source="user_override"),
+        ParameterBinding(variable_name="ibias", netlist_target="param::ibias", value_si=ibias, units="A", source="user_override"),
+        ParameterBinding(variable_name="gm_core", netlist_target="param::gm_core", value_si=gm_core, units="A/V", source="system_inferred"),
+        ParameterBinding(variable_name="ro_core", netlist_target="param::ro_core", value_si=ro_core, units="ohm", source="system_inferred"),
+        ParameterBinding(variable_name="c_ref", netlist_target="param::c_ref", value_si=c_ref, units="F", source="system_inferred"),
+        ParameterBinding(variable_name="iref", netlist_target="param::iref", value_si=max(2.2 * ibias, 1e-6), units="A", source="system_inferred"),
+        ParameterBinding(variable_name="vdd_step_high", netlist_target="param::vdd_step_high", value_si=vdd_step_high, units="V", source="system_inferred"),
+        ParameterBinding(variable_name="tempco_hint_ppm_per_c", netlist_target="hint::tempco_ppm_per_c", value_si=tempco_hint, units="ppm_per_c", source="system_inferred"),
+    ]
+    model_binding = _model_binding_from_config(
+        backend="ngspice",
+        process_node=task.parent_spec_id,
+        corner=env.corner,
+        temperature_c=env.temperature_c,
+        supply_voltage_v=supply_v,
+        default_builtin_ref="builtin_demo_bandgap_reference_v1",
+    )
+    stimulus = [
+        StimulusBinding(source_name="VDD", stimulus_type="supply", parameters={"value": supply_v, "step_high": vdd_step_high}),
+    ]
+    template = Template(bandgap_v1_netlist_template_path().read_text(encoding="utf-8"))
+    rendered = template.safe_substitute(
+        truth_mode="demonstrator_truth",
+        template_id=task.topology.template_id or "bandgap_demonstrator_truth",
+        tempco_hint_ppm_per_c=f"{tempco_hint:.6e}",
+        vdd=f"{supply_v:.6e}",
+        vdd_step_high=f"{vdd_step_high:.6e}",
+        area_ratio=str(area_ratio),
+        r1=f"{r1:.6e}",
+        r2=f"{r2:.6e}",
+        gm_core=f"{gm_core:.6e}",
+        ro_core=f"{ro_core:.6e}",
+        c_ref=f"{c_ref:.6e}",
+        iref=f"{max(2.2 * ibias, 1e-6):.6e}",
+    )
+    return bindings, model_binding, stimulus, rendered
+
+
 def realize_netlist_instance(
     task: DesignTask,
     candidate: CandidateRecord,
@@ -394,6 +458,18 @@ def realize_netlist_instance(
             )
     elif backend == "ngspice" and task.circuit_family == "ldo" and task.topology.topology_mode == "fixed":
         bindings, model_binding, stimulus, rendered_netlist = _demonstrator_ldo_bindings(task, candidate)
+        if model_binding_overrides:
+            model_binding = _model_binding_from_config(
+                backend="ngspice",
+                process_node=task.parent_spec_id,
+                corner=world_state.environment_state.corner,
+                temperature_c=world_state.environment_state.temperature_c,
+                supply_voltage_v=world_state.environment_state.supply_voltage_v,
+                default_builtin_ref=model_binding.backend_model_ref,
+                overrides=model_binding_overrides,
+            )
+    elif backend == "ngspice" and task.circuit_family == "bandgap" and task.topology.topology_mode == "fixed":
+        bindings, model_binding, stimulus, rendered_netlist = _demonstrator_bandgap_bindings(task, candidate)
         if model_binding_overrides:
             model_binding = _model_binding_from_config(
                 backend="ngspice",

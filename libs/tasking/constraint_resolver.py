@@ -16,6 +16,8 @@ METRIC_STAGE_MAP = {
     "input_referred_noise_nv_per_sqrt_hz": "noise",
     "output_swing_v": "tran",
     "input_common_mode_v": "op",
+    "temperature_coefficient_ppm_per_c": "op",
+    "line_regulation_mv_per_v": "tran",
 }
 
 METRIC_GROUP_MAP = {
@@ -29,6 +31,8 @@ METRIC_GROUP_MAP = {
     "input_referred_noise_nv_per_sqrt_hz": "noise",
     "output_swing_v": "swing",
     "input_common_mode_v": "input_range",
+    "temperature_coefficient_ppm_per_c": "temperature_stability",
+    "line_regulation_mv_per_v": "line_regulation",
 }
 
 

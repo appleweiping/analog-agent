@@ -2,10 +2,10 @@
 
 ## Positioning
 
-This document freezes the first conference-facing multi-task benchmark design for `analog-agent`. The goal is not to pretend that every task is already runnable at the same maturity as `ota2_v1`, but to formalize a benchmark suite that can support:
+This document freezes the first conference-facing multi-task benchmark design for `analog-agent`. The goal is to formalize a benchmark suite that can support:
 
 - a primary paper path with full closed-loop evidence;
-- cross-family generalization claims that are honest about readiness;
+- cross-family generalization claims that are honest about readiness and physical-validity strength;
 - future expansion without rewriting benchmark semantics.
 
 The benchmark suite is defined in:
@@ -22,7 +22,7 @@ The suite follows five principles.
 
 - One stable primary path: `ota2_v1` remains the canonical paper-primary runnable benchmark.
 - Cross-family coverage: the suite now spans amplifier, regulator, and reference tasks.
-- Explicit readiness: every benchmark declares whether it is `frozen_runnable`, `spec_ready`, or `planned`.
+- Explicit readiness: every benchmark declares whether it is `frozen_runnable`, `spec_ready`, or `planned`, and the current `v1` suite now freezes four runnable paths.
 - Shared reporting axes: simulation budget, feasible hit rate, prediction gap, truth level, fidelity usage, and failure modes are tracked across tasks.
 - Honest paper claims: no benchmark is described as executable or physically stronger than its current implementation state.
 
@@ -64,11 +64,11 @@ This is the first runnable benchmark that meaningfully broadens the task distrib
 
 - Benchmark id: `bandgap_v1`
 - Family: `bandgap`
-- Role: `future_extension`
-- Readiness: `spec_ready`
-- Purpose: establish the benchmark contract for reference-generation tasks before the full vertical slice is implemented
+- Role: `generalization_probe`
+- Readiness: `frozen_runnable`
+- Purpose: extend the suite into reference-generation tasks and test whether the same agent contract survives a non-amplifier, non-regulator family
 
-Bandgap is included now so that the benchmark suite already encodes the intended long-term paper scope, even though it is not yet a runnable primary path.
+Bandgap is now a fourth runnable vertical slice. It remains demonstrator-truth and intentionally lighter than `ota2_v1` in physical claim strength, but it is no longer only a placeholder benchmark.
 
 ## Reporting Structure
 
@@ -92,6 +92,7 @@ This tier supports:
 ### Tier B: Runnable cross-family generalization
 
 - `ldo_v1`
+- `bandgap_v1`
 
 This tier supports:
 
@@ -101,11 +102,7 @@ This tier supports:
 - acceptance and experiment entry points
 - benchmark/stats exports aligned with OTA and folded cascode
 
-### Tier C: Future extension
-
-- `bandgap_v1`
-
-This tier exists to stabilize benchmark semantics early and avoid ad hoc design later.
+There is currently no benchmark in the suite that is only a placeholder path. Future extensions remain possible, but the `v1` suite itself is now fully runnable.
 
 ## Shared Evaluation Axes
 
@@ -160,36 +157,32 @@ Auxiliary metrics:
 Primary metrics:
 
 - `power_w`
-
-Auxiliary metrics:
-
 - `temperature_coefficient_ppm_per_c`
 - `line_regulation_mv_per_v`
-- `noise_nv_per_sqrt_hz`
 
 ## What This Enables for the Paper
 
 This benchmark design already supports a strong paper structure:
 
 - main result on `ota2_v1`
-- secondary generalization claim on folded cascode and LDO with runnable vertical slices
-- honest statement that the suite is broader than the currently frozen executable path
+- secondary generalization claim on folded cascode, LDO, and bandgap with runnable vertical slices
+- honest statement that runnable breadth is broader than physical-validity strength
 - direct alignment between benchmark configs, stats aggregation, and future tables/figures
 
 ## What Is Still Missing
 
-The benchmark suite is now formally designed, but not fully executable across every task. The following still needs implementation work:
+The benchmark suite is now formally designed and executable across four frozen `v1` tasks. The following still needs implementation work:
 
-- family-aware templates and measurement contracts in the simulation main path for bandgap
-- cross-task baselines beyond OTA/folded-cascode/LDO
+- cross-task baselines beyond OTA/folded-cascode/LDO/bandgap
+- stronger configured-truth upgrades for the non-OTA slices
 
 ## Conference-Ready Interpretation
 
 The benchmark suite should currently be described as:
 
 - one paper-primary runnable benchmark (`ota2_v1`)
-- one paper-secondary runnable benchmark (`folded_cascode_v1`)
-- one runnable cross-family regulator benchmark (`ldo_v1`)
-- one formal future extension (`bandgap_v1`)
+- one paper-secondary runnable amplifier benchmark (`folded_cascode_v1`)
+- one runnable regulator benchmark (`ldo_v1`)
+- one runnable reference benchmark (`bandgap_v1`)
 
-This is strong enough to organize the next phase of top-conference experimentation without overclaiming current execution maturity.
+This is strong enough to organize the next phase of top-conference experimentation without overclaiming current physical-validity strength.
