@@ -1,0 +1,4 @@
+Mode,Feasible Hit Rate,Avg Sim Calls,Avg Step to Feasible,Avg Repeated Failures,Warm-Start Rate,Retrieval Precision,Negative Transfer Risk,Harmful Transfer Rate
+no_memory,1.0,2.0,0.0,1.5,0.0,0.0,0.0,0.0
+governed_transfer,1.0,1.0,0.0,0.5,1.0,0.4634,0.5366,0.0
+forced_transfer,1.0,2.0,0.0,1.5,1.0,0.15,0.85,1.0

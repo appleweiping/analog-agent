@@ -1,0 +1,285 @@
+{
+  "chapter_id": "memory_chapter_v1",
+  "cross_family_pairs": [
+    "ota2-v1->ldo-v1",
+    "ota2-v1->bandgap-v1"
+  ],
+  "figures": [
+    {
+      "caption": "Repeated-episode memory benefit on OTA v1.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_chapter_repeated_episode_calls",
+      "output_path": "research\\papers\\memory_chapter\\figs\\memory_chapter_repeated_episode_calls.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            2.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            1.333333
+          ]
+        }
+      ],
+      "title": "Memory Chapter: Repeated-Episode Real Simulation Calls",
+      "x_label": "Mode",
+      "y_label": "Average Real Simulation Calls"
+    },
+    {
+      "caption": "Governed same-family transfer compared with no-memory execution.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_chapter_same_family_transfer",
+      "output_path": "research\\papers\\memory_chapter\\figs\\memory_chapter_same_family_transfer.svg",
+      "series": [
+        {
+          "color": "#1f77b4",
+          "label": "folded_cascode-v1",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "ota2-v1",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#d62728",
+          "label": "folded_cascode-v1 (no_memory)",
+          "x_values": [
+            0.35
+          ],
+          "y_values": [
+            2.0
+          ]
+        },
+        {
+          "color": "#d62728",
+          "label": "ota2-v1 (no_memory)",
+          "x_values": [
+            1.35
+          ],
+          "y_values": [
+            2.0
+          ]
+        }
+      ],
+      "title": "Memory Chapter: Same-Family Transfer Benefit",
+      "x_label": "Transfer Pair",
+      "y_label": "Average Real Simulation Calls"
+    },
+    {
+      "caption": "Governance suppresses harmful transfer under cross-family reuse, while forced transfer exposes it.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_chapter_cross_family_governance",
+      "output_path": "research\\papers\\memory_chapter\\figs\\memory_chapter_cross_family_governance.svg",
+      "series": [
+        {
+          "color": "#1f77b4",
+          "label": "ldo-v1",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "bandgap-v1",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#9467bd",
+          "label": "ldo-v1 (forced)",
+          "x_values": [
+            0.35
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#9467bd",
+          "label": "bandgap-v1 (forced)",
+          "x_values": [
+            1.35
+          ],
+          "y_values": [
+            0.5
+          ]
+        }
+      ],
+      "title": "Memory Chapter: Cross-Family Governance Prevents Harmful Transfer",
+      "x_label": "Transfer Pair",
+      "y_label": "Harmful Transfer Rate"
+    }
+  ],
+  "json_output_path": "research\\papers\\memory_chapter\\memory_chapter_evidence_bundle.json",
+  "repeated_episode_task": "benchmark-ota2-v1-memory-ablation",
+  "same_family_pairs": [
+    "ota2-v1->folded_cascode-v1",
+    "folded_cascode-v1->ota2-v1"
+  ],
+  "summary": {
+    "forced_transfer_exposes_negative_transfer": true,
+    "governance_blocks_cross_family_negative_transfer": true,
+    "notes": [
+      "same_family_pairs=ota2-v1->folded_cascode-v1,folded_cascode-v1->ota2-v1",
+      "cross_family_pairs=ota2-v1->ldo-v1,ota2-v1->bandgap-v1",
+      "repeated_task=benchmark-ota2-v1-memory-ablation"
+    ],
+    "repeated_episode_beneficial": true,
+    "same_family_transfer_beneficial": true
+  },
+  "tables": [
+    {
+      "caption": "Chapter-level repeated-episode summary used in the memory results section.",
+      "columns": [
+        {
+          "key": "task",
+          "label": "Task"
+        },
+        {
+          "key": "mode",
+          "label": "Mode"
+        },
+        {
+          "key": "avg_sim_calls",
+          "label": "Avg Sim Calls"
+        },
+        {
+          "key": "avg_repeated_failures",
+          "label": "Avg Repeated Failures"
+        },
+        {
+          "key": "warm_start_rate",
+          "label": "Warm-Start Rate"
+        }
+      ],
+      "csv_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_repeated_episode.csv",
+      "markdown_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_repeated_episode.md",
+      "rows": [
+        {
+          "values": {
+            "avg_repeated_failures": 1.666667,
+            "avg_sim_calls": 2.0,
+            "mode": "no_memory",
+            "task": "benchmark-ota2-v1-memory-ablation",
+            "warm_start_rate": 0.0
+          }
+        },
+        {
+          "values": {
+            "avg_repeated_failures": 1.0,
+            "avg_sim_calls": 1.333333,
+            "mode": "full_memory",
+            "task": "benchmark-ota2-v1-memory-ablation",
+            "warm_start_rate": 0.666667
+          }
+        }
+      ],
+      "table_id": "tbl_memory_chapter_repeated_episode",
+      "title": "Repeated-Episode Memory Summary"
+    },
+    {
+      "caption": "Chapter-level transfer summary across same-family and cross-family settings.",
+      "columns": [
+        {
+          "key": "pair",
+          "label": "Transfer Pair"
+        },
+        {
+          "key": "transfer_kind",
+          "label": "Transfer Kind"
+        },
+        {
+          "key": "governed_avg_sim_calls",
+          "label": "Governed Avg Sim Calls"
+        },
+        {
+          "key": "forced_harmful_rate",
+          "label": "Forced Harmful Rate"
+        },
+        {
+          "key": "governance_blocks_harm",
+          "label": "Governance Blocks Harm"
+        },
+        {
+          "key": "beneficial",
+          "label": "Governed Beneficial"
+        }
+      ],
+      "csv_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_transfer_summary.csv",
+      "markdown_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_transfer_summary.md",
+      "rows": [
+        {
+          "values": {
+            "beneficial": true,
+            "forced_harmful_rate": 1.0,
+            "governance_blocks_harm": true,
+            "governed_avg_sim_calls": 1.0,
+            "pair": "ota2-v1->folded_cascode-v1",
+            "transfer_kind": "same_family"
+          }
+        },
+        {
+          "values": {
+            "beneficial": true,
+            "forced_harmful_rate": 1.0,
+            "governance_blocks_harm": true,
+            "governed_avg_sim_calls": 1.0,
+            "pair": "folded_cascode-v1->ota2-v1",
+            "transfer_kind": "same_family"
+          }
+        },
+        {
+          "values": {
+            "beneficial": false,
+            "forced_harmful_rate": 1.0,
+            "governance_blocks_harm": true,
+            "governed_avg_sim_calls": 2.0,
+            "pair": "ota2-v1->ldo-v1",
+            "transfer_kind": "cross_family"
+          }
+        },
+        {
+          "values": {
+            "beneficial": false,
+            "forced_harmful_rate": 0.5,
+            "governance_blocks_harm": true,
+            "governed_avg_sim_calls": 1.0,
+            "pair": "ota2-v1->bandgap-v1",
+            "transfer_kind": "cross_family"
+          }
+        }
+      ],
+      "table_id": "tbl_memory_chapter_transfer",
+      "title": "Cross-Task Memory Transfer Summary"
+    }
+  ]
+}

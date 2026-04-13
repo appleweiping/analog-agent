@@ -214,3 +214,30 @@ class MemoryTransferEvidenceBundle(BaseModel):
     tables: list[TableSpec] = Field(default_factory=list)
     summary: MemoryTransferSummary
     json_output_path: str
+
+
+class MemoryChapterSummary(BaseModel):
+    """Top-level conclusions for the memory chapter evidence package."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    repeated_episode_beneficial: bool
+    same_family_transfer_beneficial: bool
+    governance_blocks_cross_family_negative_transfer: bool
+    forced_transfer_exposes_negative_transfer: bool
+    notes: list[str] = Field(default_factory=list)
+
+
+class MemoryChapterEvidenceBundle(BaseModel):
+    """Paper-facing chapter bundle that organizes repeated and transfer evidence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    chapter_id: str
+    repeated_episode_task: str
+    same_family_pairs: list[str] = Field(default_factory=list)
+    cross_family_pairs: list[str] = Field(default_factory=list)
+    figures: list[FigureSpec] = Field(default_factory=list)
+    tables: list[TableSpec] = Field(default_factory=list)
+    summary: MemoryChapterSummary
+    json_output_path: str

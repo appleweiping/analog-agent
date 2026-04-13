@@ -23,6 +23,8 @@ from libs.schema.memory_evidence import (
     MemoryAblationEvidenceBundle,
     MemoryAblationSuiteResult,
     MemoryAblationSummary,
+    MemoryChapterEvidenceBundle,
+    MemoryChapterSummary,
     MemoryEpisodeStatsRecord,
     MemoryModeSummary,
     MemoryTransferEvidenceBundle,
@@ -864,6 +866,221 @@ def build_memory_transfer_evidence_bundle(
         figures=[figure_calls, figure_step, figure_harm],
         tables=[comparison_table, episode_table],
         summary=suite.summary,
+        json_output_path=str(json_output_path),
+    )
+    Path(json_output_path).write_text(
+        json.dumps(bundle.model_dump(mode="json"), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    return bundle
+
+
+def build_memory_chapter_evidence_bundle(
+    *,
+    repeated_bundle: MemoryAblationEvidenceBundle,
+    same_family_bundles: list[MemoryTransferEvidenceBundle],
+    cross_family_bundles: list[MemoryTransferEvidenceBundle],
+    figures_dir: str | Path,
+    tables_dir: str | Path,
+    json_output_path: str | Path,
+) -> MemoryChapterEvidenceBundle:
+    """Build chapter-level figures and tables that summarize memory evidence."""
+
+    figures_root = Path(figures_dir)
+    tables_root = Path(tables_dir)
+    figures_root.mkdir(parents=True, exist_ok=True)
+    tables_root.mkdir(parents=True, exist_ok=True)
+
+    repeated_summary = {
+        row.values["mode"]: row.values
+        for row in repeated_bundle.tables[0].rows
+    }
+    same_family_labels = [f"{bundle.source_task_slug}->{bundle.target_task_slug}" for bundle in same_family_bundles]
+    cross_family_labels = [f"{bundle.source_task_slug}->{bundle.target_task_slug}" for bundle in cross_family_bundles]
+
+    repeated_calls_figure = FigureSpec(
+        figure_id="fig_memory_chapter_repeated_episode_calls",
+        title="Memory Chapter: Repeated-Episode Real Simulation Calls",
+        chart_type="bar",
+        x_label="Mode",
+        y_label="Average Real Simulation Calls",
+        series=[
+            FigureSeries(label="no_memory", x_values=[0.0], y_values=[float(repeated_summary["no_memory"]["average_real_simulation_calls"])], color="#d62728"),
+            FigureSeries(label="full_memory", x_values=[1.0], y_values=[float(repeated_summary["full_memory"]["average_real_simulation_calls"])], color="#1f77b4"),
+        ],
+        caption="Repeated-episode memory benefit on OTA v1.",
+        output_path=str(figures_root / "memory_chapter_repeated_episode_calls.svg"),
+    )
+
+    same_family_calls_figure = FigureSpec(
+        figure_id="fig_memory_chapter_same_family_transfer",
+        title="Memory Chapter: Same-Family Transfer Benefit",
+        chart_type="bar",
+        x_label="Transfer Pair",
+        y_label="Average Real Simulation Calls",
+        series=[
+            FigureSeries(
+                label=bundle.target_task_slug,
+                x_values=[float(index)],
+                y_values=[
+                    next(
+                        summary_row.values["average_real_simulation_calls"]
+                        for summary_row in bundle.tables[0].rows
+                        if summary_row.values["mode"] == "governed_transfer"
+                    )
+                ],
+                color="#1f77b4",
+            )
+            for index, bundle in enumerate(same_family_bundles)
+        ] + [
+            FigureSeries(
+                label=f"{bundle.target_task_slug} (no_memory)",
+                x_values=[float(index) + 0.35],
+                y_values=[
+                    next(
+                        summary_row.values["average_real_simulation_calls"]
+                        for summary_row in bundle.tables[0].rows
+                        if summary_row.values["mode"] == "no_memory"
+                    )
+                ],
+                color="#d62728",
+            )
+            for index, bundle in enumerate(same_family_bundles)
+        ],
+        caption="Governed same-family transfer compared with no-memory execution.",
+        output_path=str(figures_root / "memory_chapter_same_family_transfer.svg"),
+    )
+
+    cross_family_harm_figure = FigureSpec(
+        figure_id="fig_memory_chapter_cross_family_governance",
+        title="Memory Chapter: Cross-Family Governance Prevents Harmful Transfer",
+        chart_type="bar",
+        x_label="Transfer Pair",
+        y_label="Harmful Transfer Rate",
+        series=[
+            FigureSeries(
+                label=bundle.target_task_slug,
+                x_values=[float(index)],
+                y_values=[
+                    next(
+                        summary_row.values["harmful_transfer_rate"]
+                        for summary_row in bundle.tables[0].rows
+                        if summary_row.values["mode"] == "governed_transfer"
+                    )
+                ],
+                color="#1f77b4",
+            )
+            for index, bundle in enumerate(cross_family_bundles)
+        ] + [
+            FigureSeries(
+                label=f"{bundle.target_task_slug} (forced)",
+                x_values=[float(index) + 0.35],
+                y_values=[
+                    next(
+                        summary_row.values["harmful_transfer_rate"]
+                        for summary_row in bundle.tables[0].rows
+                        if summary_row.values["mode"] == "forced_transfer"
+                    )
+                ],
+                color="#9467bd",
+            )
+            for index, bundle in enumerate(cross_family_bundles)
+        ],
+        caption="Governance suppresses harmful transfer under cross-family reuse, while forced transfer exposes it.",
+        output_path=str(figures_root / "memory_chapter_cross_family_governance.svg"),
+    )
+
+    for figure in (repeated_calls_figure, same_family_calls_figure, cross_family_harm_figure):
+        _write_svg_bar_chart(figure)
+
+    repeated_table = TableSpec(
+        table_id="tbl_memory_chapter_repeated_episode",
+        title="Repeated-Episode Memory Summary",
+        columns=[
+            TableColumn(key="task", label="Task"),
+            TableColumn(key="mode", label="Mode"),
+            TableColumn(key="avg_sim_calls", label="Avg Sim Calls"),
+            TableColumn(key="avg_repeated_failures", label="Avg Repeated Failures"),
+            TableColumn(key="warm_start_rate", label="Warm-Start Rate"),
+        ],
+        rows=[
+            TableRow(
+                values={
+                    "task": repeated_bundle.task_id,
+                    "mode": row.values["mode"],
+                    "avg_sim_calls": row.values["average_real_simulation_calls"],
+                    "avg_repeated_failures": row.values["average_repeated_failure_count"],
+                    "warm_start_rate": row.values["warm_start_application_rate"],
+                }
+            )
+            for row in repeated_bundle.tables[0].rows
+        ],
+        caption="Chapter-level repeated-episode summary used in the memory results section.",
+        csv_output_path=str(tables_root / "memory_chapter_repeated_episode.csv"),
+        markdown_output_path=str(tables_root / "memory_chapter_repeated_episode.md"),
+    )
+
+    transfer_table = TableSpec(
+        table_id="tbl_memory_chapter_transfer",
+        title="Cross-Task Memory Transfer Summary",
+        columns=[
+            TableColumn(key="pair", label="Transfer Pair"),
+            TableColumn(key="transfer_kind", label="Transfer Kind"),
+            TableColumn(key="governed_avg_sim_calls", label="Governed Avg Sim Calls"),
+            TableColumn(key="forced_harmful_rate", label="Forced Harmful Rate"),
+            TableColumn(key="governance_blocks_harm", label="Governance Blocks Harm"),
+            TableColumn(key="beneficial", label="Governed Beneficial"),
+        ],
+        rows=[
+            TableRow(
+                values={
+                    "pair": f"{bundle.source_task_slug}->{bundle.target_task_slug}",
+                    "transfer_kind": bundle.transfer_kind,
+                    "governed_avg_sim_calls": next(
+                        row.values["average_real_simulation_calls"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
+                    "forced_harmful_rate": next(
+                        row.values["harmful_transfer_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "forced_transfer"
+                    ),
+                    "governance_blocks_harm": bundle.summary.governance_blocks_harmful_transfer,
+                    "beneficial": bundle.summary.governed_transfer_beneficial,
+                }
+            )
+            for bundle in [*same_family_bundles, *cross_family_bundles]
+        ],
+        caption="Chapter-level transfer summary across same-family and cross-family settings.",
+        csv_output_path=str(tables_root / "memory_chapter_transfer_summary.csv"),
+        markdown_output_path=str(tables_root / "memory_chapter_transfer_summary.md"),
+    )
+
+    for table in (repeated_table, transfer_table):
+        _write_table_csv(table)
+        _write_table_markdown(table)
+
+    summary = MemoryChapterSummary(
+        repeated_episode_beneficial=repeated_bundle.summary.memory_reduces_simulation_calls or repeated_bundle.summary.memory_reduces_repeated_failures,
+        same_family_transfer_beneficial=all(bundle.summary.governed_transfer_beneficial for bundle in same_family_bundles),
+        governance_blocks_cross_family_negative_transfer=all(bundle.summary.governance_blocks_harmful_transfer for bundle in cross_family_bundles),
+        forced_transfer_exposes_negative_transfer=all(bundle.summary.forced_transfer_exposes_negative_transfer for bundle in [*same_family_bundles, *cross_family_bundles]),
+        notes=[
+            f"same_family_pairs={','.join(same_family_labels)}",
+            f"cross_family_pairs={','.join(cross_family_labels)}",
+            f"repeated_task={repeated_bundle.task_id}",
+        ],
+    )
+
+    bundle = MemoryChapterEvidenceBundle(
+        chapter_id="memory_chapter_v1",
+        repeated_episode_task=repeated_bundle.task_id,
+        same_family_pairs=same_family_labels,
+        cross_family_pairs=cross_family_labels,
+        figures=[repeated_calls_figure, same_family_calls_figure, cross_family_harm_figure],
+        tables=[repeated_table, transfer_table],
+        summary=summary,
         json_output_path=str(json_output_path),
     )
     Path(json_output_path).write_text(
