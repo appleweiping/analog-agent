@@ -1,0 +1,170 @@
+{
+  "aggregation_scope": "experiment_suite",
+  "average_prediction_gap": {
+    "average_absolute_error": {
+      "gbw_hz": 24651711.00168,
+      "phase_margin_deg": 84.083933,
+      "power_w": 0.000249
+    },
+    "average_relative_error": {
+      "gbw_hz": 0.694395,
+      "phase_margin_deg": 0.472465,
+      "power_w": 0.136918
+    },
+    "by_family": {
+      "ldo": {
+        "gbw_hz": 24651711.00168,
+        "phase_margin_deg": 84.083933,
+        "power_w": 0.000249
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "gbw_hz": 24847835.798692,
+        "phase_margin_deg": 84.360195,
+        "power_w": 0.000258
+      },
+      "quick_truth": {
+        "gbw_hz": 24390211.272331,
+        "phase_margin_deg": 83.715584,
+        "power_w": 0.000236
+      }
+    },
+    "by_task_id": {
+      "task_1fa70474145a": {
+        "gbw_hz": 24651711.00168,
+        "phase_margin_deg": 84.083933,
+        "power_w": 0.000249
+      }
+    },
+    "metrics_covered": [
+      "gbw_hz",
+      "phase_margin_deg",
+      "power_w"
+    ],
+    "record_count": 105
+  },
+  "dominant_failure_mode_distribution": {
+    "by_family": {
+      "ldo": {
+        "design_failure": 105
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "design_failure": 60
+      },
+      "quick_truth": {
+        "design_failure": 45
+      }
+    },
+    "by_truth_level": {
+      "demonstrator_truth": {
+        "design_failure": 105
+      }
+    },
+    "frequency": {
+      "design_failure": 105
+    },
+    "ratio": {
+      "design_failure": 1.0
+    },
+    "total_records": 105
+  },
+  "failure_mode_summary": {
+    "by_family": {
+      "ldo": {
+        "design_failure": 105
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "design_failure": 60
+      },
+      "quick_truth": {
+        "design_failure": 45
+      }
+    },
+    "by_truth_level": {
+      "demonstrator_truth": {
+        "design_failure": 105
+      }
+    },
+    "frequency": {
+      "design_failure": 105
+    },
+    "ratio": {
+      "design_failure": 1.0
+    },
+    "total_records": 105
+  },
+  "feasible_verification_rate": 0.0,
+  "fidelity_summary": {
+    "escalation_count": 60,
+    "escalation_reason_distribution": {
+      "boundary_candidate_requires_higher_confidence": 60
+    },
+    "fidelity_escalation_rate": 0.571429,
+    "focused_truth_calls": 60,
+    "focused_truth_ratio": 0.571429,
+    "quick_truth_calls": 45,
+    "total_real_verifications": 105
+  },
+  "measurement_success_rate": 1.0,
+  "predicted_feasible_to_verified_feasible_conversion": 0.0,
+  "prediction_gap_summary": {
+    "average_absolute_error": {
+      "gbw_hz": 24651711.00168,
+      "phase_margin_deg": 84.083933,
+      "power_w": 0.000249
+    },
+    "average_relative_error": {
+      "gbw_hz": 0.694395,
+      "phase_margin_deg": 0.472465,
+      "power_w": 0.136918
+    },
+    "by_family": {
+      "ldo": {
+        "gbw_hz": 24651711.00168,
+        "phase_margin_deg": 84.083933,
+        "power_w": 0.000249
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "gbw_hz": 24847835.798692,
+        "phase_margin_deg": 84.360195,
+        "power_w": 0.000258
+      },
+      "quick_truth": {
+        "gbw_hz": 24390211.272331,
+        "phase_margin_deg": 83.715584,
+        "power_w": 0.000236
+      }
+    },
+    "by_task_id": {
+      "task_1fa70474145a": {
+        "gbw_hz": 24651711.00168,
+        "phase_margin_deg": 84.083933,
+        "power_w": 0.000249
+      }
+    },
+    "metrics_covered": [
+      "gbw_hz",
+      "phase_margin_deg",
+      "power_w"
+    ],
+    "record_count": 105
+  },
+  "simulation_reduction_ratio": null,
+  "source_ids": [
+    "task_1fa70474145a",
+    "full_system",
+    "top_k_baseline",
+    "no_fidelity_escalation",
+    "no_phase_updates",
+    "no_calibration_replanning",
+    "no_rollout_planning"
+  ],
+  "total_real_simulation_calls": 105
+}

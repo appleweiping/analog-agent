@@ -9,12 +9,13 @@ from apps.orchestrator.job_runner import run_full_system_acceptance
 from libs.eval.experiment_runner import run_experiment_suite
 from libs.eval.stats import export_stats_csv, export_stats_json
 from libs.schema.experiment import ExperimentBudget, ExperimentSuiteResult
-from libs.schema.paper_evidence import WorldModelEvidenceBundle
+from libs.schema.paper_evidence import PlannerAblationEvidenceBundle, WorldModelEvidenceBundle
 from libs.schema.system_binding import AcceptanceTaskConfig, SystemAcceptanceResult
 from libs.vertical_slices.folded_cascode_spec import (
     build_folded_cascode_v1_design_task,
     load_folded_cascode_v1_config,
 )
+from libs.vertical_slices.planner_evidence import run_vertical_slice_planner_evidence
 from libs.vertical_slices.world_model_evidence import run_vertical_slice_world_model_evidence
 
 
@@ -59,8 +60,17 @@ def run_folded_cascode_experiment_suite(
     if selected_modes is None:
         if comparison_profile == "methodology":
             selected_modes = ["full_system", "no_world_model", "no_calibration", "no_fidelity_escalation"]
+        elif comparison_profile == "planner_ablation":
+            selected_modes = [
+                "full_system",
+                "top_k_baseline",
+                "no_fidelity_escalation",
+                "no_phase_updates",
+                "no_calibration_replanning",
+                "no_rollout_planning",
+            ]
         else:
-            selected_modes = ["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "rl_baseline", "no_world_model_baseline", "full_system"]
+            selected_modes = ["full_simulation_baseline", "top_k_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "rl_baseline", "no_world_model_baseline", "full_system"]
     suite = run_experiment_suite(
         build_folded_cascode_v1_design_task(task_id=task_id),
         modes=selected_modes,
@@ -108,6 +118,28 @@ def run_folded_cascode_world_model_evidence(
         task_slug="folded_cascode-v1",
         suite_runner=run_folded_cascode_experiment_suite,
         measurement_targets=list(config.measurement_targets),
+        steps=steps,
+        repeat_runs=repeat_runs,
+        budget=budget,
+        backend_preference=backend_preference or config.defaults.backend_preference,
+        fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,
+        output_root=output_root,
+    )
+
+
+def run_folded_cascode_planner_evidence(
+    *,
+    steps: int = 3,
+    repeat_runs: int = 5,
+    budget: ExperimentBudget | None = None,
+    backend_preference: str | None = None,
+    fidelity_level: str | None = None,
+    output_root: str | Path = "research/papers/folded_cascode_v1",
+) -> PlannerAblationEvidenceBundle:
+    config = load_folded_cascode_v1_config()
+    return run_vertical_slice_planner_evidence(
+        task_slug="folded_cascode-v1",
+        suite_runner=run_folded_cascode_experiment_suite,
         steps=steps,
         repeat_runs=repeat_runs,
         budget=budget,

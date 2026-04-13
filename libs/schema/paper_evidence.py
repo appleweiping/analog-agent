@@ -85,3 +85,29 @@ class WorldModelEvidenceBundle(BaseModel):
     tables: list[TableSpec] = Field(default_factory=list)
     summary: WorldModelUtilitySummary
     json_output_path: str
+
+
+class PlannerAblationSummary(BaseModel):
+    """Top-level conclusions for planner-ablation evidence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    planner_beats_top_k: bool
+    fidelity_escalation_effective: bool
+    phase_updates_effective: bool
+    calibration_replanning_effective: bool
+    rollout_guidance_effective: bool
+    notes: list[str] = Field(default_factory=list)
+
+
+class PlannerAblationEvidenceBundle(BaseModel):
+    """Formal bundle of figures, tables, and conclusions for planner ablations."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str
+    modes: list[str] = Field(default_factory=list)
+    figures: list[FigureSpec] = Field(default_factory=list)
+    tables: list[TableSpec] = Field(default_factory=list)
+    summary: PlannerAblationSummary
+    json_output_path: str

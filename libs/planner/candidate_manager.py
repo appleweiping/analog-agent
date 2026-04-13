@@ -63,6 +63,10 @@ def summarize_candidate(candidate: CandidateRecord) -> CandidateSummary:
     """Build a compact candidate summary for SearchState."""
 
     feasible_probability = candidate.predicted_feasibility.overall_feasibility if candidate.predicted_feasibility else 0.0
+    if candidate.lifecycle_status in {"verified", "best_feasible"}:
+        feasible_probability = 1.0
+    elif candidate.lifecycle_status in {"rejected", "best_infeasible"}:
+        feasible_probability = min(feasible_probability, 0.0)
     return CandidateSummary(
         candidate_id=candidate.candidate_id,
         world_state_ref=candidate.world_state_ref,
@@ -80,4 +84,3 @@ def frontier_candidates(pool: CandidatePoolState) -> list[CandidateRecord]:
         for candidate in pool.candidates
         if candidate.lifecycle_status in {"proposed", "frontier", "best_infeasible", "best_feasible"}
     ]
-

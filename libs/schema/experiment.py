@@ -11,6 +11,7 @@ from libs.schema.stats import ExperimentStatsRecord, StatsAggregationResult, Ver
 
 ExperimentMode = Literal[
     "full_simulation_baseline",
+    "top_k_baseline",
     "random_search_baseline",
     "bayesopt_baseline",
     "cmaes_baseline",
@@ -20,10 +21,14 @@ ExperimentMode = Literal[
     "no_world_model",
     "no_calibration",
     "no_fidelity_escalation",
+    "no_phase_updates",
+    "no_calibration_replanning",
+    "no_rollout_planning",
 ]
 
 EXPERIMENT_MODES = (
     "full_simulation_baseline",
+    "top_k_baseline",
     "random_search_baseline",
     "bayesopt_baseline",
     "cmaes_baseline",
@@ -33,6 +38,9 @@ EXPERIMENT_MODES = (
     "no_world_model",
     "no_calibration",
     "no_fidelity_escalation",
+    "no_phase_updates",
+    "no_calibration_replanning",
+    "no_rollout_planning",
 )
 
 
@@ -45,7 +53,11 @@ class MethodComponentConfig(BaseModel):
     use_world_model: bool
     use_calibration: bool
     use_fidelity_escalation: bool
+    use_phase_updates: bool = True
+    use_calibration_replanning: bool = True
+    use_rollout_planning: bool = True
     use_full_simulation_baseline: bool = False
+    use_top_k_baseline: bool = False
     use_random_search_baseline: bool = False
     use_bayesopt_baseline: bool = False
     use_cmaes_baseline: bool = False
@@ -78,6 +90,15 @@ class ExperimentLogRecord(BaseModel):
     world_model_enabled: bool = True
     calibration_enabled: bool = True
     fidelity_escalation_enabled: bool = True
+    phase_updates_enabled: bool = True
+    calibration_replanning_enabled: bool = True
+    rollout_planning_enabled: bool = True
+    phase_before: str | None = None
+    phase_after: str | None = None
+    phase_changed: bool = False
+    calibration_required_after_step: bool = False
+    rollout_guidance_applied: bool = False
+    rollout_guidance_value: float = 0.0
     selected_mean_uncertainty: float = 0.0
     selected_mean_confidence: float = 0.0
     selected_mean_simulation_value: float = 0.0
@@ -222,6 +243,10 @@ class MethodConclusionSummary(BaseModel):
     world_model_effective: bool
     calibration_effective: bool
     fidelity_effective: bool
+    top_k_baseline_effective: bool = False
+    phase_updates_effective: bool = False
+    calibration_replanning_effective: bool = False
+    rollout_effective: bool = False
     conclusion_notes: list[str] = Field(default_factory=list)
 
 

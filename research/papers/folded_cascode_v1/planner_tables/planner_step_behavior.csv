@@ -1,0 +1,7 @@
+Mode,Mean Selected Uncertainty,Mean Selected Confidence,Mean Sim Value,Mean Pred Feasibility
+full_system,0.1809,0.8657,0.476902,0.409533
+top_k_baseline,0.1809,0.8657,0.476786,0.4093
+no_fidelity_escalation,0.1809,0.8657,0.476902,0.409533
+no_phase_updates,0.1809,0.8657,0.476902,0.409533
+no_calibration_replanning,0.1809,0.8657,0.476902,0.409533
+no_rollout_planning,0.1809,0.8657,0.476902,0.409533

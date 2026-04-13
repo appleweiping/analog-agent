@@ -10,6 +10,7 @@ from apps.orchestrator.job_runner import run_full_system_acceptance
 from libs.eval.experiment_runner import run_experiment_suite
 from libs.eval.stats import export_stats_csv, export_stats_json
 from libs.schema.experiment import ExperimentBudget, ExperimentSuiteResult
+from libs.schema.paper_evidence import PlannerAblationEvidenceBundle
 from libs.schema.system_binding import (
     AcceptanceTaskConfig,
     FinalSystemCheckSummary,
@@ -17,6 +18,7 @@ from libs.schema.system_binding import (
     SystemClosureResult,
 )
 from libs.vertical_slices.ota2_spec import build_ota2_v1_design_task, load_ota2_v1_config
+from libs.vertical_slices.planner_evidence import run_vertical_slice_planner_evidence
 
 
 def run_ota_acceptance(
@@ -60,8 +62,17 @@ def run_ota_experiment_suite(
     if selected_modes is None:
         if comparison_profile == "methodology":
             selected_modes = ["full_system", "no_world_model", "no_calibration", "no_fidelity_escalation"]
+        elif comparison_profile == "planner_ablation":
+            selected_modes = [
+                "full_system",
+                "top_k_baseline",
+                "no_fidelity_escalation",
+                "no_phase_updates",
+                "no_calibration_replanning",
+                "no_rollout_planning",
+            ]
         else:
-            selected_modes = ["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "rl_baseline", "no_world_model_baseline", "full_system"]
+            selected_modes = ["full_simulation_baseline", "top_k_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "rl_baseline", "no_world_model_baseline", "full_system"]
     suite = run_experiment_suite(
         build_ota2_v1_design_task(task_id=task_id),
         modes=selected_modes,
@@ -216,4 +227,26 @@ def run_ota_submission_ready_freeze(
         methodology_suite=methodology_suite,
         method_conclusions=methodology_suite.comparison,
         final_check_summary=final_check,
+    )
+
+
+def run_ota_planner_evidence(
+    *,
+    steps: int = 3,
+    repeat_runs: int = 5,
+    budget: ExperimentBudget | None = None,
+    backend_preference: str | None = None,
+    fidelity_level: str | None = None,
+    output_root: str | Path = "research/papers/ota2_v1",
+) -> PlannerAblationEvidenceBundle:
+    config = load_ota2_v1_config()
+    return run_vertical_slice_planner_evidence(
+        task_slug="ota2-v1",
+        suite_runner=run_ota_experiment_suite,
+        steps=steps,
+        repeat_runs=repeat_runs,
+        budget=budget,
+        backend_preference=backend_preference or config.defaults.backend_preference,
+        fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,
+        output_root=output_root,
     )

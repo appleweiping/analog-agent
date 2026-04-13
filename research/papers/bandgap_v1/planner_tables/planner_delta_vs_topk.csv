@@ -1,0 +1,6 @@
+Mode,Delta Sim Calls,Delta Feasible Hit,Delta Efficiency,Delta Focused Ratio,Delta Phase Change,Delta Calib Replan
+full_system,-1.0,0.0,0.0,1.0,0.666667,0.333333
+no_fidelity_escalation,-1.0,0.0,0.0,0.0,0.666667,0.333333
+no_phase_updates,-1.0,0.0,0.0,1.0,0.0,0.333333
+no_calibration_replanning,-1.0,0.0,0.0,1.0,0.333333,0.0
+no_rollout_planning,-1.0,0.0,0.0,1.0,0.666667,0.333333

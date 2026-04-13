@@ -1,0 +1,387 @@
+{
+  "conclusions": {
+    "calibration_effective": true,
+    "calibration_replanning_effective": true,
+    "conclusion_notes": [
+      "fidelity_delta_focused_ratio=1.0",
+      "top_k_delta_sim_calls=3.0",
+      "top_k_delta_efficiency=0.166667",
+      "phase_update_delta_convergence=0.0",
+      "calibration_replanning_delta_sim_calls=0.0",
+      "rollout_delta_convergence=0.0"
+    ],
+    "fidelity_effective": true,
+    "phase_updates_effective": true,
+    "rollout_effective": true,
+    "top_k_baseline_effective": true,
+    "world_model_effective": true
+  },
+  "deltas": [
+    {
+      "baseline_mode": "top_k_baseline",
+      "best_metric_delta": {
+        "dc_gain_db": -0.4139,
+        "gbw_hz": -7604.712582,
+        "phase_margin_deg": 1e-06,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 1.1596210526315888e+69
+      },
+      "calibration_update_delta": -3.0,
+      "compared_mode": "full_system",
+      "feasible_hit_rate_delta": 0.0,
+      "focused_truth_ratio_delta": 1.0,
+      "prediction_gap_delta": {
+        "dc_gain_db": 3.036295,
+        "gbw_hz": 4340772.678315,
+        "phase_margin_deg": -10.19408,
+        "power_w": 9e-05,
+        "slew_rate_v_per_us": 8.224910526315859e+68
+      },
+      "simulation_call_delta": -3.0
+    },
+    {
+      "baseline_mode": "no_fidelity_escalation",
+      "best_metric_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": -7604.712582,
+        "phase_margin_deg": 1e-06,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 1.1596210526315888e+69
+      },
+      "calibration_update_delta": 0.0,
+      "compared_mode": "full_system",
+      "feasible_hit_rate_delta": 0.0,
+      "focused_truth_ratio_delta": 1.0,
+      "prediction_gap_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": -25761.585628,
+        "phase_margin_deg": -0.001106,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 8.224910526315859e+68
+      },
+      "simulation_call_delta": 0.0
+    },
+    {
+      "baseline_mode": "no_phase_updates",
+      "best_metric_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": 0.0,
+        "phase_margin_deg": 0.0,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 0.0
+      },
+      "calibration_update_delta": 0.0,
+      "compared_mode": "full_system",
+      "feasible_hit_rate_delta": 0.0,
+      "focused_truth_ratio_delta": 0.0,
+      "prediction_gap_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": 0.0,
+        "phase_margin_deg": 0.0,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 0.0
+      },
+      "simulation_call_delta": 0.0
+    },
+    {
+      "baseline_mode": "no_calibration_replanning",
+      "best_metric_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": 0.0,
+        "phase_margin_deg": 0.0,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 0.0
+      },
+      "calibration_update_delta": 0.0,
+      "compared_mode": "full_system",
+      "feasible_hit_rate_delta": 0.0,
+      "focused_truth_ratio_delta": 0.0,
+      "prediction_gap_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": 0.0,
+        "phase_margin_deg": 0.0,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 0.0
+      },
+      "simulation_call_delta": 0.0
+    },
+    {
+      "baseline_mode": "no_rollout_planning",
+      "best_metric_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": 0.0,
+        "phase_margin_deg": 0.0,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": 0.0
+      },
+      "calibration_update_delta": 0.0,
+      "compared_mode": "full_system",
+      "feasible_hit_rate_delta": 0.0,
+      "focused_truth_ratio_delta": 0.0,
+      "prediction_gap_delta": {
+        "dc_gain_db": 0.0,
+        "gbw_hz": 0.0,
+        "phase_margin_deg": 0.0,
+        "power_w": 0.0,
+        "slew_rate_v_per_us": -1.831396491228084e+67
+      },
+      "simulation_call_delta": 0.0
+    }
+  ],
+  "mode_summaries": [
+    {
+      "average_best_metrics": {
+        "dc_gain_db": 129.3011,
+        "gbw_hz": 315686930.423234,
+        "phase_margin_deg": 179.98498,
+        "power_w": 0.00023,
+        "slew_rate_v_per_us": 1.1596210526315888e+69
+      },
+      "average_calibration_update_count": 3.0,
+      "average_convergence_step": 0.0,
+      "average_prediction_gap": {
+        "dc_gain_db": 24.571598,
+        "gbw_hz": 145510125.20578,
+        "phase_margin_deg": 58.645395,
+        "power_w": 0.000665,
+        "slew_rate_v_per_us": 8.224910526315859e+68
+      },
+      "component_config": {
+        "mode": "full_system",
+        "use_bayesopt_baseline": false,
+        "use_calibration": true,
+        "use_calibration_replanning": true,
+        "use_cmaes_baseline": false,
+        "use_fidelity_escalation": true,
+        "use_full_simulation_baseline": false,
+        "use_phase_updates": true,
+        "use_random_search_baseline": false,
+        "use_rl_baseline": false,
+        "use_rollout_planning": true,
+        "use_top_k_baseline": false,
+        "use_world_model": true
+      },
+      "escalation_count": 15,
+      "failure_type_distribution": {
+        "robustness_failure": 15
+      },
+      "feasible_hit_rate": 1.0,
+      "focused_truth_ratio": 1.0,
+      "mode": "full_system",
+      "run_count": 5,
+      "simulation_call_count": 3.0
+    },
+    {
+      "average_best_metrics": {
+        "dc_gain_db": 129.715,
+        "gbw_hz": 315694535.135816,
+        "phase_margin_deg": 179.984979,
+        "power_w": 0.00023
+      },
+      "average_calibration_update_count": 6.0,
+      "average_convergence_step": 0.0,
+      "average_prediction_gap": {
+        "dc_gain_db": 21.535303,
+        "gbw_hz": 141169352.527465,
+        "phase_margin_deg": 68.839475,
+        "power_w": 0.000575
+      },
+      "component_config": {
+        "mode": "top_k_baseline",
+        "use_bayesopt_baseline": false,
+        "use_calibration": true,
+        "use_calibration_replanning": false,
+        "use_cmaes_baseline": false,
+        "use_fidelity_escalation": false,
+        "use_full_simulation_baseline": false,
+        "use_phase_updates": false,
+        "use_random_search_baseline": false,
+        "use_rl_baseline": false,
+        "use_rollout_planning": false,
+        "use_top_k_baseline": true,
+        "use_world_model": true
+      },
+      "escalation_count": 0,
+      "failure_type_distribution": {},
+      "feasible_hit_rate": 1.0,
+      "focused_truth_ratio": 0.0,
+      "mode": "top_k_baseline",
+      "run_count": 5,
+      "simulation_call_count": 6.0
+    },
+    {
+      "average_best_metrics": {
+        "dc_gain_db": 129.3011,
+        "gbw_hz": 315694535.135816,
+        "phase_margin_deg": 179.984979,
+        "power_w": 0.00023
+      },
+      "average_calibration_update_count": 3.0,
+      "average_convergence_step": 0.0,
+      "average_prediction_gap": {
+        "dc_gain_db": 24.571598,
+        "gbw_hz": 145535886.791408,
+        "phase_margin_deg": 58.646501,
+        "power_w": 0.000665
+      },
+      "component_config": {
+        "mode": "no_fidelity_escalation",
+        "use_bayesopt_baseline": false,
+        "use_calibration": true,
+        "use_calibration_replanning": true,
+        "use_cmaes_baseline": false,
+        "use_fidelity_escalation": false,
+        "use_full_simulation_baseline": false,
+        "use_phase_updates": true,
+        "use_random_search_baseline": false,
+        "use_rl_baseline": false,
+        "use_rollout_planning": true,
+        "use_top_k_baseline": false,
+        "use_world_model": true
+      },
+      "escalation_count": 0,
+      "failure_type_distribution": {},
+      "feasible_hit_rate": 1.0,
+      "focused_truth_ratio": 0.0,
+      "mode": "no_fidelity_escalation",
+      "run_count": 5,
+      "simulation_call_count": 3.0
+    },
+    {
+      "average_best_metrics": {
+        "dc_gain_db": 129.3011,
+        "gbw_hz": 315686930.423234,
+        "phase_margin_deg": 179.98498,
+        "power_w": 0.00023,
+        "slew_rate_v_per_us": 1.1596210526315888e+69
+      },
+      "average_calibration_update_count": 3.0,
+      "average_convergence_step": 0.0,
+      "average_prediction_gap": {
+        "dc_gain_db": 24.571598,
+        "gbw_hz": 145510125.20578,
+        "phase_margin_deg": 58.645395,
+        "power_w": 0.000665,
+        "slew_rate_v_per_us": 8.224910526315859e+68
+      },
+      "component_config": {
+        "mode": "no_phase_updates",
+        "use_bayesopt_baseline": false,
+        "use_calibration": true,
+        "use_calibration_replanning": true,
+        "use_cmaes_baseline": false,
+        "use_fidelity_escalation": true,
+        "use_full_simulation_baseline": false,
+        "use_phase_updates": false,
+        "use_random_search_baseline": false,
+        "use_rl_baseline": false,
+        "use_rollout_planning": true,
+        "use_top_k_baseline": false,
+        "use_world_model": true
+      },
+      "escalation_count": 15,
+      "failure_type_distribution": {
+        "robustness_failure": 15
+      },
+      "feasible_hit_rate": 1.0,
+      "focused_truth_ratio": 1.0,
+      "mode": "no_phase_updates",
+      "run_count": 5,
+      "simulation_call_count": 3.0
+    },
+    {
+      "average_best_metrics": {
+        "dc_gain_db": 129.3011,
+        "gbw_hz": 315686930.423234,
+        "phase_margin_deg": 179.98498,
+        "power_w": 0.00023,
+        "slew_rate_v_per_us": 1.1596210526315888e+69
+      },
+      "average_calibration_update_count": 3.0,
+      "average_convergence_step": 0.0,
+      "average_prediction_gap": {
+        "dc_gain_db": 24.571598,
+        "gbw_hz": 145510125.20578,
+        "phase_margin_deg": 58.645395,
+        "power_w": 0.000665,
+        "slew_rate_v_per_us": 8.224910526315859e+68
+      },
+      "component_config": {
+        "mode": "no_calibration_replanning",
+        "use_bayesopt_baseline": false,
+        "use_calibration": true,
+        "use_calibration_replanning": false,
+        "use_cmaes_baseline": false,
+        "use_fidelity_escalation": true,
+        "use_full_simulation_baseline": false,
+        "use_phase_updates": true,
+        "use_random_search_baseline": false,
+        "use_rl_baseline": false,
+        "use_rollout_planning": true,
+        "use_top_k_baseline": false,
+        "use_world_model": true
+      },
+      "escalation_count": 15,
+      "failure_type_distribution": {
+        "robustness_failure": 15
+      },
+      "feasible_hit_rate": 1.0,
+      "focused_truth_ratio": 1.0,
+      "mode": "no_calibration_replanning",
+      "run_count": 5,
+      "simulation_call_count": 3.0
+    },
+    {
+      "average_best_metrics": {
+        "dc_gain_db": 129.3011,
+        "gbw_hz": 315686930.423234,
+        "phase_margin_deg": 179.98498,
+        "power_w": 0.00023,
+        "slew_rate_v_per_us": 1.1596210526315888e+69
+      },
+      "average_calibration_update_count": 3.0,
+      "average_convergence_step": 0.0,
+      "average_prediction_gap": {
+        "dc_gain_db": 24.571598,
+        "gbw_hz": 145510125.20578,
+        "phase_margin_deg": 58.645395,
+        "power_w": 0.000665,
+        "slew_rate_v_per_us": 8.408050175438667e+68
+      },
+      "component_config": {
+        "mode": "no_rollout_planning",
+        "use_bayesopt_baseline": false,
+        "use_calibration": true,
+        "use_calibration_replanning": true,
+        "use_cmaes_baseline": false,
+        "use_fidelity_escalation": true,
+        "use_full_simulation_baseline": false,
+        "use_phase_updates": true,
+        "use_random_search_baseline": false,
+        "use_rl_baseline": false,
+        "use_rollout_planning": false,
+        "use_top_k_baseline": false,
+        "use_world_model": true
+      },
+      "escalation_count": 15,
+      "failure_type_distribution": {
+        "robustness_failure": 14,
+        "simulation_invalid": 1
+      },
+      "feasible_hit_rate": 1.0,
+      "focused_truth_ratio": 1.0,
+      "mode": "no_rollout_planning",
+      "run_count": 5,
+      "simulation_call_count": 3.0
+    }
+  ],
+  "modes": [
+    "full_system",
+    "top_k_baseline",
+    "no_fidelity_escalation",
+    "no_phase_updates",
+    "no_calibration_replanning",
+    "no_rollout_planning"
+  ],
+  "task_id": "task_8262911e6e27"
+}

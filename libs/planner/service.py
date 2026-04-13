@@ -597,7 +597,7 @@ class PlanningService:
             "verified": "verified",
             "rejected": "rejected",
             "needs_more_simulation": "frontier",
-            "boundary_candidate": "frontier",
+            "boundary_candidate": "best_feasible",
         }[requested_lifecycle]
         updated_candidate = append_evaluation_event(
             candidate.model_copy(
@@ -679,9 +679,12 @@ class PlanningService:
         current = search_state.phase_state.current_phase
         next_phase = current
         rationale: list[str] = []
-        if current == "feasibility_bootstrapping" and search_state.best_known_feasible is not None:
+        has_truth_feedback = search_state.budget_state.simulations_used > 0
+        if current == "feasibility_bootstrapping" and (
+            search_state.best_known_feasible is not None or has_truth_feedback
+        ):
             next_phase = "performance_refinement"
-            rationale.append("feasible candidate discovered")
+            rationale.append("initial truth feedback available")
         elif current == "performance_refinement" and search_state.risk_context.calibration_required:
             next_phase = "calibration_recovery"
             rationale.append("world-model mismatch detected")

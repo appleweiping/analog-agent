@@ -23,7 +23,7 @@ from libs.planner.budget_controller import initialize_budget_state, remaining_si
 from libs.planner.candidate_manager import append_decision_event, append_evaluation_event
 from libs.planner.candidate_manager import frontier_candidates, summarize_candidate, upsert_candidate
 from libs.planner.compiler import compile_planning_bundle
-from libs.planner.phase_controller import initialize_phase_state
+from libs.planner.phase_controller import increment_phase_iteration, initialize_phase_state
 from libs.planner.rollout_planner import build_candidate_actions
 from libs.planner.selection_engine import apply_priority_scores
 from libs.planner.service import PlanningService, _timestamp
@@ -213,6 +213,9 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=True,
             use_calibration=True,
             use_fidelity_escalation=True,
+            use_phase_updates=True,
+            use_calibration_replanning=True,
+            use_rollout_planning=True,
             use_full_simulation_baseline=False,
         )
     if mode in {"no_world_model", "no_world_model_baseline"}:
@@ -221,7 +224,22 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=False,
             use_calibration=False,
             use_fidelity_escalation=True,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=False,
             use_full_simulation_baseline=False,
+        )
+    if mode == "top_k_baseline":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=True,
+            use_calibration=True,
+            use_fidelity_escalation=False,
+            use_phase_updates=False,
+            use_calibration_replanning=False,
+            use_rollout_planning=False,
+            use_full_simulation_baseline=False,
+            use_top_k_baseline=True,
         )
     if mode == "random_search_baseline":
         return MethodComponentConfig(
@@ -229,7 +247,11 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=False,
             use_calibration=False,
             use_fidelity_escalation=False,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=False,
             use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
             use_random_search_baseline=True,
         )
     if mode == "bayesopt_baseline":
@@ -238,7 +260,11 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=False,
             use_calibration=False,
             use_fidelity_escalation=False,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=False,
             use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
             use_random_search_baseline=False,
             use_bayesopt_baseline=True,
         )
@@ -248,7 +274,11 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=False,
             use_calibration=False,
             use_fidelity_escalation=False,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=False,
             use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
             use_random_search_baseline=False,
             use_bayesopt_baseline=False,
             use_cmaes_baseline=True,
@@ -259,7 +289,11 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=False,
             use_calibration=False,
             use_fidelity_escalation=False,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=False,
             use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
             use_random_search_baseline=False,
             use_bayesopt_baseline=False,
             use_cmaes_baseline=False,
@@ -271,7 +305,11 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=True,
             use_calibration=False,
             use_fidelity_escalation=True,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=True,
             use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
         )
     if mode == "no_fidelity_escalation":
         return MethodComponentConfig(
@@ -279,7 +317,47 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=True,
             use_calibration=True,
             use_fidelity_escalation=False,
+            use_phase_updates=True,
+            use_calibration_replanning=True,
+            use_rollout_planning=True,
             use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
+        )
+    if mode == "no_phase_updates":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=True,
+            use_calibration=True,
+            use_fidelity_escalation=True,
+            use_phase_updates=False,
+            use_calibration_replanning=True,
+            use_rollout_planning=True,
+            use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
+        )
+    if mode == "no_calibration_replanning":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=True,
+            use_calibration=True,
+            use_fidelity_escalation=True,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=True,
+            use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
+        )
+    if mode == "no_rollout_planning":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=True,
+            use_calibration=True,
+            use_fidelity_escalation=True,
+            use_phase_updates=True,
+            use_calibration_replanning=True,
+            use_rollout_planning=False,
+            use_full_simulation_baseline=False,
+            use_top_k_baseline=False,
         )
     if mode == "full_simulation_baseline":
         return MethodComponentConfig(
@@ -287,7 +365,11 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_world_model=False,
             use_calibration=False,
             use_fidelity_escalation=False,
+            use_phase_updates=True,
+            use_calibration_replanning=False,
+            use_rollout_planning=False,
             use_full_simulation_baseline=True,
+            use_top_k_baseline=False,
         )
     raise ValueError(f"unsupported experiment mode: {mode}")
 
@@ -311,6 +393,71 @@ def _requested_fidelity(
     if not config.use_fidelity_escalation:
         return "quick_truth"
     return selection.requested_fidelity_map.get(candidate.candidate_id, default_fidelity)
+
+
+def _apply_rollout_guidance(service: PlanningService, search_state: SearchState):
+    action_plan = service.plan_next_actions(search_state)
+    updated_state = action_plan.search_state
+    rollout_guidance_applied = False
+    rollout_guidance_value = 0.0
+    if action_plan.anchor_candidate_id is None or action_plan.rollout_response is None or not action_plan.rollout_response.steps:
+        return updated_state, rollout_guidance_applied, rollout_guidance_value
+
+    anchor_id = action_plan.anchor_candidate_id
+    preferred_action_id = action_plan.action_chain[0].action_id if action_plan.action_chain else None
+    rollout_guidance_value = float(action_plan.rollout_response.steps[-1].simulation_value.estimated_value)
+    updated_candidates = []
+    for candidate in updated_state.candidate_pool_state.candidates:
+        score_delta = 0.0
+        if candidate.candidate_id == anchor_id:
+            rollout_guidance_applied = True
+            score_delta += 0.2 * rollout_guidance_value
+        if preferred_action_id and candidate.proposal_action_chain:
+            if candidate.proposal_action_chain[0].action_id == preferred_action_id:
+                rollout_guidance_applied = True
+                score_delta += 0.55 * rollout_guidance_value
+            else:
+                score_delta -= 0.15 * rollout_guidance_value
+        if score_delta != 0.0:
+            updated_candidates.append(
+                append_decision_event(
+                    candidate.model_copy(update={"priority_score": round(candidate.priority_score + score_delta, 6)}),
+                    "keep",
+                    f"rollout_guidance_delta={round(score_delta, 6)}",
+                )
+            )
+        else:
+            updated_candidates.append(candidate)
+    updated_pool = updated_state.candidate_pool_state.model_copy(update={"candidates": updated_candidates})
+    updated_frontier_ids = [candidate.candidate_id for candidate in frontier_candidates(updated_pool)]
+    return (
+        updated_state.model_copy(
+            update={
+                "candidate_pool_state": updated_pool,
+                "frontier_state": updated_state.frontier_state.model_copy(update={"frontier_candidate_ids": updated_frontier_ids}),
+            }
+        ),
+        rollout_guidance_applied,
+        round(rollout_guidance_value, 6),
+    )
+
+
+def _suppress_calibration_replanning(search_state: SearchState) -> SearchState:
+    active_failure_modes = [
+        item
+        for item in search_state.risk_context.active_failure_modes
+        if item != "trust_violation" and not item.startswith("truth_level=") and not item.startswith("validation_status=")
+    ]
+    return search_state.model_copy(
+        update={
+            "risk_context": search_state.risk_context.model_copy(
+                update={
+                    "calibration_required": False,
+                    "active_failure_modes": active_failure_modes,
+                }
+            )
+        }
+    )
 
 
 def _initialize_baseline_state(service: PlanningService, mode: str, run_index: int) -> SearchState:
@@ -863,6 +1010,64 @@ def _select_candidates_for_mode(service: PlanningService, search_state: SearchSt
             requested_fidelity_map={candidate.candidate_id: "quick_truth" for candidate in queued},
             traces=[trace],
         )
+    if mode == "top_k_baseline":
+        frontier_ids = set(search_state.frontier_state.frontier_candidate_ids)
+        frontier = [
+            candidate
+            for candidate in search_state.candidate_pool_state.candidates
+            if candidate.candidate_id in frontier_ids and candidate.lifecycle_status in {"proposed", "frontier", "best_feasible", "best_infeasible"}
+        ]
+        ranked = sorted(frontier, key=lambda item: item.priority_score, reverse=True)
+        top_k = min(
+            max(2, service.planning_bundle.budget_controller.batch_size),
+            remaining_simulations(search_state.budget_state),
+            len(ranked),
+        )
+        selected = ranked[:top_k]
+        queued = [
+            append_decision_event(
+                candidate.model_copy(update={"lifecycle_state": "queued_for_simulation", "lifecycle_status": "queued_for_simulation"}),
+                "simulate",
+                "top_k_baseline",
+            )
+            for candidate in selected
+        ]
+        pool_state = search_state.candidate_pool_state
+        for candidate in queued:
+            pool_state = upsert_candidate(pool_state, candidate)
+        from libs.planner.budget_controller import consume_simulations
+
+        budget_state = consume_simulations(search_state.budget_state, len(queued))
+        trace = service._make_trace(
+            search_state,
+            outcome_tag="simulation_selected",
+            selected_candidate_id=queued[0].candidate_id if queued else None,
+            executed_action_chain=[],
+            world_model_queries=[],
+            simulation_decision=SimulationDecision(
+                decision="simulate" if queued else "defer",
+                candidate_ids=[candidate.candidate_id for candidate in queued],
+                reasons=["top_k_baseline"],
+                requested_fidelity="quick_truth" if queued else None,
+            ),
+            decision_rationale=["selected the top-K ranked candidates without trust gating, phase control, or fidelity escalation"],
+            reward_or_progress_signal=max((candidate.priority_score for candidate in queued), default=0.0),
+            trust_snapshot=queued[0].predicted_uncertainty if queued else None,
+        )
+        updated_state = service._refresh_search_state(
+            search_state,
+            pool_state=pool_state,
+            frontier_ids=[candidate.candidate_id for candidate in frontier_candidates(pool_state)],
+            budget_state=budget_state,
+            provenance_source="candidate_evaluation",
+            traces=[trace],
+        ).model_copy(update={"pending_simulation_refs": [*search_state.pending_simulation_refs, *[candidate.candidate_id for candidate in queued]]})
+        return SimulationSelectionResponse(
+            search_state=updated_state,
+            selected_candidates=queued,
+            requested_fidelity_map={candidate.candidate_id: "quick_truth" for candidate in queued},
+            traces=[trace],
+        )
     if mode == "rl_baseline":
         frontier_ids = set(search_state.frontier_state.frontier_candidate_ids)
         frontier = [
@@ -1176,6 +1381,8 @@ def run_experiment(
     rl_observations = []
 
     for step_index in range(steps):
+        rollout_guidance_applied = False
+        rollout_guidance_value = 0.0
         if component_config.use_random_search_baseline:
             search_state = _propose_random_search_candidates(service, search_state, run_index, step_index)
         elif component_config.use_bayesopt_baseline:
@@ -1189,6 +1396,8 @@ def run_experiment(
         else:
             search_state = service.propose_candidates(search_state).search_state
             search_state = service.evaluate_candidates(search_state).search_state
+            if component_config.use_rollout_planning:
+                search_state, rollout_guidance_applied, rollout_guidance_value = _apply_rollout_guidance(service, search_state)
 
         selectable_count = max(
             1,
@@ -1204,6 +1413,7 @@ def run_experiment(
         selection = _select_candidates_for_mode(service, search_state, mode)
         search_state = selection.search_state
         total_selected_candidates += len(selection.selected_candidates)
+        phase_before = search_state.phase_state.current_phase
         step_executions = []
         step_fidelity_usage: Counter[str] = Counter()
         step_calibration_updates = 0
@@ -1239,8 +1449,18 @@ def run_experiment(
             search_state = feedback.search_state
             service.world_model_bundle = feedback.updated_world_model_bundle
             service.world_model_service.bundle = feedback.updated_world_model_bundle
+            if component_config.use_calibration and not component_config.use_calibration_replanning:
+                search_state = _suppress_calibration_replanning(search_state)
 
-        search_state = service.advance_phase(search_state).search_state
+        if component_config.use_phase_updates:
+            search_state = service.advance_phase(search_state).search_state
+        else:
+            search_state = search_state.model_copy(
+                update={
+                    "phase_state": increment_phase_iteration(search_state.phase_state, improved=bool(step_executions)),
+                }
+            )
+        phase_after = search_state.phase_state.current_phase
         if convergence_step is None and search_state.best_known_feasible is not None:
             convergence_step = step_index
 
@@ -1269,6 +1489,15 @@ def run_experiment(
                 world_model_enabled=component_config.use_world_model,
                 calibration_enabled=component_config.use_calibration,
                 fidelity_escalation_enabled=component_config.use_fidelity_escalation,
+                phase_updates_enabled=component_config.use_phase_updates,
+                calibration_replanning_enabled=component_config.use_calibration_replanning,
+                rollout_planning_enabled=component_config.use_rollout_planning,
+                phase_before=phase_before,
+                phase_after=phase_after,
+                phase_changed=phase_before != phase_after,
+                calibration_required_after_step=search_state.risk_context.calibration_required,
+                rollout_guidance_applied=rollout_guidance_applied,
+                rollout_guidance_value=rollout_guidance_value,
                 selected_mean_uncertainty=_mean_selected_value(
                     selection.selected_candidates,
                     lambda candidate: candidate.predicted_uncertainty.uncertainty_score if candidate.predicted_uncertainty else None,
@@ -1402,7 +1631,19 @@ def _build_method_comparison(task_id: str, summaries: list[MethodModeSummary]) -
         return None
     full = summary_map["full_system"]
     deltas: list[MethodDeltaSummary] = []
-    comparison_modes = [mode for mode in ("no_world_model", "no_calibration", "no_fidelity_escalation") if mode in summary_map]
+    comparison_modes = [
+        mode
+        for mode in (
+            "top_k_baseline",
+            "no_world_model",
+            "no_calibration",
+            "no_fidelity_escalation",
+            "no_phase_updates",
+            "no_calibration_replanning",
+            "no_rollout_planning",
+        )
+        if mode in summary_map
+    ]
     for mode in comparison_modes:
         compared = summary_map[mode]
         deltas.append(
@@ -1432,6 +1673,22 @@ def _build_method_comparison(task_id: str, summaries: list[MethodModeSummary]) -
         full.focused_truth_ratio > 0.0
         and full.simulation_call_count <= summary_map["no_fidelity_escalation"].simulation_call_count
     )
+    top_k_effective = "top_k_baseline" not in summary_map or (
+        full.simulation_call_count <= summary_map["top_k_baseline"].simulation_call_count
+        and full.feasible_hit_rate >= summary_map["top_k_baseline"].feasible_hit_rate
+    )
+    phase_updates_effective = "no_phase_updates" not in summary_map or (
+        full.feasible_hit_rate >= summary_map["no_phase_updates"].feasible_hit_rate
+        and full.average_convergence_step <= summary_map["no_phase_updates"].average_convergence_step
+    )
+    calibration_replanning_effective = "no_calibration_replanning" not in summary_map or (
+        full.average_convergence_step <= summary_map["no_calibration_replanning"].average_convergence_step
+        and full.simulation_call_count <= summary_map["no_calibration_replanning"].simulation_call_count
+    )
+    rollout_effective = "no_rollout_planning" not in summary_map or (
+        full.feasible_hit_rate >= summary_map["no_rollout_planning"].feasible_hit_rate
+        and full.average_convergence_step <= summary_map["no_rollout_planning"].average_convergence_step
+    )
     notes: list[str] = []
     if "no_world_model" in summary_map:
         notes.append(
@@ -1445,6 +1702,25 @@ def _build_method_comparison(task_id: str, summaries: list[MethodModeSummary]) -
         notes.append(
             f"fidelity_delta_focused_ratio={round(full.focused_truth_ratio - summary_map['no_fidelity_escalation'].focused_truth_ratio, 6)}"
         )
+    if "top_k_baseline" in summary_map:
+        notes.append(
+            f"top_k_delta_sim_calls={round(summary_map['top_k_baseline'].simulation_call_count - full.simulation_call_count, 6)}"
+        )
+        notes.append(
+            f"top_k_delta_efficiency={round((full.feasible_hit_rate / max(full.simulation_call_count, 1e-6)) - (summary_map['top_k_baseline'].feasible_hit_rate / max(summary_map['top_k_baseline'].simulation_call_count, 1e-6)), 6)}"
+        )
+    if "no_phase_updates" in summary_map:
+        notes.append(
+            f"phase_update_delta_convergence={round(summary_map['no_phase_updates'].average_convergence_step - full.average_convergence_step, 6)}"
+        )
+    if "no_calibration_replanning" in summary_map:
+        notes.append(
+            f"calibration_replanning_delta_sim_calls={round(summary_map['no_calibration_replanning'].simulation_call_count - full.simulation_call_count, 6)}"
+        )
+    if "no_rollout_planning" in summary_map:
+        notes.append(
+            f"rollout_delta_convergence={round(summary_map['no_rollout_planning'].average_convergence_step - full.average_convergence_step, 6)}"
+        )
     return MethodComparisonResult(
         task_id=task_id,
         modes=[summary.mode for summary in summaries],
@@ -1454,6 +1730,10 @@ def _build_method_comparison(task_id: str, summaries: list[MethodModeSummary]) -
             world_model_effective=world_model_effective,
             calibration_effective=calibration_effective,
             fidelity_effective=fidelity_effective,
+            top_k_baseline_effective=top_k_effective,
+            phase_updates_effective=phase_updates_effective,
+            calibration_replanning_effective=calibration_replanning_effective,
+            rollout_effective=rollout_effective,
             conclusion_notes=notes,
         ),
     )
@@ -1524,7 +1804,16 @@ def run_experiment_suite(
                 average_focused_truth_call_count=round(sum(result.focused_truth_call_count for result in mode_runs) / max(1, len(mode_runs)), 6),
             )
         )
-        if mode in {"full_system", "no_world_model", "no_calibration", "no_fidelity_escalation"}:
+        if mode in {
+            "top_k_baseline",
+            "full_system",
+            "no_world_model",
+            "no_calibration",
+            "no_fidelity_escalation",
+            "no_phase_updates",
+            "no_calibration_replanning",
+            "no_rollout_planning",
+        }:
             method_summaries.append(_method_mode_summary(mode, mode_runs, steps))
     suite = ExperimentSuiteResult(task_id=task.task_id, modes=modes, runs=runs, summaries=summaries)
     suite = suite.model_copy(update={"aggregated_stats": aggregate_stats(suite)})

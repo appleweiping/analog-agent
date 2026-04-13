@@ -119,15 +119,19 @@ class ExperimentStatsRecord(BaseModel):
     task_id: str
     mode: Literal[
         "full_simulation_baseline",
+        "top_k_baseline",
         "random_search_baseline",
         "bayesopt_baseline",
         "cmaes_baseline",
         "rl_baseline",
         "no_world_model_baseline",
-        "full_system",
-        "no_world_model",
-        "no_calibration",
-        "no_fidelity_escalation",
+    "full_system",
+    "no_world_model",
+    "no_calibration",
+    "no_fidelity_escalation",
+    "no_phase_updates",
+    "no_calibration_replanning",
+    "no_rollout_planning",
     ]
     simulation_call_count: int
     candidate_count: int

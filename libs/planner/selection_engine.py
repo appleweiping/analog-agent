@@ -70,10 +70,19 @@ def choose_best_known(candidates: list[CandidateRecord], *, feasible: bool) -> C
     filtered = []
     for candidate in candidates:
         probability = candidate.predicted_feasibility.overall_feasibility if candidate.predicted_feasibility else 0.0
-        if feasible and probability >= 0.8:
+        is_verified_feasible = candidate.lifecycle_status in {"verified", "best_feasible"}
+        is_verified_infeasible = candidate.lifecycle_status in {"rejected", "best_infeasible", "screened_out"}
+        if feasible and (is_verified_feasible or probability >= 0.8):
             filtered.append(candidate)
-        if not feasible and probability < 0.8:
+        if not feasible and (is_verified_infeasible or probability < 0.8):
             filtered.append(candidate)
     if not filtered:
         return None
-    return sorted(filtered, key=lambda item: item.priority_score, reverse=True)[0]
+    return sorted(
+        filtered,
+        key=lambda item: (
+            item.lifecycle_status in {"verified", "best_feasible"} if feasible else item.lifecycle_status in {"rejected", "best_infeasible", "screened_out"},
+            item.priority_score,
+        ),
+        reverse=True,
+    )[0]
