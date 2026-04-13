@@ -83,7 +83,7 @@ This tier supports:
 
 - full acceptance
 - full experiment runner
-- baseline comparison
+- baseline comparison, now including unified `random_search_baseline` and `bayesopt_baseline`
 - methodology comparison
 - statistics export
 

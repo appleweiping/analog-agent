@@ -9,6 +9,9 @@ from libs.eval.metrics import (
     efficiency_score,
     feasible_hit_rate,
 )
+from libs.eval.bayesopt import build_observation as build_bayesopt_observation
+from libs.eval.bayesopt import build_surrogate_predictions, propose_parameter_batch
+from libs.eval.random_search import deterministic_unit, sample_parameter_values
 from libs.eval.stats import aggregate_stats, build_experiment_stats_record
 from libs.planner.budget_controller import initialize_budget_state, remaining_simulations
 from libs.planner.candidate_manager import append_decision_event, append_evaluation_event
@@ -41,7 +44,7 @@ from libs.world_model.state_builder import build_world_state
 
 
 def _pseudo_unit(seed: str) -> float:
-    return int(stable_hash(seed)[:8], 16) / 0xFFFFFFFF
+    return deterministic_unit(seed)
 
 
 def _parameter_map(candidate) -> dict[str, float | int | str | bool]:
@@ -100,6 +103,18 @@ def _baseline_trust(mode: str, seed: str) -> TrustAssessment:
             must_escalate=True,
             hard_block=False,
             reasons=["full_simulation_baseline"],
+        )
+    if mode == "random_search_baseline":
+        ratio = _pseudo_unit(seed)
+        return TrustAssessment(
+            trust_level="low",
+            service_tier="screening_only",
+            confidence=round(0.1 + 0.05 * ratio, 4),
+            uncertainty_score=round(0.75 + 0.15 * (1.0 - ratio), 4),
+            ood_score=round(0.45 + 0.1 * ratio, 4),
+            must_escalate=False,
+            hard_block=False,
+            reasons=["random_search_baseline"],
         )
     ratio = _pseudo_unit(seed)
     return TrustAssessment(
@@ -164,6 +179,14 @@ def _baseline_predictions(task, candidate, mode: str, run_index: int):
             reasons=["full_simulation_baseline"],
             trust_assessment=trust,
         )
+    elif mode == "random_search_baseline":
+        simulation_value = SimulationValueEstimate(
+            state_id=candidate.world_state_ref,
+            estimated_value=1.0,
+            decision="simulate",
+            reasons=["random_search_baseline"],
+            trust_assessment=trust,
+        )
     else:
         value = round(0.35 + 0.4 * _pseudo_unit(f"sim-value|{seed}"), 6)
         decision = "simulate" if value >= 0.55 else "defer"
@@ -194,6 +217,25 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_fidelity_escalation=True,
             use_full_simulation_baseline=False,
         )
+    if mode == "random_search_baseline":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=False,
+            use_calibration=False,
+            use_fidelity_escalation=False,
+            use_full_simulation_baseline=False,
+            use_random_search_baseline=True,
+        )
+    if mode == "bayesopt_baseline":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=False,
+            use_calibration=False,
+            use_fidelity_escalation=False,
+            use_full_simulation_baseline=False,
+            use_random_search_baseline=False,
+            use_bayesopt_baseline=True,
+        )
     if mode == "no_calibration":
         return MethodComponentConfig(
             mode=mode,
@@ -222,7 +264,9 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
 
 
 def _uses_baseline_predictions(config: MethodComponentConfig) -> bool:
-    return config.use_full_simulation_baseline or not config.use_world_model
+    return config.use_full_simulation_baseline or (
+        not config.use_world_model and not config.use_random_search_baseline and not config.use_bayesopt_baseline
+    )
 
 
 def _requested_fidelity(
@@ -288,6 +332,43 @@ def _initialize_baseline_state(service: PlanningService, mode: str, run_index: i
     )
 
 
+def _initialize_random_search_state(service: PlanningService, mode: str, run_index: int) -> SearchState:
+    current = build_world_state(
+        service.task,
+        parameter_values=service.task.initial_state.template_defaults,
+        provenance_type="trajectory_replay",
+        provenance_stage="initial",
+    )
+    return SearchState(
+        search_id=f"search_{stable_hash(service.planning_bundle.planning_id + mode)[:12]}",
+        task_id=service.task.task_id,
+        episode_id=f"episode_{stable_hash(service.task.task_id + mode + str(run_index))[:12]}",
+        current_world_state=current,
+        candidate_pool_state=CandidatePoolState(candidates=[], active_candidate_ids=[], archived_candidate_ids=[], discarded_candidate_ids=[]),
+        frontier_state=FrontierState(
+            frontier_candidate_ids=[],
+            expansion_round=0,
+            max_frontier_size=max(4, service.planning_bundle.budget_controller.batch_size * 3),
+        ),
+        evaluated_state_refs=[],
+        pending_simulation_refs=[],
+        budget_state=initialize_budget_state(service.planning_bundle.budget_controller),
+        phase_state=initialize_phase_state(service.planning_bundle.phase_controller),
+        best_known_feasible=None,
+        best_known_infeasible=None,
+        strategy_context=StrategyContext(
+            active_policy=mode,
+            exploration_enabled=True,
+            rollout_enabled=False,
+            last_selected_candidate_id=None,
+            notes=[f"mode={mode}", "random_search_initialized"],
+        ),
+        risk_context=service._risk_context([]),
+        provenance=SearchProvenance(source="initialized", created_at=_timestamp(), artifact_refs=[]),
+        trace_log=[],
+    )
+
+
 def _evaluate_mode_candidates(service: PlanningService, candidates, mode: str, run_index: int, budget_state):
     if mode == "full_system":
         return service._evaluate_records(candidates, budget_state)
@@ -309,7 +390,7 @@ def _evaluate_mode_candidates(service: PlanningService, candidates, mode: str, r
         )
         updated = append_evaluation_event(updated, "predicted", [f"mode={mode}"])
         evaluated.append(updated)
-        ranking_scores[updated.world_state_ref] = 0.0 if mode == "full_simulation_baseline" else round(_pseudo_unit(updated.candidate_id + str(run_index)), 6)
+        ranking_scores[updated.world_state_ref] = 0.0 if mode in {"full_simulation_baseline", "random_search_baseline"} else round(_pseudo_unit(updated.candidate_id + str(run_index)), 6)
     if mode == "no_world_model_baseline":
         evaluated = apply_priority_scores(evaluated, ranking_scores=ranking_scores, policy=service.planning_bundle.selection_policy)
         from libs.planner.budget_controller import consume_proxy_evaluations
@@ -383,7 +464,255 @@ def _propose_baseline_candidates(service: PlanningService, search_state: SearchS
     return updated_state
 
 
+def _propose_random_search_candidates(service: PlanningService, search_state: SearchState, run_index: int, step_index: int):
+    batch_size = min(
+        service.planning_bundle.budget_controller.batch_size,
+        remaining_simulations(search_state.budget_state),
+    )
+    if batch_size <= 0:
+        return search_state
+    new_records = []
+    for sample_index in range(batch_size):
+        parameter_values = sample_parameter_values(
+            service.task,
+            run_label="random_search_baseline",
+            step_index=step_index,
+            sample_index=(run_index * max(1, batch_size)) + sample_index,
+        )
+        next_state = build_world_state(
+            service.task,
+            parameter_values=parameter_values,
+            provenance_type="trajectory_replay",
+            provenance_stage="predicted",
+        )
+        new_records.append(
+            service._candidate_record(
+                next_state,
+                parent_candidate_id=None,
+                proposal_source="restart_policy",
+                action_chain=[],
+                generation_depth=0,
+            )
+        )
+    new_records, budget_state = _evaluate_mode_candidates(service, new_records, "random_search_baseline", run_index, search_state.budget_state)
+    pool_state = search_state.candidate_pool_state
+    for candidate in new_records:
+        pool_state = upsert_candidate(pool_state, candidate)
+    trace = service._make_trace(
+        search_state,
+        outcome_tag="candidate_proposed",
+        selected_candidate_id=new_records[0].candidate_id if new_records else None,
+        executed_action_chain=[],
+        world_model_queries=[],
+        simulation_decision=SimulationDecision(
+            decision="keep",
+            candidate_ids=[candidate.candidate_id for candidate in new_records],
+            reasons=["random_search_baseline"],
+        ),
+        decision_rationale=["sampled candidate batch uniformly from DesignTask.design_space"],
+        reward_or_progress_signal=max((candidate.priority_score for candidate in new_records), default=0.0),
+        trust_snapshot=new_records[0].predicted_uncertainty if new_records else None,
+    )
+    return service._refresh_search_state(
+        search_state,
+        pool_state=pool_state,
+        frontier_ids=[candidate.candidate_id for candidate in new_records],
+        budget_state=budget_state,
+        provenance_source="candidate_proposal",
+        traces=[trace],
+    )
+
+
+def _propose_bayesopt_candidates(service: PlanningService, search_state: SearchState, observations, run_index: int, step_index: int):
+    batch_size = min(
+        service.planning_bundle.budget_controller.batch_size,
+        remaining_simulations(search_state.budget_state),
+    )
+    if batch_size <= 0:
+        return search_state
+    proposal_values = propose_parameter_batch(
+        service.task,
+        run_label=f"bayesopt_baseline|{run_index}",
+        step_index=step_index,
+        batch_size=batch_size,
+    )
+    candidate_records = []
+    ranking_scores: dict[str, float] = {}
+    for sample_index, parameter_values in enumerate(proposal_values):
+        next_state = build_world_state(
+            service.task,
+            parameter_values=parameter_values,
+            provenance_type="trajectory_replay",
+            provenance_stage="predicted",
+        )
+        candidate = service._candidate_record(
+            next_state,
+            parent_candidate_id=None,
+            proposal_source="restart_policy",
+            action_chain=[],
+            generation_depth=0,
+        )
+        metrics_prediction, feasibility_prediction, simulation_value, acquisition = build_surrogate_predictions(
+            service.task,
+            next_state.state_id,
+            parameter_values,
+            observations=observations,
+            seed=f"{candidate.candidate_id}|{run_index}|{step_index}|{sample_index}",
+        )
+        candidate = append_evaluation_event(
+            candidate.model_copy(
+                update={
+                    "predicted_metrics": metrics_prediction,
+                    "predicted_feasibility": feasibility_prediction,
+                    "predicted_uncertainty": feasibility_prediction.trust_assessment,
+                    "simulation_value_estimate": simulation_value,
+                    "lifecycle_state": "frontier",
+                    "lifecycle_status": "frontier",
+                }
+            ),
+            "predicted",
+            [f"mode=bayesopt_baseline", f"observation_count={len(observations)}"],
+        )
+        candidate_records.append(candidate)
+        ranking_scores[candidate.world_state_ref] = acquisition
+    candidate_records = apply_priority_scores(candidate_records, ranking_scores=ranking_scores, policy=service.planning_bundle.selection_policy)
+    from libs.planner.budget_controller import consume_proxy_evaluations
+
+    budget_state = consume_proxy_evaluations(search_state.budget_state, len(candidate_records))
+    pool_state = search_state.candidate_pool_state
+    for candidate in candidate_records:
+        pool_state = upsert_candidate(pool_state, candidate)
+    trace = service._make_trace(
+        search_state,
+        outcome_tag="candidate_proposed",
+        selected_candidate_id=candidate_records[0].candidate_id if candidate_records else None,
+        executed_action_chain=[],
+        world_model_queries=[],
+        simulation_decision=SimulationDecision(
+            decision="prioritize",
+            candidate_ids=[candidate.candidate_id for candidate in candidate_records],
+            reasons=["bayesopt_baseline"],
+        ),
+        decision_rationale=["ranked sampled candidates with a lightweight acquisition surrogate built from verified history"],
+        reward_or_progress_signal=max((candidate.priority_score for candidate in candidate_records), default=0.0),
+        trust_snapshot=candidate_records[0].predicted_uncertainty if candidate_records else None,
+    )
+    return service._refresh_search_state(
+        search_state,
+        pool_state=pool_state,
+        frontier_ids=[candidate.candidate_id for candidate in candidate_records],
+        budget_state=budget_state,
+        provenance_source="candidate_proposal",
+        traces=[trace],
+    )
+
+
 def _select_candidates_for_mode(service: PlanningService, search_state: SearchState, mode: str):
+    if mode == "random_search_baseline":
+        frontier_ids = set(search_state.frontier_state.frontier_candidate_ids)
+        selected = [
+            candidate
+            for candidate in search_state.candidate_pool_state.candidates
+            if candidate.candidate_id in frontier_ids and candidate.lifecycle_status in {"proposed", "frontier"}
+        ]
+        selected = selected[: remaining_simulations(search_state.budget_state)]
+        queued = [
+            append_decision_event(
+                candidate.model_copy(update={"lifecycle_state": "queued_for_simulation", "lifecycle_status": "queued_for_simulation"}),
+                "simulate",
+                "random_search_baseline",
+            )
+            for candidate in selected
+        ]
+        pool_state = search_state.candidate_pool_state
+        for candidate in queued:
+            pool_state = upsert_candidate(pool_state, candidate)
+        from libs.planner.budget_controller import consume_simulations
+
+        budget_state = consume_simulations(search_state.budget_state, len(queued))
+        trace = service._make_trace(
+            search_state,
+            outcome_tag="simulation_selected",
+            selected_candidate_id=queued[0].candidate_id if queued else None,
+            executed_action_chain=[],
+            world_model_queries=[],
+            simulation_decision=SimulationDecision(
+                decision="simulate" if queued else "defer",
+                candidate_ids=[candidate.candidate_id for candidate in queued],
+                reasons=["random_search_baseline"],
+                requested_fidelity="quick_truth" if queued else None,
+            ),
+            decision_rationale=["simulate each sampled random-search candidate without planner ranking"],
+            reward_or_progress_signal=max((candidate.priority_score for candidate in queued), default=0.0),
+            trust_snapshot=queued[0].predicted_uncertainty if queued else None,
+        )
+        updated_state = service._refresh_search_state(
+            search_state,
+            pool_state=pool_state,
+            frontier_ids=[candidate.candidate_id for candidate in frontier_candidates(pool_state)],
+            budget_state=budget_state,
+            provenance_source="candidate_evaluation",
+            traces=[trace],
+        ).model_copy(update={"pending_simulation_refs": [*search_state.pending_simulation_refs, *[candidate.candidate_id for candidate in queued]]})
+        return SimulationSelectionResponse(
+            search_state=updated_state,
+            selected_candidates=queued,
+            requested_fidelity_map={candidate.candidate_id: "quick_truth" for candidate in queued},
+            traces=[trace],
+        )
+    if mode == "bayesopt_baseline":
+        frontier_ids = set(search_state.frontier_state.frontier_candidate_ids)
+        frontier = [
+            candidate
+            for candidate in search_state.candidate_pool_state.candidates
+            if candidate.candidate_id in frontier_ids and candidate.lifecycle_status in {"proposed", "frontier"}
+        ]
+        ranked = sorted(frontier, key=lambda item: item.priority_score, reverse=True)
+        selected = ranked[: min(service.planning_bundle.budget_controller.batch_size, remaining_simulations(search_state.budget_state))]
+        queued = [
+            append_decision_event(
+                candidate.model_copy(update={"lifecycle_state": "queued_for_simulation", "lifecycle_status": "queued_for_simulation"}),
+                "simulate",
+                "bayesopt_baseline",
+            )
+            for candidate in selected
+        ]
+        pool_state = search_state.candidate_pool_state
+        for candidate in queued:
+            pool_state = upsert_candidate(pool_state, candidate)
+        from libs.planner.budget_controller import consume_simulations
+
+        budget_state = consume_simulations(search_state.budget_state, len(queued))
+        trace = service._make_trace(
+            search_state,
+            outcome_tag="simulation_selected",
+            selected_candidate_id=queued[0].candidate_id if queued else None,
+            executed_action_chain=[],
+            world_model_queries=[],
+            simulation_decision=SimulationDecision(
+                decision="simulate" if queued else "defer",
+                candidate_ids=[candidate.candidate_id for candidate in queued],
+                reasons=["bayesopt_baseline"],
+                requested_fidelity="quick_truth" if queued else None,
+            ),
+            decision_rationale=["selected the top acquisition-ranked BayesOpt candidates for real simulation"],
+            reward_or_progress_signal=max((candidate.priority_score for candidate in queued), default=0.0),
+            trust_snapshot=queued[0].predicted_uncertainty if queued else None,
+        )
+        updated_state = service._refresh_search_state(
+            search_state,
+            pool_state=pool_state,
+            frontier_ids=[candidate.candidate_id for candidate in frontier_candidates(pool_state)],
+            budget_state=budget_state,
+            provenance_source="candidate_evaluation",
+            traces=[trace],
+        ).model_copy(update={"pending_simulation_refs": [*search_state.pending_simulation_refs, *[candidate.candidate_id for candidate in queued]]})
+        return SimulationSelectionResponse(
+            search_state=updated_state,
+            selected_candidates=queued,
+            requested_fidelity_map={candidate.candidate_id: "quick_truth" for candidate in queued},
+            traces=[trace],
+        )
     if mode != "full_simulation_baseline":
         return service.select_for_simulation(search_state)
     selected = [
@@ -504,7 +833,9 @@ def run_experiment(
         }
     )
     service = PlanningService(planning_bundle, task, world_model_bundle)
-    if _uses_baseline_predictions(component_config):
+    if component_config.use_random_search_baseline or component_config.use_bayesopt_baseline:
+        search_state = _initialize_random_search_state(service, mode, run_index)
+    elif _uses_baseline_predictions(component_config):
         search_state = _initialize_baseline_state(service, mode, run_index)
     else:
         search_state = service.initialize_search().search_state
@@ -517,9 +848,14 @@ def run_experiment(
     calibration_update_count = 0
     focused_truth_call_count = 0
     prediction_gap_by_step: list[dict[str, float]] = []
+    bayesopt_observations = []
 
     for step_index in range(steps):
-        if _uses_baseline_predictions(component_config):
+        if component_config.use_random_search_baseline:
+            search_state = _propose_random_search_candidates(service, search_state, run_index, step_index)
+        elif component_config.use_bayesopt_baseline:
+            search_state = _propose_bayesopt_candidates(service, search_state, bayesopt_observations, run_index, step_index)
+        elif _uses_baseline_predictions(component_config):
             search_state = _propose_baseline_candidates(service, search_state, mode, run_index)
         else:
             search_state = service.propose_candidates(search_state).search_state
@@ -555,6 +891,8 @@ def run_experiment(
             step_fidelity_usage[requested_fidelity] += 1
             simulation_executions.append(execution)
             step_executions.append(execution)
+            if component_config.use_bayesopt_baseline:
+                bayesopt_observations.append(build_bayesopt_observation(service.task, execution))
             feedback = service.ingest_simulation_feedback(
                 search_state,
                 candidate.candidate_id,

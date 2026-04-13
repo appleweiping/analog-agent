@@ -1,148 +1,153 @@
-﻿analog-agent/
-|-- README.md
-|-- LICENSE
-|-- pyproject.toml
-|-- Makefile
-|-- .env.example
-|-- .gitignore
-|-- docker-compose.yml
-|-- project_tree
+analog-agent/
 |-- .github/
 |   `-- workflows/
 |       `-- ci.yml
-|-- configs/
-|   |-- default.yaml
-|   |-- llm/
-|   |   |-- planner.yaml
-|   |   |-- critic.yaml
-|   |   `-- parser.yaml
-|   |-- simulator/
-|   |   |-- ngspice.yaml
-|   |   |-- xyce.yaml
-|   |   `-- spectre_compat.yaml
-|   |-- world_model/
-|   |   |-- tabular_surrogate.yaml
-|   |   |-- gnn_surrogate.yaml
-|   |   `-- uncertainty.yaml
-|   `-- benchmarks/
-|       |-- ota2.yaml
-|       |-- folded_cascode.yaml
-|       |-- ldo.yaml
-|       `-- bandgap.yaml
 |-- apps/
 |   |-- api_server/
-|   |   |-- main.py
+|   |   |-- routes/
+|   |   |   |-- .gitkeep
+|   |   |   |-- acceptance.py
+|   |   |   |-- experiments.py
+|   |   |   |-- interaction.py
+|   |   |   |-- memory_reflection.py
+|   |   |   |-- planning.py
+|   |   |   |-- simulation.py
+|   |   |   |-- tasking.py
+|   |   |   `-- world_modeling.py
 |   |   |-- deps.py
-|   |   `-- routes/
-|   |       |-- interaction.py
-|   |       |-- tasking.py
-|   |       |-- world_modeling.py
-|   |       |-- planning.py
-|   |       |-- simulation.py
-|   |       `-- memory_reflection.py
+|   |   `-- main.py
 |   |-- orchestrator/
-|   |   |-- state_machine.py
 |   |   |-- graph_runtime.py
+|   |   |-- job_runner.py
 |   |   |-- scheduler.py
-|   |   `-- job_runner.py
+|   |   `-- state_machine.py
 |   |-- worker_llm/
-|   |   |-- planner_agent.py
-|   |   |-- parser_agent.py
 |   |   |-- critic_agent.py
+|   |   |-- parser_agent.py
+|   |   |-- planner_agent.py
 |   |   |-- reflection_agent.py
 |   |   `-- topology_agent.py
-|   |-- worker_world_model/
-|   |   |-- inference_service.py
-|   |   |-- uncertainty_service.py
-|   |   `-- candidate_ranker.py
 |   |-- worker_memory/
-|   |   |-- episodic_store.py
 |   |   |-- design_case_store.py
-|   |   |-- trace_indexer.py
-|   |   `-- retrieval_service.py
-|   `-- worker_simulator/
-|       |-- ngspice_runner.py
-|       |-- xyce_runner.py
-|       |-- spectre_compat_runner.py
-|       |-- raw_parser.py
-|       `-- metric_extractor.py
-|-- libs/
-|   |-- schema/
-|   |   |-- design_spec.py
-|   |   |-- design_task.py
-|   |   |-- world_model.py
-|   |   |-- planning.py
-|   |   |-- simulation.py
-|   |   |-- memory.py
-|   |   |-- circuit_ir.py
-|   |   |-- action_ir.py
-|   |   |-- simulation_ir.py
-|   |   |-- reflection_ir.py
-|   |   `-- result_ir.py
-|   |-- interaction/
-|   |   |-- parser.py
-|   |   |-- spec_compiler.py
-|   |   |-- normalizer.py
-|   |   |-- validator.py
-|   |   |-- repair_loop.py
-|   |   |-- prompt_contracts.py
-|   |   `-- testing.py
-|   |-- tasking/
-|   |   |-- compiler.py
-|   |   |-- task_type_resolver.py
-|   |   |-- topology_resolver.py
-|   |   |-- design_space_builder.py
-|   |   |-- objective_compiler.py
-|   |   |-- constraint_compiler.py
-|   |   |-- evaluation_plan_builder.py
-|   |   |-- difficulty_profiler.py
-|   |   |-- validation.py
-|   |   |-- testing.py
-|   |   |-- task_graph_builder.py
-|   |   |-- constraint_resolver.py
-|   |   |-- default_testbench_planner.py
-|   |   `-- objective_scalarizer.py
-|   |-- topology/
-|   |   |-- templates/
-|   |   |-- topology_registry.py
-|   |   |-- graph_encoder.py
-|   |   `-- mutation_ops.py
+|   |   |-- episodic_store.py
+|   |   |-- retrieval_service.py
+|   |   `-- trace_indexer.py
+|   |-- worker_simulator/
+|   |   |-- metric_extractor.py
+|   |   |-- ngspice_runner.py
+|   |   |-- raw_parser.py
+|   |   |-- spectre_compat_runner.py
+|   |   `-- xyce_runner.py
+|   `-- worker_world_model/
+|       |-- candidate_ranker.py
+|       |-- inference_service.py
+|       `-- uncertainty_service.py
+|-- configs/
+|   |-- benchmarks/
+|   |   |-- bandgap.yaml
+|   |   |-- folded_cascode.yaml
+|   |   |-- ldo.yaml
+|   |   |-- multi_task_suite_v1.yaml
+|   |   `-- ota2.yaml
+|   |-- llm/
+|   |   |-- critic.yaml
+|   |   |-- parser.yaml
+|   |   `-- planner.yaml
+|   |-- simulator/
+|   |   |-- ngspice.yaml
+|   |   |-- spectre_compat.yaml
+|   |   `-- xyce.yaml
 |   |-- world_model/
-|   |   |-- datasets/
-|   |   |-- features/
-|   |   |-- models/
-|   |   |   |-- mlp_surrogate.py
-|   |   |   |-- xgb_surrogate.py
-|   |   |   |-- gnn_surrogate.py
-|   |   |   `-- feasibility_head.py
-|   |   |-- action_builder.py
-|   |   |-- compiler.py
-|   |   |-- design_task_adapter.py
-|   |   |-- feature_projection.py
-|   |   |-- state_builder.py
-|   |   |-- service.py
-|   |   |-- validation.py
+|   |   |-- gnn_surrogate.yaml
+|   |   |-- tabular_surrogate.yaml
+|   |   `-- uncertainty.yaml
+|   `-- default.yaml
+|-- infra/
+|   |-- ci/
+|   |   `-- .gitkeep
+|   |-- docker/
+|   |   `-- .gitkeep
+|   `-- observability/
+|       `-- .gitkeep
+|-- libs/
+|   |-- eval/
+|   |   |-- bayesopt.py
+|   |   |-- benchmark_registry.py
+|   |   |-- budget.py
+|   |   |-- experiment_runner.py
+|   |   |-- explainability.py
+|   |   |-- metrics.py
+|   |   |-- random_search.py
+|   |   |-- robustness.py
+|   |   `-- stats.py
+|   |-- interaction/
+|   |   |-- normalizer.py
+|   |   |-- parser.py
+|   |   |-- prompt_contracts.py
+|   |   |-- repair_loop.py
+|   |   |-- spec_compiler.py
 |   |   |-- testing.py
-|   |   |-- train.py
-|   |   |-- infer.py
-|   |   `-- calibrate.py
+|   |   `-- validator.py
+|   |-- knowledge/
+|   |   |-- analog_rules/
+|   |   |   `-- .gitkeep
+|   |   |-- equation_cards/
+|   |   |   `-- .gitkeep
+|   |   |-- paper_snippets/
+|   |   |   `-- .gitkeep
+|   |   `-- topology_notes/
+|   |       `-- .gitkeep
+|   |-- memory/
+|   |   |-- advice_emitter.py
+|   |   |-- compiler.py
+|   |   |-- consolidation_engine.py
+|   |   |-- failure_taxonomy.py
+|   |   |-- forgetting_manager.py
+|   |   |-- hybrid_retriever.py
+|   |   |-- pattern_miner.py
+|   |   |-- quality_governor.py
+|   |   |-- reflection_summarizer.py
+|   |   |-- retrieval_policy.py
+|   |   |-- service.py
+|   |   |-- task_signature.py
+|   |   |-- testing.py
+|   |   |-- trajectory_logger.py
+|   |   `-- validation.py
 |   |-- planner/
+|   |   |-- acquisition.py
+|   |   |-- bo_engine.py
 |   |   |-- budget_controller.py
 |   |   |-- candidate_manager.py
+|   |   |-- cmaes_engine.py
 |   |   |-- compiler.py
+|   |   |-- mpc_rollout.py
 |   |   |-- phase_controller.py
+|   |   |-- rl_policy.py
 |   |   |-- rollout_planner.py
 |   |   |-- search_controller.py
 |   |   |-- selection_engine.py
 |   |   |-- service.py
 |   |   |-- testing.py
-|   |   |-- validation.py
-|   |   |-- bo_engine.py
-|   |   |-- cmaes_engine.py
-|   |   |-- rl_policy.py
-|   |   |-- mpc_rollout.py
-|   |   `-- acquisition.py
+|   |   `-- validation.py
+|   |-- schema/
+|   |   |-- action_ir.py
+|   |   |-- benchmark.py
+|   |   |-- circuit_ir.py
+|   |   |-- design_spec.py
+|   |   |-- design_task.py
+|   |   |-- experiment.py
+|   |   |-- memory.py
+|   |   |-- planning.py
+|   |   |-- reflection_ir.py
+|   |   |-- result_ir.py
+|   |   |-- simulation.py
+|   |   |-- simulation_ir.py
+|   |   |-- stats.py
+|   |   |-- system_binding.py
+|   |   `-- world_model.py
 |   |-- simulation/
+|   |   |-- templates/
+|   |   |   `-- ota2_nominal_op_ac.spice.tpl
 |   |   |-- artifact_registry.py
 |   |   |-- backend_router.py
 |   |   |-- batch_executor.py
@@ -159,92 +164,222 @@
 |   |   |-- truth_model.py
 |   |   |-- validation.py
 |   |   `-- waveform_postproc.py
-|   |-- memory/
-|   |   |-- advice_emitter.py
+|   |-- tasking/
 |   |   |-- compiler.py
-|   |   |-- consolidation_engine.py
-|   |   |-- trajectory_logger.py
-|   |   |-- failure_taxonomy.py
-|   |   |-- forgetting_manager.py
-|   |   |-- hybrid_retriever.py
-|   |   |-- pattern_miner.py
-|   |   |-- quality_governor.py
-|   |   |-- reflection_summarizer.py
-|   |   |-- retrieval_policy.py
-|   |   |-- service.py
-|   |   |-- task_signature.py
+|   |   |-- constraint_compiler.py
+|   |   |-- constraint_resolver.py
+|   |   |-- default_testbench_planner.py
+|   |   |-- design_space_builder.py
+|   |   |-- difficulty_profiler.py
+|   |   |-- evaluation_plan_builder.py
+|   |   |-- objective_compiler.py
+|   |   |-- objective_scalarizer.py
+|   |   |-- task_graph_builder.py
+|   |   |-- task_type_resolver.py
 |   |   |-- testing.py
+|   |   |-- topology_resolver.py
 |   |   `-- validation.py
-|   |-- knowledge/
-|   |   |-- analog_rules/
-|   |   |-- equation_cards/
-|   |   |-- topology_notes/
-|   |   `-- paper_snippets/
-|   |-- eval/
-|   |   |-- metrics.py
-|   |   |-- budget.py
-|   |   |-- robustness.py
-|   |   `-- explainability.py
-|   `-- utils/
-|       |-- logging.py
-|       |-- io.py
-|       |-- hashing.py
-|       |-- units.py
-|       `-- reproducibility.py
+|   |-- topology/
+|   |   |-- templates/
+|   |   |   `-- .gitkeep
+|   |   |-- graph_encoder.py
+|   |   |-- mutation_ops.py
+|   |   `-- topology_registry.py
+|   |-- utils/
+|   |   |-- hashing.py
+|   |   |-- io.py
+|   |   |-- logging.py
+|   |   |-- reproducibility.py
+|   |   `-- units.py
+|   |-- vertical_slices/
+|   |   |-- __init__.py
+|   |   |-- bandgap.py
+|   |   |-- bandgap_spec.py
+|   |   |-- folded_cascode.py
+|   |   |-- folded_cascode_spec.py
+|   |   |-- ldo.py
+|   |   |-- ldo_spec.py
+|   |   |-- ota2.py
+|   |   `-- ota2_spec.py
+|   `-- world_model/
+|       |-- datasets/
+|       |   `-- .gitkeep
+|       |-- features/
+|       |   `-- .gitkeep
+|       |-- models/
+|       |   |-- feasibility_head.py
+|       |   |-- gnn_surrogate.py
+|       |   |-- mlp_surrogate.py
+|       |   `-- xgb_surrogate.py
+|       |-- action_builder.py
+|       |-- calibrate.py
+|       |-- compiler.py
+|       |-- design_task_adapter.py
+|       |-- feature_projection.py
+|       |-- infer.py
+|       |-- service.py
+|       |-- state_builder.py
+|       |-- testing.py
+|       |-- train.py
+|       `-- validation.py
+|-- paper/
+|   `-- 闭环工程/
+|       `-- April_12th_OTA主实验vertical_slice固化报告Day10.md
 |-- research/
-|   |-- benchmarks/
-|   |   |-- ota2/
-|   |   |-- folded_cascode/
-|   |   |-- ldo/
-|   |   `-- bandgap/
+|   |-- ablations/
+|   |   `-- .gitkeep
 |   |-- baselines/
 |   |   |-- bayesopt/
+|   |   |   |-- .gitkeep
+|   |   |   `-- README.md
 |   |   |-- cmaes/
-|   |   |-- rl/
-|   |   `-- random_search/
+|   |   |   `-- .gitkeep
+|   |   |-- random_search/
+|   |   |   |-- .gitkeep
+|   |   |   `-- README.md
+|   |   `-- rl/
+|   |       `-- .gitkeep
+|   |-- benchmarks/
+|   |   |-- bandgap/
+|   |   |   `-- .gitkeep
+|   |   |-- folded_cascode/
+|   |   |   `-- .gitkeep
+|   |   |-- ldo/
+|   |   |   `-- .gitkeep
+|   |   |-- ota2/
+|   |   |   `-- .gitkeep
+|   |   `-- multi_task_benchmark_design.md
 |   |-- datasets/
+|   |   |-- failure_cases/
+|   |   |   `-- .gitkeep
 |   |   |-- offline_lhs/
-|   |   |-- online_traces/
-|   |   `-- failure_cases/
+|   |   |   `-- .gitkeep
+|   |   `-- online_traces/
+|   |       `-- .gitkeep
 |   |-- notebooks/
-|   |-- ablations/
-|   `-- papers/
-|       |-- figs/
-|       |-- tables/
-|       `-- outline.md
-|-- tests/
-|   |-- unit/
-|   |   |-- test_interaction_layer.py
-|   |   |-- test_task_formalization_layer.py
-|   |   |-- test_world_model_layer.py
-|   |   |-- test_planning_layer.py
-|   |   |-- test_simulation_layer.py
-|   |   `-- test_memory_layer.py
-|   |-- integration/
-|   |   |-- test_interaction_api.py
-|   |   |-- test_tasking_api.py
-|   |   |-- test_world_model_api.py
-|   |   |-- test_planning_api.py
-|   |   |-- test_simulation_api.py
-|   |   `-- test_memory_api.py
-|   |-- regression/
-|   |   |-- test_interaction_acceptance.py
-|   |   |-- test_task_formalization_acceptance.py
-|   |   |-- test_world_model_acceptance.py
-|   |   |-- test_planning_acceptance.py
-|   |   |-- test_simulation_acceptance.py
-|   |   `-- test_memory_acceptance.py
-|   `-- e2e/
+|   |   `-- .gitkeep
+|   |-- papers/
+|   |   |-- figs/
+|   |   |   `-- .gitkeep
+|   |   |-- tables/
+|   |   |   `-- .gitkeep
+|   |   `-- outline.md
+|   `-- vertical_slices/
+|       |-- bandgap.md
+|       |-- folded_cascode.md
+|       |-- ldo.md
+|       `-- ota2.md
 |-- scripts/
+|   |-- smoke/
+|   |   |-- run_ngspice_smoke.py
+|   |   `-- test_ngspice_min.cir
 |   |-- bootstrap_dev_env.ps1
+|   |-- build_dataset.py
+|   |-- export_paper_tables.py
+|   |-- replay_trace.py
+|   |-- run_bandgap_acceptance.py
+|   |-- run_bandgap_experiment_suite.py
+|   |-- run_benchmark.py
+|   |-- run_folded_cascode_acceptance.py
+|   |-- run_folded_cascode_experiment_suite.py
+|   |-- run_ldo_acceptance.py
+|   |-- run_ldo_experiment_suite.py
+|   |-- run_ota_acceptance.py
+|   |-- run_ota_experiment_suite.py
+|   |-- run_system_closure_report.py
 |   |-- run_test_suite.ps1
 |   |-- run_test_suite.py
-|   |-- build_dataset.py
-|   |-- train_world_model.py
-|   |-- run_benchmark.py
-|   |-- replay_trace.py
-|   `-- export_paper_tables.py
-`-- infra/
-    |-- docker/
-    |-- ci/
-    `-- observability/
+|   `-- train_world_model.py
+|-- templates/
+|   |-- netlist/
+|   |   |-- bandgap/
+|   |   |   `-- v1/
+|   |   |       `-- bandgap_demonstrator_truth.spice.tpl
+|   |   |-- folded_cascode/
+|   |   |   `-- v1/
+|   |   |       `-- folded_cascode_demonstrator_truth.spice.tpl
+|   |   |-- ldo/
+|   |   |   `-- v1/
+|   |   |       `-- ldo_demonstrator_truth.spice.tpl
+|   |   `-- ota2/
+|   |       `-- v1/
+|   |           `-- ota2_demonstrator_truth.spice.tpl
+|   `-- testbench/
+|       |-- bandgap/
+|       |   `-- v1/
+|       |       |-- focused_truth.yaml
+|       |       |-- measurement_contract.yaml
+|       |       `-- quick_truth.yaml
+|       |-- folded_cascode/
+|       |   `-- v1/
+|       |       |-- focused_truth.yaml
+|       |       |-- measurement_contract.yaml
+|       |       `-- quick_truth.yaml
+|       |-- ldo/
+|       |   `-- v1/
+|       |       |-- focused_truth.yaml
+|       |       |-- measurement_contract.yaml
+|       |       `-- quick_truth.yaml
+|       `-- ota2/
+|           `-- v1/
+|               |-- focused_truth.yaml
+|               |-- measurement_contract.yaml
+|               `-- quick_truth.yaml
+|-- tests/
+|   |-- e2e/
+|   |   `-- .gitkeep
+|   |-- integration/
+|   |   |-- .gitkeep
+|   |   |-- __init__.py
+|   |   |-- test_bandgap_vertical_slice.py
+|   |   |-- test_bayesopt_baseline.py
+|   |   |-- test_experiment_api.py
+|   |   |-- test_fidelity_execution.py
+|   |   |-- test_folded_cascode_vertical_slice.py
+|   |   |-- test_full_system_acceptance.py
+|   |   |-- test_interaction_api.py
+|   |   |-- test_ldo_vertical_slice.py
+|   |   |-- test_memory_api.py
+|   |   |-- test_methodology_comparison.py
+|   |   |-- test_model_binding_provenance.py
+|   |   |-- test_ota_vertical_slice.py
+|   |   |-- test_planning_api.py
+|   |   |-- test_random_search_baseline.py
+|   |   |-- test_simulation_api.py
+|   |   |-- test_simulation_bad_sample.py
+|   |   |-- test_stats_pipeline.py
+|   |   |-- test_system_closure_report.py
+|   |   |-- test_tasking_api.py
+|   |   |-- test_world_model_api.py
+|   |   `-- test_world_model_truth_binding.py
+|   |-- regression/
+|   |   |-- .gitkeep
+|   |   |-- __init__.py
+|   |   |-- test_interaction_acceptance.py
+|   |   |-- test_memory_acceptance.py
+|   |   |-- test_planning_acceptance.py
+|   |   |-- test_simulation_acceptance.py
+|   |   |-- test_task_formalization_acceptance.py
+|   |   `-- test_world_model_acceptance.py
+|   |-- unit/
+|   |   |-- .gitkeep
+|   |   |-- __init__.py
+|   |   |-- test_benchmark_registry.py
+|   |   |-- test_interaction_layer.py
+|   |   |-- test_measurement_contract.py
+|   |   |-- test_memory_layer.py
+|   |   |-- test_model_binding_validation.py
+|   |   |-- test_ngspice_backend_smoke.py
+|   |   |-- test_planning_layer.py
+|   |   |-- test_simulation_layer.py
+|   |   |-- test_task_formalization_layer.py
+|   |   `-- test_world_model_layer.py
+|   `-- __init__.py
+|-- .env.example
+|-- .gitignore
+|-- docker-compose.yml
+|-- LICENSE
+|-- Makefile
+|-- project_tree
+|-- pyproject.toml
+`-- README.md

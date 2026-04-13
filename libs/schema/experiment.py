@@ -11,6 +11,8 @@ from libs.schema.stats import ExperimentStatsRecord, StatsAggregationResult, Ver
 
 ExperimentMode = Literal[
     "full_simulation_baseline",
+    "random_search_baseline",
+    "bayesopt_baseline",
     "no_world_model_baseline",
     "full_system",
     "no_world_model",
@@ -20,6 +22,8 @@ ExperimentMode = Literal[
 
 EXPERIMENT_MODES = (
     "full_simulation_baseline",
+    "random_search_baseline",
+    "bayesopt_baseline",
     "no_world_model_baseline",
     "full_system",
     "no_world_model",
@@ -38,6 +42,8 @@ class MethodComponentConfig(BaseModel):
     use_calibration: bool
     use_fidelity_escalation: bool
     use_full_simulation_baseline: bool = False
+    use_random_search_baseline: bool = False
+    use_bayesopt_baseline: bool = False
 
 
 class ExperimentBudget(BaseModel):
