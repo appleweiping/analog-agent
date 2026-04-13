@@ -178,6 +178,7 @@ class CandidateOutcomeSummary(BaseModel):
     feasible_probability: float | None = None
     priority_score: float | None = None
     world_state_ref: str | None = None
+    parameter_values: dict[str, float | int | str | bool] = Field(default_factory=dict)
     truth_feasibility_status: str | None = None
     truth_level: str | None = None
     validation_status: str | None = None

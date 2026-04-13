@@ -39,12 +39,17 @@ def _candidate_summary(candidate: CandidateRecord | None, verification: Verifica
         return None
     feasible_probability = candidate.predicted_feasibility.overall_feasibility if candidate.predicted_feasibility else None
     truth_status = verification.feasibility_status if verification and verification.candidate_id == candidate.candidate_id else None
+    parameter_values = {
+        parameter.variable_name: parameter.value
+        for parameter in candidate.world_state_snapshot.parameter_state
+    }
     return CandidateOutcomeSummary(
         candidate_id=candidate.candidate_id,
         lifecycle_status=candidate.lifecycle_status,
         feasible_probability=feasible_probability,
         priority_score=candidate.priority_score,
         world_state_ref=candidate.world_state_ref,
+        parameter_values=parameter_values,
         truth_feasibility_status=truth_status,
         truth_level=verification.validation_status.truth_level if verification and verification.candidate_id == candidate.candidate_id else None,
         validation_status=verification.validation_status.validity_state if verification and verification.candidate_id == candidate.candidate_id else None,

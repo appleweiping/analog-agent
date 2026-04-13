@@ -1,0 +1,359 @@
+{
+  "figures": [
+    {
+      "caption": "Cross-task transfer comparison on real SPICE call count.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_transfer_simulation_calls",
+      "output_path": "research\\papers\\bandgap_v1\\memory_transfer_figs\\memory_transfer_simulation_calls.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "governed_transfer",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#9467bd",
+          "label": "forced_transfer",
+          "x_values": [
+            2.0
+          ],
+          "y_values": [
+            1.0
+          ]
+        }
+      ],
+      "title": "Cross-Task Memory Transfer: Real Simulation Calls",
+      "x_label": "Transfer Mode",
+      "y_label": "Average Real Simulation Calls"
+    },
+    {
+      "caption": "Cross-task transfer comparison on first-feasible step.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_transfer_step_to_first_feasible",
+      "output_path": "research\\papers\\bandgap_v1\\memory_transfer_figs\\memory_transfer_step_to_first_feasible.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "governed_transfer",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#9467bd",
+          "label": "forced_transfer",
+          "x_values": [
+            2.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        }
+      ],
+      "title": "Cross-Task Memory Transfer: Step to First Feasible",
+      "x_label": "Transfer Mode",
+      "y_label": "Average Step to First Feasible"
+    },
+    {
+      "caption": "Rate of harmful transfer activation under each mode.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_transfer_harmful_transfer_rate",
+      "output_path": "research\\papers\\bandgap_v1\\memory_transfer_figs\\memory_transfer_harmful_transfer_rate.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "governed_transfer",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#9467bd",
+          "label": "forced_transfer",
+          "x_values": [
+            2.0
+          ],
+          "y_values": [
+            0.5
+          ]
+        }
+      ],
+      "title": "Cross-Task Memory Transfer: Harmful Transfer Rate",
+      "x_label": "Transfer Mode",
+      "y_label": "Harmful Transfer Rate"
+    }
+  ],
+  "json_output_path": "research\\papers\\bandgap_v1\\memory_transfer_evidence_bundle.json",
+  "modes": [
+    "no_memory",
+    "governed_transfer",
+    "forced_transfer"
+  ],
+  "source_task_slug": "ota2-v1",
+  "summary": {
+    "forced_transfer_exposes_negative_transfer": true,
+    "governance_blocks_harmful_transfer": true,
+    "governed_transfer_beneficial": false,
+    "notes": [
+      "source_episodes=2",
+      "target_episodes=2",
+      "transfer_kind=cross_family"
+    ]
+  },
+  "tables": [
+    {
+      "caption": "Primary cross-task transfer comparison table.",
+      "columns": [
+        {
+          "key": "mode",
+          "label": "Mode"
+        },
+        {
+          "key": "feasible_hit_rate",
+          "label": "Feasible Hit Rate"
+        },
+        {
+          "key": "average_real_simulation_calls",
+          "label": "Avg Sim Calls"
+        },
+        {
+          "key": "average_step_to_first_feasible",
+          "label": "Avg Step to Feasible"
+        },
+        {
+          "key": "average_repeated_failure_count",
+          "label": "Avg Repeated Failures"
+        },
+        {
+          "key": "warm_start_application_rate",
+          "label": "Warm-Start Rate"
+        },
+        {
+          "key": "average_retrieval_precision",
+          "label": "Retrieval Precision"
+        },
+        {
+          "key": "average_negative_transfer_risk",
+          "label": "Negative Transfer Risk"
+        },
+        {
+          "key": "harmful_transfer_rate",
+          "label": "Harmful Transfer Rate"
+        }
+      ],
+      "csv_output_path": "research\\papers\\bandgap_v1\\memory_transfer_tables\\memory_transfer_comparison.csv",
+      "markdown_output_path": "research\\papers\\bandgap_v1\\memory_transfer_tables\\memory_transfer_comparison.md",
+      "rows": [
+        {
+          "values": {
+            "average_negative_transfer_risk": 0.0,
+            "average_real_simulation_calls": 1.0,
+            "average_repeated_failure_count": 0.5,
+            "average_retrieval_precision": 0.0,
+            "average_step_to_first_feasible": 0.0,
+            "feasible_hit_rate": 0.0,
+            "harmful_transfer_rate": 0.0,
+            "mode": "no_memory",
+            "warm_start_application_rate": 0.0
+          }
+        },
+        {
+          "values": {
+            "average_negative_transfer_risk": 0.6034,
+            "average_real_simulation_calls": 1.0,
+            "average_repeated_failure_count": 0.5,
+            "average_retrieval_precision": 0.3966,
+            "average_step_to_first_feasible": 0.0,
+            "feasible_hit_rate": 0.0,
+            "harmful_transfer_rate": 0.0,
+            "mode": "governed_transfer",
+            "warm_start_application_rate": 0.0
+          }
+        },
+        {
+          "values": {
+            "average_negative_transfer_risk": 0.85,
+            "average_real_simulation_calls": 1.0,
+            "average_repeated_failure_count": 0.5,
+            "average_retrieval_precision": 0.15,
+            "average_step_to_first_feasible": 0.0,
+            "feasible_hit_rate": 0.0,
+            "harmful_transfer_rate": 0.5,
+            "mode": "forced_transfer",
+            "warm_start_application_rate": 1.0
+          }
+        }
+      ],
+      "table_id": "tbl_memory_transfer_comparison",
+      "title": "Cross-Task Memory Transfer Comparison"
+    },
+    {
+      "caption": "Per-episode cross-task transfer breakdown for appendix and failure analysis.",
+      "columns": [
+        {
+          "key": "mode",
+          "label": "Mode"
+        },
+        {
+          "key": "episode_index",
+          "label": "Episode"
+        },
+        {
+          "key": "warm_start_applied",
+          "label": "Warm Start"
+        },
+        {
+          "key": "real_simulation_calls",
+          "label": "Real Sim Calls"
+        },
+        {
+          "key": "step_to_first_feasible",
+          "label": "Step to Feasible"
+        },
+        {
+          "key": "repeated_failure_count",
+          "label": "Repeated Failures"
+        },
+        {
+          "key": "retrieved_episode_count",
+          "label": "Retrieved Episodes"
+        },
+        {
+          "key": "negative_transfer_risk",
+          "label": "Negative Transfer Risk"
+        },
+        {
+          "key": "harmful_transfer_applied",
+          "label": "Harmful Transfer"
+        }
+      ],
+      "csv_output_path": "research\\papers\\bandgap_v1\\memory_transfer_tables\\memory_transfer_episode_breakdown.csv",
+      "markdown_output_path": "research\\papers\\bandgap_v1\\memory_transfer_tables\\memory_transfer_episode_breakdown.md",
+      "rows": [
+        {
+          "values": {
+            "episode_index": 0,
+            "harmful_transfer_applied": false,
+            "mode": "no_memory",
+            "negative_transfer_risk": 0.0,
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 0,
+            "retrieved_episode_count": 0,
+            "step_to_first_feasible": "na",
+            "warm_start_applied": false
+          }
+        },
+        {
+          "values": {
+            "episode_index": 1,
+            "harmful_transfer_applied": false,
+            "mode": "no_memory",
+            "negative_transfer_risk": 0.0,
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 1,
+            "retrieved_episode_count": 0,
+            "step_to_first_feasible": "na",
+            "warm_start_applied": false
+          }
+        },
+        {
+          "values": {
+            "episode_index": 0,
+            "harmful_transfer_applied": false,
+            "mode": "governed_transfer",
+            "negative_transfer_risk": 0.6034,
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 0,
+            "retrieved_episode_count": 2,
+            "step_to_first_feasible": "na",
+            "warm_start_applied": false
+          }
+        },
+        {
+          "values": {
+            "episode_index": 1,
+            "harmful_transfer_applied": false,
+            "mode": "governed_transfer",
+            "negative_transfer_risk": 0.6034,
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 1,
+            "retrieved_episode_count": 2,
+            "step_to_first_feasible": "na",
+            "warm_start_applied": false
+          }
+        },
+        {
+          "values": {
+            "episode_index": 0,
+            "harmful_transfer_applied": false,
+            "mode": "forced_transfer",
+            "negative_transfer_risk": 0.85,
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 0,
+            "retrieved_episode_count": 1,
+            "step_to_first_feasible": "na",
+            "warm_start_applied": true
+          }
+        },
+        {
+          "values": {
+            "episode_index": 1,
+            "harmful_transfer_applied": true,
+            "mode": "forced_transfer",
+            "negative_transfer_risk": 0.85,
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 1,
+            "retrieved_episode_count": 1,
+            "step_to_first_feasible": "na",
+            "warm_start_applied": true
+          }
+        }
+      ],
+      "table_id": "tbl_memory_transfer_episode_breakdown",
+      "title": "Cross-Task Memory Transfer Breakdown"
+    }
+  ],
+  "target_task_slug": "bandgap-v1",
+  "transfer_kind": "cross_family"
+}
