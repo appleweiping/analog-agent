@@ -6,6 +6,7 @@ import math
 import subprocess
 import time
 from pathlib import Path
+import shutil
 
 from libs.schema.design_task import DesignTask
 from libs.schema.planning import CandidateRecord
@@ -38,7 +39,13 @@ def ngspice_binary_path() -> Path:
     """Return the configured ngspice binary path."""
 
     config = _load_ngspice_config()
-    return Path(str(config["binary"]))
+    configured = Path(str(config["binary"]))
+    if configured.exists():
+        return configured
+    discovered = shutil.which("ngspice")
+    if discovered:
+        return Path(discovered)
+    return configured
 
 
 def native_ngspice_available() -> bool:

@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 import unittest
 
+from apps.worker_simulator.ngspice_runner import native_ngspice_available
+
 
 @unittest.skipUnless(
     importlib.util.find_spec("fastapi") and importlib.util.find_spec("httpx"),
@@ -91,6 +93,7 @@ class SimulationApiTests(unittest.TestCase):
         self.assertIn("backend_report", payload)
         self.assertIn("simulation_request", payload)
 
+    @unittest.skipUnless(native_ngspice_available(), "native ngspice is not available in this environment")
     def test_verify_endpoint_hits_native_ngspice_path(self) -> None:
         from fastapi.testclient import TestClient
 
