@@ -4,6 +4,19 @@
 
 This repository is being developed as an engineering-grade prototype for analog design automation. The public code emphasizes system interfaces, compile-time guarantees, structured validation, and system-level evaluation scaffolding. Implementation details that are tightly coupled to ongoing research assets are intentionally abstracted at a high level.
 
+## Paper Positioning
+
+The intended paper-facing claim for this repository is:
+
+- a layered analog-agent system grounded in real SPICE verification;
+- a world-model-guided and planner-mediated closed loop rather than a single-step generator;
+- a system that explicitly trades learned prediction against real simulation budget, then feeds
+  truth back into calibration and memory.
+
+What this repository is trying to prove is not merely that it can produce candidate circuits,
+but that a structured analog-design agent can reduce real simulation cost while preserving or
+improving feasible-design discovery under explicit physical-validity boundaries.
+
 ## Research Scope
 
 The current repository is organized around four principles:
@@ -41,14 +54,23 @@ This is still an active research codebase rather than a finished release. The fi
 - `configs/`: benchmark, simulator, model, and runtime configuration.
 - `libs/`: core schemas, interaction logic, task compilers, world-model services, planning services, simulation/verification services, memory utilities, and evaluation code.
 - `templates/`: frozen family-aware netlist, testbench, and measurement-contract assets for canonical verification paths.
-- `research/`: experiment assets, datasets, baselines, and paper-facing material.
 - `scripts/`: command-line utilities for dataset, training, benchmarking, and export workflows.
 - `tests/`: unit, integration, and regression coverage.
 - `infra/`: container, CI, and observability placeholders.
 
+Local-only workspaces:
+
+- `research/`: local experiment outputs, evidence bundles, benchmark exports, and paper assets.
+- `paper/`: local reports, planning notes, and writing artifacts.
+
+These two directories are intentionally ignored from version control so the public repository
+stays focused on system code, configs, templates, scripts, and tests.
+
 ## Project Tree
 
-The repository now exposes a paper-facing system tree with four runnable benchmark slices, unified benchmark baselines, and frozen family-aware templates:
+The repository now exposes a paper-facing system tree with four runnable benchmark slices,
+unified benchmark baselines, and frozen family-aware templates. Local-only `research/` and
+`paper/` workspaces are intentionally excluded from the tracked tree shown below:
 
 ```text
 analog-agent/
@@ -85,15 +107,6 @@ analog-agent/
 |       |-- folded_cascode/v1/
 |       |-- ldo/v1/
 |       `-- bandgap/v1/
-|-- research/
-|   |-- benchmarks/
-|   |-- baselines/
-|   |   |-- random_search/
-|   |   |-- bayesopt/
-|   |   |-- cmaes/
-|   |   `-- rl/
-|   |-- vertical_slices/
-|   `-- papers/
 |-- scripts/
 |   |-- run_benchmark.py
 |   |-- run_ota_experiment_suite.py
@@ -112,7 +125,26 @@ analog-agent/
         `-- test_bandgap_vertical_slice.py
 ```
 
-The full repository snapshot is stored in [`project_tree`](./project_tree) and updated alongside the runnable benchmark paths.
+The full tracked repository snapshot is stored in [`project_tree`](./project_tree) and updated
+alongside the runnable benchmark paths.
+
+## Paper-Facing Storyline
+
+The current submission-facing storyline is:
+
+- `ota2_v1` as the primary closed-loop experiment;
+- `folded_cascode_v1`, `ldo_v1`, and `bandgap_v1` as runnable generalization tasks;
+- world-model utility proven through prediction-gap, budget, and trust-guided evidence;
+- planner utility proven through top-k comparison, escalation ablations, and replanning
+  evidence;
+- memory utility proven through repeated-episode savings, same-family transfer, and governed
+  negative-transfer suppression.
+
+The repository therefore supports three distinct layers of evidence:
+
+- system evidence: end-to-end acceptance and real-SPICE closure;
+- method evidence: world model, planner, and memory ablations;
+- benchmark evidence: multi-task comparisons against research baselines.
 
 ## Getting Started
 
@@ -310,3 +342,9 @@ It intentionally does not attempt to publish every modeling choice, prompt strat
 ## Status
 
 The project is under active construction, but it is no longer only a front-end scaffold. The repository now contains formal implementations for the first six layers of the system architecture, along with API routes, acceptance-oriented test coverage, and a frozen OTA `v1` vertical slice for reproducible end-to-end physical closure. What remains intentionally lightweight in the public tree are research-tuned backend details, deeper learned-backend integrations, broader circuit-family support, and stronger configured-truth simulator/model integrations that will continue to evolve as the research pipeline is expanded.
+
+Important boundary:
+
+- the tracked repository contains the system implementation and reproducible entrypoints;
+- local `research/` and `paper/` directories contain paper drafts, benchmark exports, evidence
+  bundles, and working notes, and are intentionally kept out of GitHub.

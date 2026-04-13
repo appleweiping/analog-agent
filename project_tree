@@ -5,7 +5,6 @@ analog-agent/
 |-- apps/
 |   |-- api_server/
 |   |   |-- routes/
-|   |   |   |-- .gitkeep
 |   |   |   |-- acceptance.py
 |   |   |   |-- experiments.py
 |   |   |   |-- interaction.py
@@ -44,11 +43,11 @@ analog-agent/
 |       `-- uncertainty_service.py
 |-- configs/
 |   |-- benchmarks/
-|   |   |-- bandgap.yaml
+|   |   |-- ota2.yaml
 |   |   |-- folded_cascode.yaml
 |   |   |-- ldo.yaml
-|   |   |-- multi_task_suite_v1.yaml
-|   |   `-- ota2.yaml
+|   |   |-- bandgap.yaml
+|   |   `-- multi_task_suite_v1.yaml
 |   |-- llm/
 |   |   |-- critic.yaml
 |   |   |-- parser.yaml
@@ -74,10 +73,12 @@ analog-agent/
 |   |   |-- bayesopt.py
 |   |   |-- benchmark_registry.py
 |   |   |-- budget.py
+|   |   |-- cmaes.py
 |   |   |-- experiment_runner.py
 |   |   |-- explainability.py
 |   |   |-- metrics.py
 |   |   |-- random_search.py
+|   |   |-- rl_baseline.py
 |   |   |-- robustness.py
 |   |   `-- stats.py
 |   |-- interaction/
@@ -146,8 +147,6 @@ analog-agent/
 |   |   |-- system_binding.py
 |   |   `-- world_model.py
 |   |-- simulation/
-|   |   |-- templates/
-|   |   |   `-- ota2_nominal_op_ac.spice.tpl
 |   |   |-- artifact_registry.py
 |   |   |-- backend_router.py
 |   |   |-- batch_executor.py
@@ -159,6 +158,8 @@ analog-agent/
 |   |   |-- netlist_builder.py
 |   |   |-- robustness_evaluator.py
 |   |   |-- service.py
+|   |   |-- templates/
+|   |   |   `-- ota2_nominal_op_ac.spice.tpl
 |   |   |-- testbench_builder.py
 |   |   |-- testing.py
 |   |   |-- truth_model.py
@@ -180,10 +181,10 @@ analog-agent/
 |   |   |-- topology_resolver.py
 |   |   `-- validation.py
 |   |-- topology/
-|   |   |-- templates/
-|   |   |   `-- .gitkeep
 |   |   |-- graph_encoder.py
 |   |   |-- mutation_ops.py
+|   |   |-- templates/
+|   |   |   `-- .gitkeep
 |   |   `-- topology_registry.py
 |   |-- utils/
 |   |   |-- hashing.py
@@ -202,73 +203,26 @@ analog-agent/
 |   |   |-- ota2.py
 |   |   `-- ota2_spec.py
 |   `-- world_model/
+|       |-- action_builder.py
+|       |-- calibrate.py
+|       |-- compiler.py
 |       |-- datasets/
 |       |   `-- .gitkeep
+|       |-- design_task_adapter.py
+|       |-- feature_projection.py
 |       |-- features/
 |       |   `-- .gitkeep
+|       |-- infer.py
 |       |-- models/
 |       |   |-- feasibility_head.py
 |       |   |-- gnn_surrogate.py
 |       |   |-- mlp_surrogate.py
 |       |   `-- xgb_surrogate.py
-|       |-- action_builder.py
-|       |-- calibrate.py
-|       |-- compiler.py
-|       |-- design_task_adapter.py
-|       |-- feature_projection.py
-|       |-- infer.py
 |       |-- service.py
 |       |-- state_builder.py
 |       |-- testing.py
 |       |-- train.py
 |       `-- validation.py
-|-- paper/
-|   `-- 闭环工程/
-|       `-- April_12th_OTA主实验vertical_slice固化报告Day10.md
-|-- research/
-|   |-- ablations/
-|   |   `-- .gitkeep
-|   |-- baselines/
-|   |   |-- bayesopt/
-|   |   |   |-- .gitkeep
-|   |   |   `-- README.md
-|   |   |-- cmaes/
-|   |   |   `-- .gitkeep
-|   |   |-- random_search/
-|   |   |   |-- .gitkeep
-|   |   |   `-- README.md
-|   |   `-- rl/
-|   |       `-- .gitkeep
-|   |-- benchmarks/
-|   |   |-- bandgap/
-|   |   |   `-- .gitkeep
-|   |   |-- folded_cascode/
-|   |   |   `-- .gitkeep
-|   |   |-- ldo/
-|   |   |   `-- .gitkeep
-|   |   |-- ota2/
-|   |   |   `-- .gitkeep
-|   |   `-- multi_task_benchmark_design.md
-|   |-- datasets/
-|   |   |-- failure_cases/
-|   |   |   `-- .gitkeep
-|   |   |-- offline_lhs/
-|   |   |   `-- .gitkeep
-|   |   `-- online_traces/
-|   |       `-- .gitkeep
-|   |-- notebooks/
-|   |   `-- .gitkeep
-|   |-- papers/
-|   |   |-- figs/
-|   |   |   `-- .gitkeep
-|   |   |-- tables/
-|   |   |   `-- .gitkeep
-|   |   `-- outline.md
-|   `-- vertical_slices/
-|       |-- bandgap.md
-|       |-- folded_cascode.md
-|       |-- ldo.md
-|       `-- ota2.md
 |-- scripts/
 |   |-- smoke/
 |   |   |-- run_ngspice_smoke.py
@@ -286,7 +240,6 @@ analog-agent/
 |   |-- run_ldo_experiment_suite.py
 |   |-- run_ota_acceptance.py
 |   |-- run_ota_experiment_suite.py
-|   |-- run_system_closure_report.py
 |   |-- run_test_suite.ps1
 |   |-- run_test_suite.py
 |   `-- train_world_model.py
@@ -348,7 +301,6 @@ analog-agent/
 |   |   |-- test_simulation_api.py
 |   |   |-- test_simulation_bad_sample.py
 |   |   |-- test_stats_pipeline.py
-|   |   |-- test_system_closure_report.py
 |   |   |-- test_tasking_api.py
 |   |   |-- test_world_model_api.py
 |   |   `-- test_world_model_truth_binding.py
@@ -383,3 +335,7 @@ analog-agent/
 |-- project_tree
 |-- pyproject.toml
 `-- README.md
+
+Local-only and intentionally untracked:
+- paper/
+- research/
