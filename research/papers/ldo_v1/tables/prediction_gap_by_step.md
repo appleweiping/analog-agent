@@ -1,0 +1,9 @@
+# Prediction Gap by Step
+
+Average core-metric prediction gap per optimization step.
+
+| Step | Full System | No Calibration | No World Model |
+| --- | --- | --- | --- |
+| 0 | 10553613.829223 | 10553613.829223 | 23154218.333135 |
+| 1 | 7434131.018278 | 10952002.294686 | 26833053.037123 |
+| 2 | 6860175.311644 | 11357111.523536 | 26833053.037123 |

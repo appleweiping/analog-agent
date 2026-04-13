@@ -1,0 +1,5 @@
+Mode,Avg Sim Calls,Feasible Hit Rate,Avg Convergence Step,Focused Truth Ratio,gbw_hz Gap,phase_margin_deg Gap,power_w Gap
+full_system,3.0,0.0,3.0,1.0,24847835.798692,84.360195,0.000258
+no_world_model,3.0,0.0,3.0,0.0,76820211.472713,112.933993,0.000675
+no_calibration,3.0,0.0,3.0,1.0,32862615.160795,112.486283,0.000366
+no_fidelity_escalation,3.0,0.0,3.0,0.0,24847366.154137,84.360572,0.000258

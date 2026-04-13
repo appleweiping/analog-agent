@@ -1,0 +1,176 @@
+{
+  "aggregation_scope": "experiment_suite",
+  "average_prediction_gap": {
+    "average_absolute_error": {
+      "dc_gain_db": 32.570933,
+      "gbw_hz": 160752046.578299,
+      "phase_margin_deg": 65.146442,
+      "power_w": 0.000827
+    },
+    "average_relative_error": {
+      "dc_gain_db": 0.252295,
+      "gbw_hz": 0.528698,
+      "phase_margin_deg": 0.487324,
+      "power_w": 3.588759
+    },
+    "by_family": {
+      "folded_cascode_ota": {
+        "dc_gain_db": 32.570933,
+        "gbw_hz": 160752046.578299,
+        "phase_margin_deg": 65.146442,
+        "power_w": 0.000827
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "dc_gain_db": 29.836129,
+        "gbw_hz": 165292225.55659,
+        "phase_margin_deg": 53.416888,
+        "power_w": 0.00082
+      },
+      "quick_truth": {
+        "dc_gain_db": 36.673139,
+        "gbw_hz": 153941778.110862,
+        "phase_margin_deg": 82.740772,
+        "power_w": 0.000837
+      }
+    },
+    "by_task_id": {
+      "task_f82b16253207": {
+        "dc_gain_db": 32.570933,
+        "gbw_hz": 160752046.578299,
+        "phase_margin_deg": 65.146442,
+        "power_w": 0.000827
+      }
+    },
+    "metrics_covered": [
+      "dc_gain_db",
+      "gbw_hz",
+      "phase_margin_deg",
+      "power_w"
+    ],
+    "record_count": 60
+  },
+  "dominant_failure_mode_distribution": {
+    "by_family": {
+      "folded_cascode_ota": {
+        "design_failure": 36
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "design_failure": 36
+      }
+    },
+    "by_truth_level": {
+      "demonstrator_truth": {
+        "design_failure": 36
+      }
+    },
+    "frequency": {
+      "design_failure": 36
+    },
+    "ratio": {
+      "design_failure": 1.0
+    },
+    "total_records": 60
+  },
+  "failure_mode_summary": {
+    "by_family": {
+      "folded_cascode_ota": {
+        "design_failure": 36
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "design_failure": 36
+      }
+    },
+    "by_truth_level": {
+      "demonstrator_truth": {
+        "design_failure": 36
+      }
+    },
+    "frequency": {
+      "design_failure": 36
+    },
+    "ratio": {
+      "design_failure": 1.0
+    },
+    "total_records": 60
+  },
+  "feasible_verification_rate": 1.0,
+  "fidelity_summary": {
+    "escalation_count": 36,
+    "escalation_reason_distribution": {
+      "default_screening_path": 36
+    },
+    "fidelity_escalation_rate": 0.6,
+    "focused_truth_calls": 36,
+    "focused_truth_ratio": 0.6,
+    "quick_truth_calls": 24,
+    "total_real_verifications": 60
+  },
+  "measurement_success_rate": 1.0,
+  "predicted_feasible_to_verified_feasible_conversion": 1.0,
+  "prediction_gap_summary": {
+    "average_absolute_error": {
+      "dc_gain_db": 32.570933,
+      "gbw_hz": 160752046.578299,
+      "phase_margin_deg": 65.146442,
+      "power_w": 0.000827
+    },
+    "average_relative_error": {
+      "dc_gain_db": 0.252295,
+      "gbw_hz": 0.528698,
+      "phase_margin_deg": 0.487324,
+      "power_w": 3.588759
+    },
+    "by_family": {
+      "folded_cascode_ota": {
+        "dc_gain_db": 32.570933,
+        "gbw_hz": 160752046.578299,
+        "phase_margin_deg": 65.146442,
+        "power_w": 0.000827
+      }
+    },
+    "by_fidelity": {
+      "focused_truth": {
+        "dc_gain_db": 29.836129,
+        "gbw_hz": 165292225.55659,
+        "phase_margin_deg": 53.416888,
+        "power_w": 0.00082
+      },
+      "quick_truth": {
+        "dc_gain_db": 36.673139,
+        "gbw_hz": 153941778.110862,
+        "phase_margin_deg": 82.740772,
+        "power_w": 0.000837
+      }
+    },
+    "by_task_id": {
+      "task_f82b16253207": {
+        "dc_gain_db": 32.570933,
+        "gbw_hz": 160752046.578299,
+        "phase_margin_deg": 65.146442,
+        "power_w": 0.000827
+      }
+    },
+    "metrics_covered": [
+      "dc_gain_db",
+      "gbw_hz",
+      "phase_margin_deg",
+      "power_w"
+    ],
+    "record_count": 60
+  },
+  "simulation_reduction_ratio": null,
+  "source_ids": [
+    "task_f82b16253207",
+    "full_system",
+    "no_world_model",
+    "no_calibration",
+    "no_fidelity_escalation"
+  ],
+  "total_real_simulation_calls": 60
+}

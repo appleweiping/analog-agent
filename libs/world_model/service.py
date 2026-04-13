@@ -111,7 +111,9 @@ class WorldModelService:
             if summary is None or summary.sample_count <= 0:
                 continue
             support = _clip(summary.sample_count / 3.0, 0.0, 1.0)
-            correction = summary.signed_bias * support
+            raw_correction = summary.signed_bias * support
+            max_correction = max(abs(float(value)) * 0.5, summary.mae * 0.5, 1e-12)
+            correction = _clip(raw_correction, -max_correction, max_correction)
             corrected[metric] = float(value - correction)
         return corrected
 

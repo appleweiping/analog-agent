@@ -9,11 +9,13 @@ from apps.orchestrator.job_runner import run_full_system_acceptance
 from libs.eval.experiment_runner import run_experiment_suite
 from libs.eval.stats import export_stats_csv, export_stats_json
 from libs.schema.experiment import ExperimentBudget, ExperimentSuiteResult
+from libs.schema.paper_evidence import WorldModelEvidenceBundle
 from libs.schema.system_binding import AcceptanceTaskConfig, SystemAcceptanceResult
 from libs.vertical_slices.folded_cascode_spec import (
     build_folded_cascode_v1_design_task,
     load_folded_cascode_v1_config,
 )
+from libs.vertical_slices.world_model_evidence import run_vertical_slice_world_model_evidence
 
 
 def run_folded_cascode_acceptance(
@@ -48,6 +50,7 @@ def run_folded_cascode_experiment_suite(
     modes: list[str] | None = None,
     export_directory: str | Path | None = None,
     task_id: str = "benchmark-folded-cascode-v1",
+    force_full_steps: bool = False,
 ) -> ExperimentSuiteResult:
     """Run the frozen folded-cascode v1 experiment suite and optionally export stats."""
 
@@ -66,6 +69,7 @@ def run_folded_cascode_experiment_suite(
         repeat_runs=repeat_runs,
         fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,
         backend_preference=backend_preference or config.defaults.backend_preference,
+        force_full_steps=force_full_steps,
     )
     if suite.aggregated_stats is not None and task_id.startswith("benchmark-"):
         suite = suite.model_copy(
@@ -86,3 +90,28 @@ def run_folded_cascode_experiment_suite(
                 encoding="utf-8",
             )
     return suite
+
+
+def run_folded_cascode_world_model_evidence(
+    *,
+    steps: int = 3,
+    repeat_runs: int = 5,
+    budget: ExperimentBudget | None = None,
+    backend_preference: str | None = None,
+    fidelity_level: str | None = None,
+    output_root: str | Path = "research/papers/folded_cascode_v1",
+) -> WorldModelEvidenceBundle:
+    """Generate paper-facing world-model evidence for folded_cascode_v1."""
+
+    config = load_folded_cascode_v1_config()
+    return run_vertical_slice_world_model_evidence(
+        task_slug="folded_cascode-v1",
+        suite_runner=run_folded_cascode_experiment_suite,
+        measurement_targets=list(config.measurement_targets),
+        steps=steps,
+        repeat_runs=repeat_runs,
+        budget=budget,
+        backend_preference=backend_preference or config.defaults.backend_preference,
+        fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,
+        output_root=output_root,
+    )

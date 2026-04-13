@@ -1,0 +1,10 @@
+# Trust-Guided Selection Profile
+
+Planner-selection profile aggregated over experiment steps and runs.
+
+| Mode | Mean Selected Uncertainty | Mean Selected Confidence | Mean Sim Value | Mean Pred Feasibility |
+| --- | --- | --- | --- | --- |
+| full_system | 0.046 | 0.303433 | 0.161983 | 0.156433 |
+| no_world_model | 0.49988 | 0.325207 | 0.60812 | 0.49964 |
+| no_calibration | 0.138 | 0.9103 | 0.487082 | 0.472133 |
+| no_fidelity_escalation | 0.046 | 0.303433 | 0.161983 | 0.156433 |

@@ -34,6 +34,42 @@ def _aggregate_summary_map(suite: ExperimentSuiteResult) -> dict[str, Experiment
     return {summary.mode: summary for summary in suite.summaries}
 
 
+def _relevant_gap_metrics(
+    suite: ExperimentSuiteResult,
+    *,
+    preferred_metrics: list[str] | None = None,
+    limit: int = 3,
+) -> list[str]:
+    if preferred_metrics:
+        preferred = [
+            metric
+            for metric in preferred_metrics
+            if any(metric in summary.average_prediction_gap for summary in suite.comparison.mode_summaries)
+        ] if suite.comparison is not None else list(preferred_metrics)
+        if preferred:
+            return preferred[:limit] if limit > 0 else preferred
+    if suite.comparison is None:
+        return ["power_w"]
+    magnitudes: dict[str, float] = {}
+    for summary in suite.comparison.mode_summaries:
+        for metric, value in summary.average_prediction_gap.items():
+            magnitudes[metric] = max(magnitudes.get(metric, 0.0), abs(float(value)))
+    ordered = [
+        metric
+        for metric, magnitude in sorted(magnitudes.items(), key=lambda item: (-item[1], item[0]))
+        if magnitude > 0.0
+    ]
+    if ordered:
+        return ordered[:limit]
+    all_metrics = sorted({metric for summary in suite.comparison.mode_summaries for metric in summary.average_prediction_gap})
+    return all_metrics[:limit] or ["power_w"]
+
+
+def _average_gap_over_metrics(summary, metrics: list[str]) -> float:
+    values = [abs(float(summary.average_prediction_gap.get(metric, 0.0))) for metric in metrics if metric in summary.average_prediction_gap]
+    return _mean(values)
+
+
 def _average_step_series(runs, metric_getter):
     if not runs:
         return []
@@ -48,7 +84,7 @@ def _average_step_series(runs, metric_getter):
     return values
 
 
-def _average_gap_series(runs) -> list[float]:
+def _average_gap_series(runs, metrics: list[str]) -> list[float]:
     if not runs:
         return []
     max_steps = max(len(run.prediction_gap_by_step) for run in runs)
@@ -59,7 +95,7 @@ def _average_gap_series(runs) -> list[float]:
             if step_index >= len(run.prediction_gap_by_step):
                 continue
             gaps = run.prediction_gap_by_step[step_index]
-            core = [abs(float(gaps.get(metric, 0.0))) for metric in ("dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w") if metric in gaps]
+            core = [abs(float(gaps.get(metric, 0.0))) for metric in metrics if metric in gaps]
             if core:
                 step_values.append(_mean(core))
         values.append(_mean(step_values))
@@ -201,6 +237,7 @@ def build_world_model_evidence_bundle(
     figures_dir: str | Path,
     tables_dir: str | Path,
     json_output_path: str | Path,
+    core_gap_metrics: list[str] | None = None,
 ) -> WorldModelEvidenceBundle:
     """Build formal figure/table evidence for world-model utility claims."""
 
@@ -219,6 +256,7 @@ def build_world_model_evidence_bundle(
     summary_map = _mode_summary_map(suite)
     baseline_suite = baseline_suite or suite
     baseline_summary_map = _aggregate_summary_map(baseline_suite)
+    relevant_gap_metrics = _relevant_gap_metrics(suite, preferred_metrics=core_gap_metrics)
 
     figure_gap = FigureSpec(
         figure_id="fig_world_model_prediction_gap_vs_step",
@@ -229,20 +267,20 @@ def build_world_model_evidence_bundle(
         series=[
             FigureSeries(
                 label="full_system",
-                x_values=list(range(len(_average_gap_series(full_runs)))),
-                y_values=_average_gap_series(full_runs),
+                x_values=list(range(len(_average_gap_series(full_runs, relevant_gap_metrics)))),
+                y_values=_average_gap_series(full_runs, relevant_gap_metrics),
                 color="#1f77b4",
             ),
             FigureSeries(
                 label="no_calibration",
-                x_values=list(range(len(_average_gap_series(no_calibration_runs)))),
-                y_values=_average_gap_series(no_calibration_runs),
+                x_values=list(range(len(_average_gap_series(no_calibration_runs, relevant_gap_metrics)))),
+                y_values=_average_gap_series(no_calibration_runs, relevant_gap_metrics),
                 color="#d62728",
             ),
             FigureSeries(
                 label="no_world_model",
-                x_values=list(range(len(_average_gap_series(no_world_model_runs)))),
-                y_values=_average_gap_series(no_world_model_runs),
+                x_values=list(range(len(_average_gap_series(no_world_model_runs, relevant_gap_metrics)))),
+                y_values=_average_gap_series(no_world_model_runs, relevant_gap_metrics),
                 color="#2ca02c",
             ),
         ],
@@ -316,19 +354,20 @@ def build_world_model_evidence_bundle(
         else:
             _write_svg_bar_chart(figure)
 
+    comparison_columns = [
+        TableColumn(key="mode", label="Mode"),
+        TableColumn(key="simulation_call_count", label="Avg Sim Calls"),
+        TableColumn(key="feasible_hit_rate", label="Feasible Hit Rate"),
+        TableColumn(key="average_convergence_step", label="Avg Convergence Step"),
+        TableColumn(key="focused_truth_ratio", label="Focused Truth Ratio"),
+    ]
+    for metric in relevant_gap_metrics:
+        comparison_columns.append(TableColumn(key=f"{metric}_gap", label=f"{metric} Gap"))
+
     comparison_table = TableSpec(
         table_id="tbl_world_model_method_comparison",
         title="World Model Utility Comparison",
-        columns=[
-            TableColumn(key="mode", label="Mode"),
-            TableColumn(key="simulation_call_count", label="Avg Sim Calls"),
-            TableColumn(key="feasible_hit_rate", label="Feasible Hit Rate"),
-            TableColumn(key="average_convergence_step", label="Avg Convergence Step"),
-            TableColumn(key="focused_truth_ratio", label="Focused Truth Ratio"),
-            TableColumn(key="gbw_gap", label="GBW Gap"),
-            TableColumn(key="pm_gap", label="PM Gap"),
-            TableColumn(key="power_gap", label="Power Gap"),
-        ],
+        columns=comparison_columns,
         rows=[
             TableRow(
                 values={
@@ -337,14 +376,12 @@ def build_world_model_evidence_bundle(
                     "feasible_hit_rate": summary.feasible_hit_rate,
                     "average_convergence_step": summary.average_convergence_step,
                     "focused_truth_ratio": summary.focused_truth_ratio,
-                    "gbw_gap": summary.average_prediction_gap.get("gbw_hz", 0.0),
-                    "pm_gap": summary.average_prediction_gap.get("phase_margin_deg", 0.0),
-                    "power_gap": summary.average_prediction_gap.get("power_w", 0.0),
+                    **{f"{metric}_gap": summary.average_prediction_gap.get(metric, 0.0) for metric in relevant_gap_metrics},
                 }
             )
             for summary in suite.comparison.mode_summaries
         ],
-        caption="Primary methodology comparison table for OTA v1 world-model utility evidence.",
+        caption="Primary methodology comparison table for the current vertical slice.",
         csv_output_path=str(tables_root / "world_model_method_comparison.csv"),
         markdown_output_path=str(tables_root / "world_model_method_comparison.md"),
     )
@@ -441,13 +478,14 @@ def build_world_model_evidence_bundle(
     summary = WorldModelUtilitySummary(
         world_model_reduces_simulations=budget_full_summary.average_simulation_call_count < budget_no_world_summary.average_simulation_call_count,
         world_model_preserves_or_improves_feasible_hit_rate=budget_full_summary.feasible_hit_rate >= budget_no_world_summary.feasible_hit_rate,
-        calibration_reduces_prediction_gap=full_summary.average_prediction_gap.get("gbw_hz", 0.0) < no_cal_summary.average_prediction_gap.get("gbw_hz", float("inf")),
+        calibration_reduces_prediction_gap=_average_gap_over_metrics(full_summary, relevant_gap_metrics) < _average_gap_over_metrics(no_cal_summary, relevant_gap_metrics),
         trust_guides_selection_behavior=_mean([log.selected_mean_uncertainty for run in full_runs for log in run.structured_log]) != _mean([log.selected_mean_uncertainty for run in no_world_model_runs for log in run.structured_log]),
         notes=[
             f"system_delta_vs_full_sim_baseline_calls={round(baseline_summary_map['full_simulation_baseline'].average_simulation_call_count - budget_full_summary.average_simulation_call_count, 6)}",
             f"world_model_delta_sim_calls={round(budget_no_world_summary.average_simulation_call_count - budget_full_summary.average_simulation_call_count, 6)}",
             f"world_model_delta_feasible_hit={round(budget_full_summary.feasible_hit_rate - budget_no_world_summary.feasible_hit_rate, 6)}",
-            f"calibration_delta_gbw_gap={round(no_cal_summary.average_prediction_gap.get('gbw_hz', 0.0) - full_summary.average_prediction_gap.get('gbw_hz', 0.0), 6)}",
+            f"calibration_delta_mean_gap={round(_average_gap_over_metrics(no_cal_summary, relevant_gap_metrics) - _average_gap_over_metrics(full_summary, relevant_gap_metrics), 6)}",
+            f"gap_metrics={','.join(relevant_gap_metrics)}",
             f"trust_selection_delta_uncertainty={round(_mean([log.selected_mean_uncertainty for run in no_world_model_runs for log in run.structured_log]) - _mean([log.selected_mean_uncertainty for run in full_runs for log in run.structured_log]), 6)}",
         ],
     )
