@@ -1,5 +1,0 @@
-Transfer Pair,Governed Harmful Rate,No-Governance Harmful Rate,Forced Harmful Rate,Wrong-Family Retrieval Rate,Harmful Advice Application Rate,Cross-Task Failure After Retrieval Rate,Governance Rejection Rate,Governance Blocks Harm
-ota2-v1->ldo-v1,0.0,1.0,1.0,1.0,0.0,0.0,1.0,True
-ota2-v1->bandgap-v1,0.0,0.75,0.75,1.0,0.0,1.0,1.0,True
-folded_cascode-v1->ldo-v1,0.0,1.0,1.0,1.0,0.0,0.0,1.0,True
-folded_cascode-v1->bandgap-v1,0.0,0.5,0.5,1.0,0.0,1.0,1.0,True

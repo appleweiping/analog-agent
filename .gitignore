@@ -206,9 +206,11 @@ paper/
 
 # Local simulation artifacts
 .artifacts/
+research/
 research/benchmarks/*_experiment_results.json
 research/benchmarks/*_stats_summary.json
 research/benchmarks/*_stats_summary.csv
+research/papers/*_ci/
 
 # Marimo
 marimo/_static/

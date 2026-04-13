@@ -1,7 +1,0 @@
-Mode,Episode,Warm Start,Real Sim Calls,Step to Feasible,Repeated Failures,Retrieved Episodes,Negative Transfer Risk,Harmful Transfer
-no_memory,0,False,2,na,1,0,0.0,False
-no_memory,1,False,2,na,2,0,0.0,False
-governed_transfer,0,False,2,na,1,2,0.5934,False
-governed_transfer,1,False,2,na,2,2,0.5934,False
-forced_transfer,0,True,2,na,1,1,0.85,True
-forced_transfer,1,True,2,na,2,1,0.85,True

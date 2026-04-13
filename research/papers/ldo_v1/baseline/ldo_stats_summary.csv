@@ -1,9 +1,0 @@
-metric,value
-aggregation_scope,experiment_suite
-total_real_simulation_calls,60
-measurement_success_rate,1.0
-feasible_verification_rate,0.0
-predicted_feasible_to_verified_feasible_conversion,0.0
-simulation_reduction_ratio,0.5
-fidelity_escalation_rate,0.3
-focused_truth_ratio,0.3
