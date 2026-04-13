@@ -89,7 +89,8 @@ class MemorySubmissionPackageTests(unittest.TestCase):
             self.assertTrue(any(case.selected_as_primary_case for case in case_studies))
             self.assertTrue((root / "layout" / "memory_paper_layout.md").exists())
             self.assertTrue((root / "layout" / "memory_paper_layout_bundle.json").exists())
-            self.assertEqual(len(layout_bundle.main_figures), 4)
+            self.assertEqual(len(layout_bundle.main_figures), 6)
+            self.assertEqual(len(layout_bundle.main_tables), 6)
             self.assertGreaterEqual(len(layout_bundle.case_studies), 2)
 
 

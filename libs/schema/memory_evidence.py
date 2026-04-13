@@ -46,6 +46,15 @@ class MemoryEpisodeStatsRecord(BaseModel):
     step_to_first_feasible: int | None = None
     dominant_failure_modes: list[str] = Field(default_factory=list)
     repeated_failure_count: int = 0
+    repeated_measurement_failure_count: int = 0
+    dominant_failure_repeated: bool = False
+    measurement_failure_repeated: bool = False
+    same_failure_mode_consecutive_count: int = 0
+    prediction_gap: float = 0.0
+    calibration_patch_count: int = 0
+    advice_aligned_selection: bool = False
+    retrieval_led_to_success: bool = False
+    best_metric_values: list["MemoryMetricSnapshot"] = Field(default_factory=list)
     episode_memory_id: str | None = None
 
     @field_validator("retrieval_precision_proxy", "negative_transfer_risk")
@@ -54,6 +63,44 @@ class MemoryEpisodeStatsRecord(BaseModel):
         if value < 0.0 or value > 1.0:
             raise ValueError("retrieval scores must be within [0, 1]")
         return round(float(value), 6)
+
+    @field_validator("prediction_gap")
+    @classmethod
+    def validate_prediction_gap(cls, value: float) -> float:
+        if value < 0.0:
+            raise ValueError("prediction_gap must be non-negative")
+        return round(float(value), 6)
+
+
+class MemoryMetricSnapshot(BaseModel):
+    """Structured metric snapshot carried by one memory evidence record."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str
+    value: float
+
+
+class DistributionSummary(BaseModel):
+    """Distribution summary used by submission-facing memory statistics."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mean: float
+    std: float
+    median: float
+    iqr: float
+    minimum: float
+    maximum: float
+
+
+class MetricDistributionSummary(BaseModel):
+    """Distribution summary for one measured metric."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str
+    distribution: DistributionSummary
 
 
 class MemoryModeSummary(BaseModel):
@@ -74,6 +121,24 @@ class MemoryModeSummary(BaseModel):
     governance_block_rate: float
     average_retrieval_precision: float
     average_negative_transfer_risk: float
+    feasible_hit_rate_by_episode: list[float] = Field(default_factory=list)
+    median_step_to_first_feasible: float = 0.0
+    mean_real_sim_calls_to_first_feasible: float = 0.0
+    episode_best_metric_summary: list[MetricDistributionSummary] = Field(default_factory=list)
+    repeated_failure_rate: float = 0.0
+    dominant_failure_repeat_ratio: float = 0.0
+    measurement_failure_repeat_ratio: float = 0.0
+    same_failure_mode_consecutive_count: float = 0.0
+    retrieval_activation_rate: float = 0.0
+    advice_aligned_selection_rate: float = 0.0
+    retrieval_to_success_conversion: float = 0.0
+    episode_index_vs_sim_calls: list[float] = Field(default_factory=list)
+    episode_index_vs_prediction_gap: list[float] = Field(default_factory=list)
+    episode_index_vs_feasible_hit_rate: list[float] = Field(default_factory=list)
+    episode_index_vs_failure_repeat_ratio: list[float] = Field(default_factory=list)
+    simulation_calls_distribution: DistributionSummary
+    step_to_feasible_distribution: DistributionSummary
+    prediction_gap_distribution: DistributionSummary
 
     @field_validator(
         "feasible_hit_rate",
@@ -101,6 +166,14 @@ class MemoryAblationSummary(BaseModel):
     memory_uses_retrieval_in_practice: bool
     reflection_improves_over_retrieval_only: bool
     governance_preserves_memory_quality: bool
+    calibration_and_memory_reduce_prediction_gap: bool = False
+    retrieval_advice_improves_decision_alignment: bool = False
+    simulation_call_paired_delta: float = 0.0
+    repeated_failure_paired_delta: float = 0.0
+    prediction_gap_paired_delta: float = 0.0
+    simulation_call_effect_size: float = 0.0
+    repeated_failure_effect_size: float = 0.0
+    prediction_gap_effect_size: float = 0.0
     notes: list[str] = Field(default_factory=list)
 
 
@@ -153,6 +226,12 @@ class MemoryTransferStatsRecord(BaseModel):
     step_to_first_feasible: int | None = None
     repeated_failure_count: int = 0
     harmful_transfer_applied: bool = False
+    wrong_family_retrieval: bool = False
+    harmful_advice_application: bool = False
+    cross_task_failure_after_retrieval: bool = False
+    advice_aligned_selection: bool = False
+    retrieval_led_to_success: bool = False
+    best_metric_values: list[MemoryMetricSnapshot] = Field(default_factory=list)
 
     @field_validator("retrieval_precision_proxy", "negative_transfer_risk")
     @classmethod
@@ -181,6 +260,14 @@ class MemoryTransferModeSummary(BaseModel):
     average_retrieval_precision: float
     average_negative_transfer_risk: float
     harmful_transfer_rate: float
+    wrong_family_retrieval_rate: float = 0.0
+    harmful_advice_application_rate: float = 0.0
+    cross_task_failure_after_retrieval_rate: float = 0.0
+    governance_rejection_rate: float = 0.0
+    advice_aligned_selection_rate: float = 0.0
+    retrieval_to_success_conversion: float = 0.0
+    simulation_calls_distribution: DistributionSummary
+    step_to_feasible_distribution: DistributionSummary
 
     @field_validator(
         "feasible_hit_rate",
@@ -207,6 +294,10 @@ class MemoryTransferSummary(BaseModel):
     governance_blocks_harmful_transfer: bool
     no_governance_exposes_harmful_transfer: bool
     forced_transfer_exposes_negative_transfer: bool
+    governed_vs_no_memory_simulation_delta: float = 0.0
+    governed_vs_no_memory_step_delta: float = 0.0
+    governed_vs_no_governance_harmful_delta: float = 0.0
+    harmful_transfer_effect_size: float = 0.0
     notes: list[str] = Field(default_factory=list)
 
 
@@ -250,6 +341,8 @@ class MemoryChapterSummary(BaseModel):
     governance_blocks_cross_family_negative_transfer: bool
     no_governance_exposes_negative_transfer: bool
     forced_transfer_exposes_negative_transfer: bool
+    calibration_and_memory_reduce_prediction_gap: bool = False
+    retrieval_utility_observable: bool = False
     notes: list[str] = Field(default_factory=list)
 
 

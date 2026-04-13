@@ -106,13 +106,17 @@ class MemoryChapterEvidenceTests(unittest.TestCase):
             self.assertTrue((root / "memory_chapter_evidence_bundle.json").exists())
             self.assertTrue((root / "chapter_figs" / "memory_chapter_repeated_episode_calls.svg").exists())
             self.assertTrue((root / "chapter_figs" / "memory_chapter_repeated_episode_failures.svg").exists())
+            self.assertTrue((root / "chapter_figs" / "memory_chapter_step_to_feasible.svg").exists())
+            self.assertTrue((root / "chapter_figs" / "memory_chapter_prediction_gap.svg").exists())
             self.assertTrue((root / "chapter_figs" / "memory_chapter_same_family_transfer.svg").exists())
             self.assertTrue((root / "chapter_figs" / "memory_chapter_cross_family_governance.svg").exists())
             self.assertTrue((root / "chapter_tables" / "memory_chapter_transfer_summary.csv").exists())
+            self.assertTrue((root / "chapter_tables" / "memory_chapter_negative_transfer.csv").exists())
             self.assertTrue(chapter_bundle.summary.repeated_episode_beneficial)
             self.assertTrue(chapter_bundle.summary.repeated_episode_generalizes_beyond_ota)
             self.assertTrue(chapter_bundle.summary.same_family_transfer_beneficial)
             self.assertTrue(chapter_bundle.summary.governance_blocks_cross_family_negative_transfer)
+            self.assertTrue(chapter_bundle.summary.retrieval_utility_observable)
 
 
 if __name__ == "__main__":

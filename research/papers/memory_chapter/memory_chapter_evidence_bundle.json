@@ -99,7 +99,7 @@
           ],
           "y_values": [
             2.9,
-            2.9,
+            2.8,
             2.9,
             0.9
           ]
@@ -156,6 +156,124 @@
       "title": "Memory Chapter: Repeated Failure Suppression",
       "x_label": "Task",
       "y_label": "Average Repeated Failure Count"
+    },
+    {
+      "caption": "Repeated-episode step-to-feasible across runnable vertical slices.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_chapter_step_to_feasible",
+      "output_path": "research\\papers\\memory_chapter\\figs\\memory_chapter_step_to_feasible.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.25,
+            1.25,
+            2.25,
+            3.25
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.5,
+            1.5,
+            2.5,
+            3.5
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            0.75,
+            1.75,
+            2.75,
+            3.75
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "title": "Memory Chapter: Step to First Feasible",
+      "x_label": "Task",
+      "y_label": "Average Step to First Feasible"
+    },
+    {
+      "caption": "Prediction-gap reduction across repeated episodes, exposing the calibration-memory interaction.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_chapter_prediction_gap",
+      "output_path": "research\\papers\\memory_chapter\\figs\\memory_chapter_prediction_gap.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0
+          ],
+          "y_values": [
+            0.772842,
+            0.666375,
+            0.321452,
+            1.039028
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            0.3,
+            1.3,
+            2.3,
+            3.3
+          ],
+          "y_values": [
+            1.414387,
+            0.961614,
+            0.393918,
+            2.873086
+          ]
+        }
+      ],
+      "title": "Memory Chapter: Prediction Gap Reduction",
+      "x_label": "Task",
+      "y_label": "Average Prediction Gap"
     },
     {
       "caption": "Governed same-family transfer compared with no-memory execution.",
@@ -352,6 +470,7 @@
     "folded_cascode-v1->ota2-v1"
   ],
   "summary": {
+    "calibration_and_memory_reduce_prediction_gap": false,
     "forced_transfer_exposes_negative_transfer": true,
     "governance_blocks_cross_family_negative_transfer": true,
     "no_governance_exposes_negative_transfer": true,
@@ -362,6 +481,7 @@
     ],
     "repeated_episode_beneficial": true,
     "repeated_episode_generalizes_beyond_ota": true,
+    "retrieval_utility_observable": true,
     "same_family_transfer_beneficial": true
   },
   "tables": [
@@ -391,6 +511,18 @@
         {
           "key": "advice_consumption_rate",
           "label": "Advice Consumption Rate"
+        },
+        {
+          "key": "prediction_gap_mean",
+          "label": "Prediction Gap Mean"
+        },
+        {
+          "key": "retrieval_activation_rate",
+          "label": "Retrieval Activation Rate"
+        },
+        {
+          "key": "advice_aligned_selection_rate",
+          "label": "Advice-Aligned Selection Rate"
         }
       ],
       "csv_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_repeated_episode.csv",
@@ -398,160 +530,208 @@
       "rows": [
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "avg_repeated_failures": 2.9,
             "avg_sim_calls": 3.0,
             "mode": "no_memory",
+            "prediction_gap_mean": 0.772842,
+            "retrieval_activation_rate": 0.0,
             "task": "benchmark-ota2-v1-memory-ablation",
             "warm_start_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "avg_repeated_failures": 2.0,
             "avg_sim_calls": 2.1,
             "mode": "episodic_retrieval_only",
+            "prediction_gap_mean": 1.085615,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-ota2-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.045966,
             "avg_repeated_failures": 2.0,
             "avg_sim_calls": 2.1,
             "mode": "episodic_plus_reflection",
+            "prediction_gap_mean": 1.085615,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-ota2-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.9,
             "advice_consumption_rate": 0.091931,
             "avg_repeated_failures": 1.9,
             "avg_sim_calls": 2.1,
             "mode": "full_memory",
+            "prediction_gap_mean": 1.414387,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-ota2-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
-            "avg_repeated_failures": 2.9,
+            "avg_repeated_failures": 2.8,
             "avg_sim_calls": 3.0,
             "mode": "no_memory",
+            "prediction_gap_mean": 0.666375,
+            "retrieval_activation_rate": 0.0,
             "task": "benchmark-folded_cascode-v1-memory-ablation",
             "warm_start_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "avg_repeated_failures": 2.0,
             "avg_sim_calls": 2.1,
             "mode": "episodic_retrieval_only",
+            "prediction_gap_mean": 0.80438,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-folded_cascode-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.045966,
             "avg_repeated_failures": 2.0,
             "avg_sim_calls": 2.1,
             "mode": "episodic_plus_reflection",
+            "prediction_gap_mean": 0.80438,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-folded_cascode-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.7,
             "advice_consumption_rate": 0.091931,
             "avg_repeated_failures": 1.7,
             "avg_sim_calls": 2.1,
             "mode": "full_memory",
+            "prediction_gap_mean": 0.961614,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-folded_cascode-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "avg_repeated_failures": 2.9,
             "avg_sim_calls": 3.0,
             "mode": "no_memory",
+            "prediction_gap_mean": 0.321452,
+            "retrieval_activation_rate": 0.0,
             "task": "benchmark-ldo-v1-memory-ablation",
             "warm_start_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "avg_repeated_failures": 2.0,
             "avg_sim_calls": 2.1,
             "mode": "episodic_retrieval_only",
+            "prediction_gap_mean": 0.393918,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-ldo-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.9,
             "advice_consumption_rate": 0.062632,
             "avg_repeated_failures": 2.0,
             "avg_sim_calls": 2.1,
             "mode": "episodic_plus_reflection",
+            "prediction_gap_mean": 0.393918,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-ldo-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.9,
             "advice_consumption_rate": 0.125265,
             "avg_repeated_failures": 2.0,
             "avg_sim_calls": 2.1,
             "mode": "full_memory",
+            "prediction_gap_mean": 0.393918,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-ldo-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "avg_repeated_failures": 0.9,
             "avg_sim_calls": 1.0,
             "mode": "no_memory",
+            "prediction_gap_mean": 1.039028,
+            "retrieval_activation_rate": 0.0,
             "task": "benchmark-bandgap-v1-memory-ablation",
             "warm_start_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "avg_repeated_failures": 0.9,
             "avg_sim_calls": 1.0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap_mean": 3.803965,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-bandgap-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.062632,
             "avg_repeated_failures": 0.9,
             "avg_sim_calls": 1.0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap_mean": 3.803965,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-bandgap-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.125265,
             "avg_repeated_failures": 0.9,
             "avg_sim_calls": 1.0,
             "mode": "full_memory",
+            "prediction_gap_mean": 2.873086,
+            "retrieval_activation_rate": 0.9,
             "task": "benchmark-bandgap-v1-memory-ablation",
             "warm_start_rate": 0.9
           }
@@ -590,6 +770,14 @@
         {
           "key": "beneficial",
           "label": "Governed Beneficial"
+        },
+        {
+          "key": "wrong_family_retrieval_rate",
+          "label": "Wrong-Family Retrieval Rate"
+        },
+        {
+          "key": "governance_rejection_rate",
+          "label": "Governance Rejection Rate"
         }
       ],
       "csv_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_transfer_summary.csv",
@@ -600,10 +788,12 @@
             "beneficial": true,
             "forced_harmful_rate": 1.0,
             "governance_blocks_harm": true,
+            "governance_rejection_rate": 0.0,
             "governed_avg_sim_calls": 2.0,
             "no_governance_harmful_rate": 1.0,
             "pair": "ota2-v1->folded_cascode-v1",
-            "transfer_kind": "same_family"
+            "transfer_kind": "same_family",
+            "wrong_family_retrieval_rate": 0.0
           }
         },
         {
@@ -611,10 +801,12 @@
             "beneficial": true,
             "forced_harmful_rate": 1.0,
             "governance_blocks_harm": true,
+            "governance_rejection_rate": 0.0,
             "governed_avg_sim_calls": 2.0,
             "no_governance_harmful_rate": 1.0,
             "pair": "folded_cascode-v1->ota2-v1",
-            "transfer_kind": "same_family"
+            "transfer_kind": "same_family",
+            "wrong_family_retrieval_rate": 0.0
           }
         },
         {
@@ -622,10 +814,12 @@
             "beneficial": false,
             "forced_harmful_rate": 1.0,
             "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
             "governed_avg_sim_calls": 3.0,
             "no_governance_harmful_rate": 1.0,
             "pair": "ota2-v1->ldo-v1",
-            "transfer_kind": "cross_family"
+            "transfer_kind": "cross_family",
+            "wrong_family_retrieval_rate": 1.0
           }
         },
         {
@@ -633,10 +827,12 @@
             "beneficial": false,
             "forced_harmful_rate": 0.75,
             "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
             "governed_avg_sim_calls": 1.0,
             "no_governance_harmful_rate": 0.75,
             "pair": "ota2-v1->bandgap-v1",
-            "transfer_kind": "cross_family"
+            "transfer_kind": "cross_family",
+            "wrong_family_retrieval_rate": 1.0
           }
         },
         {
@@ -644,10 +840,12 @@
             "beneficial": false,
             "forced_harmful_rate": 1.0,
             "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
             "governed_avg_sim_calls": 3.0,
             "no_governance_harmful_rate": 1.0,
             "pair": "folded_cascode-v1->ldo-v1",
-            "transfer_kind": "cross_family"
+            "transfer_kind": "cross_family",
+            "wrong_family_retrieval_rate": 1.0
           }
         },
         {
@@ -655,15 +853,116 @@
             "beneficial": false,
             "forced_harmful_rate": 0.5,
             "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
             "governed_avg_sim_calls": 1.0,
             "no_governance_harmful_rate": 0.5,
             "pair": "folded_cascode-v1->bandgap-v1",
-            "transfer_kind": "cross_family"
+            "transfer_kind": "cross_family",
+            "wrong_family_retrieval_rate": 1.0
           }
         }
       ],
       "table_id": "tbl_memory_chapter_transfer",
       "title": "Cross-Task Memory Transfer Summary"
+    },
+    {
+      "caption": "Cross-family negative-transfer analysis highlighting governance behavior.",
+      "columns": [
+        {
+          "key": "pair",
+          "label": "Transfer Pair"
+        },
+        {
+          "key": "governed_harmful_rate",
+          "label": "Governed Harmful Rate"
+        },
+        {
+          "key": "no_governance_harmful_rate",
+          "label": "No-Governance Harmful Rate"
+        },
+        {
+          "key": "forced_harmful_rate",
+          "label": "Forced Harmful Rate"
+        },
+        {
+          "key": "wrong_family_retrieval_rate",
+          "label": "Wrong-Family Retrieval Rate"
+        },
+        {
+          "key": "harmful_advice_application_rate",
+          "label": "Harmful Advice Application Rate"
+        },
+        {
+          "key": "cross_task_failure_after_retrieval_rate",
+          "label": "Cross-Task Failure After Retrieval Rate"
+        },
+        {
+          "key": "governance_rejection_rate",
+          "label": "Governance Rejection Rate"
+        },
+        {
+          "key": "governance_blocks_harm",
+          "label": "Governance Blocks Harm"
+        }
+      ],
+      "csv_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_negative_transfer.csv",
+      "markdown_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_negative_transfer.md",
+      "rows": [
+        {
+          "values": {
+            "cross_task_failure_after_retrieval_rate": 0.0,
+            "forced_harmful_rate": 1.0,
+            "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
+            "governed_harmful_rate": 0.0,
+            "harmful_advice_application_rate": 0.0,
+            "no_governance_harmful_rate": 1.0,
+            "pair": "ota2-v1->ldo-v1",
+            "wrong_family_retrieval_rate": 1.0
+          }
+        },
+        {
+          "values": {
+            "cross_task_failure_after_retrieval_rate": 1.0,
+            "forced_harmful_rate": 0.75,
+            "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
+            "governed_harmful_rate": 0.0,
+            "harmful_advice_application_rate": 0.0,
+            "no_governance_harmful_rate": 0.75,
+            "pair": "ota2-v1->bandgap-v1",
+            "wrong_family_retrieval_rate": 1.0
+          }
+        },
+        {
+          "values": {
+            "cross_task_failure_after_retrieval_rate": 0.0,
+            "forced_harmful_rate": 1.0,
+            "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
+            "governed_harmful_rate": 0.0,
+            "harmful_advice_application_rate": 0.0,
+            "no_governance_harmful_rate": 1.0,
+            "pair": "folded_cascode-v1->ldo-v1",
+            "wrong_family_retrieval_rate": 1.0
+          }
+        },
+        {
+          "values": {
+            "cross_task_failure_after_retrieval_rate": 1.0,
+            "forced_harmful_rate": 0.5,
+            "governance_blocks_harm": true,
+            "governance_rejection_rate": 1.0,
+            "governed_harmful_rate": 0.0,
+            "harmful_advice_application_rate": 0.0,
+            "no_governance_harmful_rate": 0.5,
+            "pair": "folded_cascode-v1->bandgap-v1",
+            "wrong_family_retrieval_rate": 1.0
+          }
+        }
+      ],
+      "table_id": "tbl_memory_chapter_negative_transfer",
+      "title": "Negative Transfer Analysis"
     }
   ]
 }

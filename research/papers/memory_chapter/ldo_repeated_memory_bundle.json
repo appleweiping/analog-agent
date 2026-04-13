@@ -370,6 +370,252 @@
       "y_label": "Repeated Failure Count"
     },
     {
+      "caption": "Mean absolute prediction gap extracted from calibration residuals after each repeated episode. Lower is better.",
+      "chart_type": "line",
+      "figure_id": "fig_memory_prediction_gap_vs_episode",
+      "output_path": "research\\papers\\memory_chapter\\ldo_repeated_figs\\memory_prediction_gap_vs_episode.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            0.321452,
+            0.321452,
+            0.321452,
+            0.321452,
+            0.321452,
+            0.321452,
+            0.321452,
+            0.321452,
+            0.321452,
+            0.321452
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            0.321452,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            0.321452,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            0.321452,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197,
+            0.40197
+          ]
+        }
+      ],
+      "title": "Repeated-Episode Memory Ablation: Prediction Gap",
+      "x_label": "Episode Index",
+      "y_label": "Prediction Gap"
+    },
+    {
+      "caption": "Binary feasibility hit per repeated episode, used to expose whether retrieval translates into solved episodes.",
+      "chart_type": "line",
+      "figure_id": "fig_memory_feasible_hit_rate_vs_episode",
+      "output_path": "research\\papers\\memory_chapter\\ldo_repeated_figs\\memory_feasible_hit_rate_vs_episode.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0
+          ],
+          "y_values": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "title": "Repeated-Episode Memory Ablation: Feasible Hit by Episode",
+      "x_label": "Episode Index",
+      "y_label": "Feasible Hit"
+    },
+    {
       "caption": "How much memory advice is actually consumed by downstream decision making.",
       "chart_type": "line",
       "figure_id": "fig_memory_advice_consumption_vs_episode",
@@ -552,6 +798,7 @@
     "full_memory"
   ],
   "summary": {
+    "calibration_and_memory_reduce_prediction_gap": false,
     "governance_preserves_memory_quality": true,
     "memory_reduces_repeated_failures": true,
     "memory_reduces_simulation_calls": true,
@@ -562,7 +809,14 @@
       "task_slug=ldo-v1",
       "full_memory_warm_start_rate=0.900"
     ],
-    "reflection_improves_over_retrieval_only": true
+    "prediction_gap_effect_size": 4.242699,
+    "prediction_gap_paired_delta": 0.072466,
+    "reflection_improves_over_retrieval_only": true,
+    "repeated_failure_effect_size": -4.242641,
+    "repeated_failure_paired_delta": -0.9,
+    "retrieval_advice_improves_decision_alignment": true,
+    "simulation_call_effect_size": -4.242641,
+    "simulation_call_paired_delta": -0.9
   },
   "tables": [
     {
@@ -615,6 +869,50 @@
         {
           "key": "average_negative_transfer_risk",
           "label": "Negative Transfer Risk"
+        },
+        {
+          "key": "median_step_to_first_feasible",
+          "label": "Median Step to Feasible"
+        },
+        {
+          "key": "mean_real_sim_calls_to_first_feasible",
+          "label": "Mean Sim Calls to Feasible"
+        },
+        {
+          "key": "repeated_failure_rate",
+          "label": "Repeated Failure Rate"
+        },
+        {
+          "key": "dominant_failure_repeat_ratio",
+          "label": "Dominant Failure Repeat Ratio"
+        },
+        {
+          "key": "measurement_failure_repeat_ratio",
+          "label": "Measurement Failure Repeat Ratio"
+        },
+        {
+          "key": "same_failure_mode_consecutive_count",
+          "label": "Same Failure Consecutive Count"
+        },
+        {
+          "key": "retrieval_activation_rate",
+          "label": "Retrieval Activation Rate"
+        },
+        {
+          "key": "advice_aligned_selection_rate",
+          "label": "Advice-Aligned Selection Rate"
+        },
+        {
+          "key": "retrieval_to_success_conversion",
+          "label": "Retrieval-to-Success Conversion"
+        },
+        {
+          "key": "prediction_gap_mean",
+          "label": "Prediction Gap Mean"
+        },
+        {
+          "key": "prediction_gap_iqr",
+          "label": "Prediction Gap IQR"
         }
       ],
       "csv_output_path": "research\\papers\\memory_chapter\\ldo_repeated_tables\\memory_mode_comparison.csv",
@@ -622,6 +920,7 @@
       "rows": [
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "average_advice_consumed_count": 0.0,
             "average_advice_count": 0.0,
@@ -630,14 +929,25 @@
             "average_repeated_failure_count": 2.9,
             "average_retrieval_precision": 0.0,
             "average_step_to_first_feasible": 0.0,
+            "dominant_failure_repeat_ratio": 0.9,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "mean_real_sim_calls_to_first_feasible": 3.0,
+            "measurement_failure_repeat_ratio": 0.0,
+            "median_step_to_first_feasible": 0.0,
             "mode": "no_memory",
+            "prediction_gap_iqr": 0.0,
+            "prediction_gap_mean": 0.321452,
+            "repeated_failure_rate": 1.0,
+            "retrieval_activation_rate": 0.0,
+            "retrieval_to_success_conversion": 0.0,
+            "same_failure_mode_consecutive_count": 4.5,
             "warm_start_application_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "average_advice_consumed_count": 0.0,
             "average_advice_count": 22.5,
@@ -646,14 +956,25 @@
             "average_repeated_failure_count": 2.0,
             "average_retrieval_precision": 0.81,
             "average_step_to_first_feasible": 0.0,
+            "dominant_failure_repeat_ratio": 0.9,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "mean_real_sim_calls_to_first_feasible": 2.1,
+            "measurement_failure_repeat_ratio": 0.0,
+            "median_step_to_first_feasible": 0.0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap_iqr": 0.0,
+            "prediction_gap_mean": 0.393918,
+            "repeated_failure_rate": 1.0,
+            "retrieval_activation_rate": 0.9,
+            "retrieval_to_success_conversion": 1.0,
+            "same_failure_mode_consecutive_count": 4.5,
             "warm_start_application_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.9,
             "advice_consumption_rate": 0.062632,
             "average_advice_consumed_count": 0.9,
             "average_advice_count": 22.5,
@@ -662,14 +983,25 @@
             "average_repeated_failure_count": 2.0,
             "average_retrieval_precision": 0.81,
             "average_step_to_first_feasible": 0.0,
+            "dominant_failure_repeat_ratio": 0.9,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "mean_real_sim_calls_to_first_feasible": 2.1,
+            "measurement_failure_repeat_ratio": 0.0,
+            "median_step_to_first_feasible": 0.0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap_iqr": 0.0,
+            "prediction_gap_mean": 0.393918,
+            "repeated_failure_rate": 1.0,
+            "retrieval_activation_rate": 0.9,
+            "retrieval_to_success_conversion": 1.0,
+            "same_failure_mode_consecutive_count": 4.5,
             "warm_start_application_rate": 0.9
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.9,
             "advice_consumption_rate": 0.125265,
             "average_advice_consumed_count": 1.8,
             "average_advice_count": 22.5,
@@ -678,9 +1010,19 @@
             "average_repeated_failure_count": 2.0,
             "average_retrieval_precision": 0.81,
             "average_step_to_first_feasible": 0.0,
+            "dominant_failure_repeat_ratio": 0.9,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "mean_real_sim_calls_to_first_feasible": 2.1,
+            "measurement_failure_repeat_ratio": 0.0,
+            "median_step_to_first_feasible": 0.0,
             "mode": "full_memory",
+            "prediction_gap_iqr": 0.0,
+            "prediction_gap_mean": 0.393918,
+            "repeated_failure_rate": 1.0,
+            "retrieval_activation_rate": 0.9,
+            "retrieval_to_success_conversion": 1.0,
+            "same_failure_mode_consecutive_count": 4.5,
             "warm_start_application_rate": 0.9
           }
         }
@@ -728,12 +1070,40 @@
           "label": "Repeated Failures"
         },
         {
+          "key": "repeated_measurement_failure_count",
+          "label": "Repeated Measurement Failures"
+        },
+        {
+          "key": "dominant_failure_repeated",
+          "label": "Dominant Failure Repeated"
+        },
+        {
+          "key": "same_failure_mode_consecutive_count",
+          "label": "Same Failure Consecutive Count"
+        },
+        {
+          "key": "prediction_gap",
+          "label": "Prediction Gap"
+        },
+        {
+          "key": "calibration_patch_count",
+          "label": "Calibration Patch Count"
+        },
+        {
           "key": "retrieved_episode_count",
           "label": "Retrieved Episodes"
         },
         {
           "key": "retrieval_precision_proxy",
           "label": "Retrieval Precision"
+        },
+        {
+          "key": "advice_aligned_selection",
+          "label": "Advice Aligned"
+        },
+        {
+          "key": "retrieval_led_to_success",
+          "label": "Retrieval to Success"
         }
       ],
       "csv_output_path": "research\\papers\\memory_chapter\\ldo_repeated_tables\\memory_episode_breakdown.csv",
@@ -741,600 +1111,880 @@
       "rows": [
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": false,
             "episode_index": 0,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 0,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 1,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 1,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 2,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 2,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 3,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 3,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 4,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 4,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 5,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 5,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 6,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 6,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 7,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 7,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 8,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 8,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": true,
             "episode_index": 9,
             "governance_block_count": 0,
             "mode": "no_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 3,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 9,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": false,
             "episode_index": 0,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 0,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 3,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 1,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 1,
+            "same_failure_mode_consecutive_count": 1,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 21,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 2,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 2,
+            "same_failure_mode_consecutive_count": 2,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 24,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 3,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 3,
+            "same_failure_mode_consecutive_count": 3,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 27,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 4,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 4,
+            "same_failure_mode_consecutive_count": 4,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 5,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 5,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 6,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 6,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 7,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 7,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 8,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 8,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 9,
             "governance_block_count": 0,
             "mode": "episodic_retrieval_only",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 9,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": false,
             "episode_index": 0,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 0,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 3,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 1,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 1,
+            "same_failure_mode_consecutive_count": 1,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 21,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 2,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 2,
+            "same_failure_mode_consecutive_count": 2,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 24,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 3,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 3,
+            "same_failure_mode_consecutive_count": 3,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 27,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 4,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 4,
+            "same_failure_mode_consecutive_count": 4,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 5,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 5,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 6,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 6,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 7,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 7,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 8,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 8,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 1,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 9,
             "governance_block_count": 0,
             "mode": "episodic_plus_reflection",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 9,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "calibration_patch_count": 3,
+            "dominant_failure_repeated": false,
             "episode_index": 0,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.321452,
             "real_simulation_calls": 3,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": false,
             "retrieval_precision_proxy": 0.0,
             "retrieved_episode_count": 0,
+            "same_failure_mode_consecutive_count": 0,
             "step_to_first_feasible": "na",
             "warm_start_applied": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 3,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 1,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 1,
+            "same_failure_mode_consecutive_count": 1,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 21,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 2,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 2,
+            "same_failure_mode_consecutive_count": 2,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 24,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 3,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 3,
+            "same_failure_mode_consecutive_count": 3,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 27,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 4,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 4,
+            "same_failure_mode_consecutive_count": 4,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 5,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 5,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 6,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 6,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 7,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 7,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 8,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 8,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         },
         {
           "values": {
+            "advice_aligned_selection": true,
             "advice_consumed_count": 2,
             "advice_count": 30,
+            "calibration_patch_count": 2,
+            "dominant_failure_repeated": true,
             "episode_index": 9,
             "governance_block_count": 0,
             "mode": "full_memory",
+            "prediction_gap": 0.40197,
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
+            "repeated_measurement_failure_count": 0,
+            "retrieval_led_to_success": true,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 5,
+            "same_failure_mode_consecutive_count": 9,
             "step_to_first_feasible": "na",
             "warm_start_applied": true
           }

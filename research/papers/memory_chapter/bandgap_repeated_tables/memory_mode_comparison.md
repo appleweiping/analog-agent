@@ -2,9 +2,9 @@
 
 Primary repeated-episode memory ablation comparison table.
 
-| Mode | Feasible Hit Rate | Avg Sim Calls | Avg Step to Feasible | Avg Repeated Failures | Warm-Start Rate | Avg Advice Count | Avg Advice Consumed | Advice Consumption Rate | Governance Block Rate | Retrieval Precision | Negative Transfer Risk |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| no_memory | 0.0 | 1.0 | 0.0 | 0.9 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
-| episodic_retrieval_only | 0.0 | 1.0 | 0.0 | 0.9 | 0.9 | 22.5 | 0.0 | 0.0 | 0.0 | 0.81 | 0.09 |
-| episodic_plus_reflection | 0.0 | 1.0 | 0.0 | 0.9 | 0.9 | 22.5 | 0.9 | 0.062632 | 0.0 | 0.81 | 0.09 |
-| full_memory | 0.0 | 1.0 | 0.0 | 0.9 | 0.9 | 22.5 | 1.8 | 0.125265 | 0.0 | 0.81 | 0.09 |
+| Mode | Feasible Hit Rate | Avg Sim Calls | Avg Step to Feasible | Avg Repeated Failures | Warm-Start Rate | Avg Advice Count | Avg Advice Consumed | Advice Consumption Rate | Governance Block Rate | Retrieval Precision | Negative Transfer Risk | Median Step to Feasible | Mean Sim Calls to Feasible | Repeated Failure Rate | Dominant Failure Repeat Ratio | Measurement Failure Repeat Ratio | Same Failure Consecutive Count | Retrieval Activation Rate | Advice-Aligned Selection Rate | Retrieval-to-Success Conversion | Prediction Gap Mean | Prediction Gap IQR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| no_memory | 0.0 | 1.0 | 0.0 | 0.9 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 1.0 | 0.9 | 0.9 | 0.0 | 4.5 | 0.0 | 0.0 | 0.0 | 1.039028 | 0.0 |
+| episodic_retrieval_only | 0.0 | 1.0 | 0.0 | 0.9 | 0.9 | 22.5 | 0.0 | 0.0 | 0.0 | 0.81 | 0.09 | 0.0 | 1.0 | 0.9 | 0.9 | 0.0 | 4.5 | 0.9 | 0.0 | 0.0 | 3.803965 | 0.0 |
+| episodic_plus_reflection | 0.0 | 1.0 | 0.0 | 0.9 | 0.9 | 22.5 | 0.9 | 0.062632 | 0.0 | 0.81 | 0.09 | 0.0 | 1.0 | 0.9 | 0.9 | 0.0 | 4.5 | 0.9 | 0.0 | 0.0 | 3.803965 | 0.0 |
+| full_memory | 0.0 | 1.0 | 0.0 | 0.9 | 0.9 | 22.5 | 1.8 | 0.125265 | 0.0 | 0.81 | 0.09 | 0.0 | 1.0 | 0.9 | 0.9 | 0.0 | 4.5 | 0.9 | 0.0 | 0.0 | 2.873086 | 3.079886 |

@@ -166,6 +166,10 @@
     "forced_transfer_exposes_negative_transfer": true,
     "governance_blocks_harmful_transfer": true,
     "governed_transfer_beneficial": true,
+    "governed_vs_no_governance_harmful_delta": -1.0,
+    "governed_vs_no_memory_simulation_delta": -1.0,
+    "governed_vs_no_memory_step_delta": 0.0,
+    "harmful_transfer_effect_size": 0.0,
     "no_governance_exposes_harmful_transfer": true,
     "notes": [
       "source_episodes=4",
@@ -228,6 +232,30 @@
         {
           "key": "harmful_transfer_rate",
           "label": "Harmful Transfer Rate"
+        },
+        {
+          "key": "wrong_family_retrieval_rate",
+          "label": "Wrong-Family Retrieval Rate"
+        },
+        {
+          "key": "harmful_advice_application_rate",
+          "label": "Harmful Advice Application Rate"
+        },
+        {
+          "key": "cross_task_failure_after_retrieval_rate",
+          "label": "Cross-Task Failure After Retrieval"
+        },
+        {
+          "key": "governance_rejection_rate",
+          "label": "Governance Rejection Rate"
+        },
+        {
+          "key": "advice_aligned_selection_rate",
+          "label": "Advice-Aligned Selection Rate"
+        },
+        {
+          "key": "retrieval_to_success_conversion",
+          "label": "Retrieval-to-Success Conversion"
         }
       ],
       "csv_output_path": "research\\papers\\memory_chapter\\ota_to_folded_cascode\\memory_transfer_tables\\memory_transfer_comparison.csv",
@@ -235,6 +263,7 @@
       "rows": [
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.0,
             "average_advice_consumed_count": 0.0,
             "average_advice_count": 0.0,
@@ -243,15 +272,21 @@
             "average_repeated_failure_count": 2.75,
             "average_retrieval_precision": 0.0,
             "average_step_to_first_feasible": 0.0,
+            "cross_task_failure_after_retrieval_rate": 0.0,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "governance_rejection_rate": 0.0,
+            "harmful_advice_application_rate": 0.0,
             "harmful_transfer_rate": 0.0,
             "mode": "no_memory",
-            "warm_start_application_rate": 0.0
+            "retrieval_to_success_conversion": 0.0,
+            "warm_start_application_rate": 0.0,
+            "wrong_family_retrieval_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.066667,
             "average_advice_consumed_count": 1.0,
             "average_advice_count": 15.0,
@@ -260,15 +295,21 @@
             "average_repeated_failure_count": 1.75,
             "average_retrieval_precision": 0.4634,
             "average_step_to_first_feasible": 0.0,
+            "cross_task_failure_after_retrieval_rate": 0.0,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "governance_rejection_rate": 0.0,
+            "harmful_advice_application_rate": 0.0,
             "harmful_transfer_rate": 0.0,
             "mode": "governed_transfer",
-            "warm_start_application_rate": 1.0
+            "retrieval_to_success_conversion": 1.0,
+            "warm_start_application_rate": 1.0,
+            "wrong_family_retrieval_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 0.066667,
             "average_advice_consumed_count": 1.0,
             "average_advice_count": 15.0,
@@ -277,15 +318,21 @@
             "average_repeated_failure_count": 1.75,
             "average_retrieval_precision": 0.4634,
             "average_step_to_first_feasible": 0.0,
+            "cross_task_failure_after_retrieval_rate": 0.0,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "governance_rejection_rate": 0.0,
+            "harmful_advice_application_rate": 1.0,
             "harmful_transfer_rate": 1.0,
             "mode": "no_governance",
-            "warm_start_application_rate": 1.0
+            "retrieval_to_success_conversion": 1.0,
+            "warm_start_application_rate": 1.0,
+            "wrong_family_retrieval_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_aligned_selection_rate": 0.0,
             "advice_consumption_rate": 1.0,
             "average_advice_consumed_count": 1.0,
             "average_advice_count": 1.0,
@@ -294,11 +341,16 @@
             "average_repeated_failure_count": 2.75,
             "average_retrieval_precision": 0.15,
             "average_step_to_first_feasible": 0.0,
+            "cross_task_failure_after_retrieval_rate": 0.0,
             "feasible_hit_rate": 1.0,
             "governance_block_rate": 0.0,
+            "governance_rejection_rate": 0.0,
+            "harmful_advice_application_rate": 1.0,
             "harmful_transfer_rate": 1.0,
             "mode": "forced_transfer",
-            "warm_start_application_rate": 1.0
+            "retrieval_to_success_conversion": 1.0,
+            "warm_start_application_rate": 1.0,
+            "wrong_family_retrieval_rate": 0.0
           }
         }
       ],
@@ -355,6 +407,22 @@
         {
           "key": "harmful_transfer_applied",
           "label": "Harmful Transfer"
+        },
+        {
+          "key": "wrong_family_retrieval",
+          "label": "Wrong-Family Retrieval"
+        },
+        {
+          "key": "harmful_advice_application",
+          "label": "Harmful Advice Applied"
+        },
+        {
+          "key": "cross_task_failure_after_retrieval",
+          "label": "Cross-Task Failure After Retrieval"
+        },
+        {
+          "key": "advice_aligned_selection",
+          "label": "Advice Aligned"
         }
       ],
       "csv_output_path": "research\\papers\\memory_chapter\\ota_to_folded_cascode\\memory_transfer_tables\\memory_transfer_episode_breakdown.csv",
@@ -362,10 +430,13 @@
       "rows": [
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 0,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "no_memory",
             "negative_transfer_risk": 0.0,
@@ -373,15 +444,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 0,
             "step_to_first_feasible": 0,
-            "warm_start_applied": false
+            "warm_start_applied": false,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 1,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "no_memory",
             "negative_transfer_risk": 0.0,
@@ -389,15 +464,19 @@
             "repeated_failure_count": 3,
             "retrieved_episode_count": 0,
             "step_to_first_feasible": 0,
-            "warm_start_applied": false
+            "warm_start_applied": false,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 2,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "no_memory",
             "negative_transfer_risk": 0.0,
@@ -405,15 +484,19 @@
             "repeated_failure_count": 3,
             "retrieved_episode_count": 0,
             "step_to_first_feasible": 0,
-            "warm_start_applied": false
+            "warm_start_applied": false,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 0,
             "advice_count": 0,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 3,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "no_memory",
             "negative_transfer_risk": 0.0,
@@ -421,15 +504,19 @@
             "repeated_failure_count": 3,
             "retrieved_episode_count": 0,
             "step_to_first_feasible": 0,
-            "warm_start_applied": false
+            "warm_start_applied": false,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 0,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "governed_transfer",
             "negative_transfer_risk": 0.5366,
@@ -437,15 +524,19 @@
             "repeated_failure_count": 1,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 1,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "governed_transfer",
             "negative_transfer_risk": 0.5366,
@@ -453,15 +544,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 2,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "governed_transfer",
             "negative_transfer_risk": 0.5366,
@@ -469,15 +564,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 3,
             "governance_block_count": 0,
+            "harmful_advice_application": false,
             "harmful_transfer_applied": false,
             "mode": "governed_transfer",
             "negative_transfer_risk": 0.5366,
@@ -485,15 +584,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 0,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "no_governance",
             "negative_transfer_risk": 0.5366,
@@ -501,15 +604,19 @@
             "repeated_failure_count": 1,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 1,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "no_governance",
             "negative_transfer_risk": 0.5366,
@@ -517,15 +624,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 2,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "no_governance",
             "negative_transfer_risk": 0.5366,
@@ -533,15 +644,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 15,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 3,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "no_governance",
             "negative_transfer_risk": 0.5366,
@@ -549,15 +664,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 4,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 1,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 0,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "forced_transfer",
             "negative_transfer_risk": 0.85,
@@ -565,15 +684,19 @@
             "repeated_failure_count": 2,
             "retrieved_episode_count": 1,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 1,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 1,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "forced_transfer",
             "negative_transfer_risk": 0.85,
@@ -581,15 +704,19 @@
             "repeated_failure_count": 3,
             "retrieved_episode_count": 1,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 1,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 2,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "forced_transfer",
             "negative_transfer_risk": 0.85,
@@ -597,15 +724,19 @@
             "repeated_failure_count": 3,
             "retrieved_episode_count": 1,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         },
         {
           "values": {
+            "advice_aligned_selection": false,
             "advice_consumed_count": 1,
             "advice_count": 1,
+            "cross_task_failure_after_retrieval": false,
             "episode_index": 3,
             "governance_block_count": 0,
+            "harmful_advice_application": true,
             "harmful_transfer_applied": true,
             "mode": "forced_transfer",
             "negative_transfer_risk": 0.85,
@@ -613,7 +744,8 @@
             "repeated_failure_count": 3,
             "retrieved_episode_count": 1,
             "step_to_first_feasible": 0,
-            "warm_start_applied": true
+            "warm_start_applied": true,
+            "wrong_family_retrieval": false
           }
         }
       ],

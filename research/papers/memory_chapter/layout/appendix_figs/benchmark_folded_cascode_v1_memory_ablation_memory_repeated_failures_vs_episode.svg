@@ -33,10 +33,10 @@
 <text x="783.3333333333333" y="474" text-anchor="middle" font-size="12" font-family="Arial">8</text>
 <line x1="870.0" y1="60" x2="870.0" y2="450" stroke="#f0f0f0" stroke-width="1"/>
 <text x="870.0" y="474" text-anchor="middle" font-size="12" font-family="Arial">9</text>
-<polyline fill="none" stroke="#d62728" stroke-width="3" points="90.00,255.00 176.67,60.00 263.33,60.00 350.00,60.00 436.67,60.00 523.33,60.00 610.00,60.00 696.67,60.00 783.33,60.00 870.00,60.00"/>
+<polyline fill="none" stroke="#d62728" stroke-width="3" points="90.00,255.00 176.67,60.00 263.33,255.00 350.00,60.00 436.67,60.00 523.33,60.00 610.00,60.00 696.67,60.00 783.33,60.00 870.00,60.00"/>
 <circle cx="90.00" cy="255.00" r="4" fill="#d62728"/>
 <circle cx="176.67" cy="60.00" r="4" fill="#d62728"/>
-<circle cx="263.33" cy="60.00" r="4" fill="#d62728"/>
+<circle cx="263.33" cy="255.00" r="4" fill="#d62728"/>
 <circle cx="350.00" cy="60.00" r="4" fill="#d62728"/>
 <circle cx="436.67" cy="60.00" r="4" fill="#d62728"/>
 <circle cx="523.33" cy="60.00" r="4" fill="#d62728"/>

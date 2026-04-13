@@ -3,21 +3,29 @@
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ota2_v1_memory_ablation_memory_real_simulation_calls_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ota2_v1_memory_ablation_memory_step_to_first_feasible_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ota2_v1_memory_ablation_memory_repeated_failures_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ota2_v1_memory_ablation_memory_prediction_gap_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ota2_v1_memory_ablation_memory_feasible_hit_rate_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ota2_v1_memory_ablation_memory_advice_consumption_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ota2_v1_memory_ablation_memory_mode_summary.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_folded_cascode_v1_memory_ablation_memory_real_simulation_calls_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_folded_cascode_v1_memory_ablation_memory_step_to_first_feasible_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_folded_cascode_v1_memory_ablation_memory_repeated_failures_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_folded_cascode_v1_memory_ablation_memory_prediction_gap_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_folded_cascode_v1_memory_ablation_memory_feasible_hit_rate_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_folded_cascode_v1_memory_ablation_memory_advice_consumption_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_folded_cascode_v1_memory_ablation_memory_mode_summary.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ldo_v1_memory_ablation_memory_real_simulation_calls_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ldo_v1_memory_ablation_memory_step_to_first_feasible_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ldo_v1_memory_ablation_memory_repeated_failures_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ldo_v1_memory_ablation_memory_prediction_gap_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ldo_v1_memory_ablation_memory_feasible_hit_rate_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ldo_v1_memory_ablation_memory_advice_consumption_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_ldo_v1_memory_ablation_memory_mode_summary.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_bandgap_v1_memory_ablation_memory_real_simulation_calls_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_bandgap_v1_memory_ablation_memory_step_to_first_feasible_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_bandgap_v1_memory_ablation_memory_repeated_failures_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_bandgap_v1_memory_ablation_memory_prediction_gap_vs_episode.svg",
+    "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_bandgap_v1_memory_ablation_memory_feasible_hit_rate_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_bandgap_v1_memory_ablation_memory_advice_consumption_vs_episode.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\benchmark_bandgap_v1_memory_ablation_memory_mode_summary.svg",
     "research\\papers\\memory_chapter\\layout\\appendix_figs\\ota2_v1_to_folded_cascode_v1_memory_transfer_simulation_calls.svg",
@@ -102,6 +110,8 @@
   "main_figures": [
     "research\\papers\\memory_chapter\\layout\\main_figs\\fig_memory_repeated_episode_calls.svg",
     "research\\papers\\memory_chapter\\layout\\main_figs\\fig_memory_repeated_episode_failures.svg",
+    "research\\papers\\memory_chapter\\layout\\main_figs\\fig_memory_step_to_feasible.svg",
+    "research\\papers\\memory_chapter\\layout\\main_figs\\fig_memory_prediction_gap.svg",
     "research\\papers\\memory_chapter\\layout\\main_figs\\fig_memory_same_family_transfer.svg",
     "research\\papers\\memory_chapter\\layout\\main_figs\\fig_memory_cross_family_governance.svg"
   ],
@@ -109,7 +119,9 @@
     "research\\papers\\memory_chapter\\layout\\main_tables\\tbl_memory_repeated_episode.csv",
     "research\\papers\\memory_chapter\\layout\\main_tables\\tbl_memory_repeated_episode.md",
     "research\\papers\\memory_chapter\\layout\\main_tables\\tbl_memory_transfer_summary.csv",
-    "research\\papers\\memory_chapter\\layout\\main_tables\\tbl_memory_transfer_summary.md"
+    "research\\papers\\memory_chapter\\layout\\main_tables\\tbl_memory_transfer_summary.md",
+    "research\\papers\\memory_chapter\\layout\\main_tables\\tbl_memory_negative_transfer.csv",
+    "research\\papers\\memory_chapter\\layout\\main_tables\\tbl_memory_negative_transfer.md"
   ],
   "markdown_output_path": "research\\papers\\memory_chapter\\layout\\memory_paper_layout.md",
   "profile_name": "paper",
@@ -126,7 +138,7 @@
   "summary_notes": [
     "profile=paper",
     "repeated_tasks=benchmark-ota2-v1-memory-ablation,benchmark-folded_cascode-v1-memory-ablation,benchmark-ldo-v1-memory-ablation,benchmark-bandgap-v1-memory-ablation",
-    "main_text should highlight repeated-episode calls/failures first, then same-family transfer, then cross-family governance.",
+    "main_text should highlight repeated-episode calls/steps/failures first, then prediction-gap reduction, then same-family transfer, then cross-family governance.",
     "appendix should carry per-task mode breakdowns and pair-specific transfer breakdowns."
   ]
 }

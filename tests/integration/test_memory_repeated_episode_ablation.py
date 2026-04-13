@@ -52,17 +52,20 @@ class MemoryRepeatedEpisodeAblationTests(unittest.TestCase):
             )
 
             self.assertEqual(bundle.task_id, "benchmark-ota2-v1-memory-ablation")
-            self.assertEqual(len(bundle.figures), 5)
+            self.assertEqual(len(bundle.figures), 7)
             self.assertEqual(len(bundle.tables), 2)
             self.assertTrue((root / "memory_evidence_bundle.json").exists())
             self.assertTrue((root / "memory_figs" / "memory_real_simulation_calls_vs_episode.svg").exists())
             self.assertTrue((root / "memory_figs" / "memory_step_to_first_feasible_vs_episode.svg").exists())
             self.assertTrue((root / "memory_figs" / "memory_repeated_failures_vs_episode.svg").exists())
+            self.assertTrue((root / "memory_figs" / "memory_prediction_gap_vs_episode.svg").exists())
+            self.assertTrue((root / "memory_figs" / "memory_feasible_hit_rate_vs_episode.svg").exists())
             self.assertTrue((root / "memory_figs" / "memory_advice_consumption_vs_episode.svg").exists())
             self.assertTrue((root / "memory_tables" / "memory_mode_comparison.csv").exists())
             self.assertTrue((root / "memory_tables" / "memory_episode_breakdown.md").exists())
             self.assertIsInstance(bundle.summary.memory_reduces_simulation_calls, bool)
             self.assertIsInstance(bundle.summary.memory_reduces_step_to_first_feasible, bool)
+            self.assertIsInstance(bundle.summary.calibration_and_memory_reduce_prediction_gap, bool)
 
     def test_folded_cascode_repeated_episode_suite_and_evidence_export(self) -> None:
         suite = run_folded_cascode_memory_ablation_suite(

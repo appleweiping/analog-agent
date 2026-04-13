@@ -7,6 +7,7 @@ import shutil
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
+from statistics import median, pstdev
 
 from apps.orchestrator.job_runner import run_planning_truth_loop
 from libs.eval.paper_evidence import (
@@ -26,11 +27,14 @@ from libs.schema.memory_evidence import (
     MemoryAblationSummary,
     MemoryChapterEvidenceBundle,
     MemoryChapterSummary,
+    DistributionSummary,
     MemoryEpisodeStatsRecord,
+    MemoryMetricSnapshot,
     MemoryNegativeTransferCaseStudy,
     MemoryModeSummary,
     MemoryPaperLayoutBundle,
     MemoryTransferEvidenceBundle,
+    MetricDistributionSummary,
     MemoryTransferModeSummary,
     MemoryTransferStatsRecord,
     MemoryTransferSuiteResult,
@@ -66,6 +70,145 @@ TRANSFER_MODE_COLORS = {
     "no_governance": "#ff7f0e",
     "forced_transfer": "#9467bd",
 }
+
+
+def _distribution(values: list[float]) -> DistributionSummary:
+    if not values:
+        return DistributionSummary(mean=0.0, std=0.0, median=0.0, iqr=0.0, minimum=0.0, maximum=0.0)
+    ordered = sorted(float(value) for value in values)
+    midpoint = len(ordered) // 2
+    lower = ordered[:midpoint]
+    upper = ordered[midpoint + (0 if len(ordered) % 2 == 0 else 1) :]
+    q1 = median(lower) if lower else ordered[0]
+    q3 = median(upper) if upper else ordered[-1]
+    return DistributionSummary(
+        mean=round(_mean(ordered), 6),
+        std=round(pstdev(ordered), 6) if len(ordered) > 1 else 0.0,
+        median=round(float(median(ordered)), 6),
+        iqr=round(float(q3 - q1), 6),
+        minimum=round(float(ordered[0]), 6),
+        maximum=round(float(ordered[-1]), 6),
+    )
+
+
+def _best_metric_snapshots(verification: VerificationResult | None) -> list[MemoryMetricSnapshot]:
+    if verification is None:
+        return []
+    return [
+        MemoryMetricSnapshot(metric=metric.metric, value=round(float(metric.value), 6))
+        for metric in verification.measurement_report.measured_metrics
+    ]
+
+
+def _mean_prediction_gap(verification: VerificationResult | None) -> float:
+    if verification is None or not verification.calibration_payload.residual_metrics:
+        return 0.0
+    residuals = [abs(float(value)) for value in verification.calibration_payload.residual_metrics.values()]
+    return round(_mean(residuals), 6)
+
+
+def _mean_prediction_gap_from_response(response) -> float:
+    candidate_lookup = {
+        candidate.candidate_id: candidate
+        for candidate in response.final_search_state.candidate_pool_state.candidates
+    }
+    relative_gaps: list[float] = []
+    for execution in response.simulation_executions:
+        candidate = candidate_lookup.get(execution.verification_result.candidate_id)
+        if candidate is None or candidate.predicted_metrics is None:
+            continue
+        predicted = {metric.metric: float(metric.value) for metric in candidate.predicted_metrics.metrics}
+        truth = {metric.metric: float(metric.value) for metric in execution.verification_result.measurement_report.measured_metrics}
+        for metric_name, truth_value in truth.items():
+            if metric_name not in predicted:
+                continue
+            denominator = max(abs(truth_value), 1e-9)
+            relative_gap = abs(predicted[metric_name] - truth_value) / denominator
+            relative_gaps.append(min(relative_gap, 10.0))
+    if relative_gaps:
+        return round(_mean(relative_gaps), 6)
+    verification = _primary_verification(response)
+    if verification is None:
+        return 0.0
+    if verification.calibration_payload.residual_metrics:
+        normalized = [min(abs(float(value)), 10.0) for value in verification.calibration_payload.residual_metrics.values()]
+        return round(_mean(normalized), 6)
+    return 0.0
+
+
+def _average_prediction_gap_by_episode(records: list[MemoryEpisodeStatsRecord]) -> list[float]:
+    if not records:
+        return []
+    max_index = max(record.episode_index for record in records)
+    return [
+        round(
+            _mean([record.prediction_gap for record in records if record.episode_index == episode_index]),
+            6,
+        )
+        for episode_index in range(max_index + 1)
+    ]
+
+
+def _average_feasible_hit_by_episode(records: list[MemoryEpisodeStatsRecord]) -> list[float]:
+    if not records:
+        return []
+    max_index = max(record.episode_index for record in records)
+    return [
+        round(
+            _mean([1.0 if record.best_feasible_found else 0.0 for record in records if record.episode_index == episode_index]),
+            6,
+        )
+        for episode_index in range(max_index + 1)
+    ]
+
+
+def _average_failure_repeat_ratio_by_episode(records: list[MemoryEpisodeStatsRecord]) -> list[float]:
+    if not records:
+        return []
+    max_index = max(record.episode_index for record in records)
+    return [
+        round(
+            _mean(
+                [
+                    1.0 if record.dominant_failure_repeated else 0.0
+                    for record in records
+                    if record.episode_index == episode_index
+                ]
+            ),
+            6,
+        )
+        for episode_index in range(max_index + 1)
+    ]
+
+
+def _metric_distribution_summary(records: list[MemoryEpisodeStatsRecord]) -> list[MetricDistributionSummary]:
+    metric_buckets: dict[str, list[float]] = {}
+    for record in records:
+        for snapshot in record.best_metric_values:
+            metric_buckets.setdefault(snapshot.metric, []).append(float(snapshot.value))
+    return [
+        MetricDistributionSummary(metric=metric, distribution=_distribution(values))
+        for metric, values in sorted(metric_buckets.items())
+    ]
+
+
+def _paired_delta(left: list[float], right: list[float]) -> float:
+    if not left or not right:
+        return 0.0
+    count = min(len(left), len(right))
+    deltas = [float(right[index]) - float(left[index]) for index in range(count)]
+    return round(_mean(deltas), 6)
+
+
+def _effect_size(left: list[float], right: list[float]) -> float:
+    if not left or not right:
+        return 0.0
+    left_distribution = _distribution(left)
+    right_distribution = _distribution(right)
+    pooled_std = ((left_distribution.std ** 2 + right_distribution.std ** 2) / 2.0) ** 0.5
+    if pooled_std <= 1e-12:
+        return 0.0
+    return round((right_distribution.mean - left_distribution.mean) / pooled_std, 6)
 
 
 def _is_feasible(verification: VerificationResult) -> bool:
@@ -322,6 +465,24 @@ def _summarize_mode(mode: str, records: list[MemoryEpisodeStatsRecord]) -> Memor
     governance_block_rate = _mean([1.0 if record.governance_block_count > 0 else 0.0 for record in records])
     retrieval_precision = _mean([record.retrieval_precision_proxy for record in records])
     negative_transfer = _mean([record.negative_transfer_risk for record in records])
+    feasible_hit_rate_by_episode = [1.0 if record.best_feasible_found else 0.0 for record in records]
+    median_step = _distribution(step_values).median if step_values else 0.0
+    repeated_failure_rate = _mean([1.0 if record.repeated_failure_count > 0 else 0.0 for record in records])
+    dominant_failure_repeat_ratio = _mean([1.0 if record.dominant_failure_repeated else 0.0 for record in records])
+    measurement_failure_repeat_ratio = _mean([1.0 if record.measurement_failure_repeated else 0.0 for record in records])
+    consecutive_repeat_count = _mean([float(record.same_failure_mode_consecutive_count) for record in records])
+    retrieval_activation_rate = _mean([1.0 if record.retrieved_episode_count > 0 else 0.0 for record in records])
+    advice_aligned_selection_rate = _mean([1.0 if record.advice_aligned_selection else 0.0 for record in records])
+    retrieval_to_success_conversion = _mean(
+        [
+            1.0 if record.retrieval_led_to_success else 0.0
+            for record in records
+            if record.retrieved_episode_count > 0
+        ]
+    )
+    simulation_distribution = _distribution([float(record.real_simulation_calls) for record in records])
+    step_distribution = _distribution(step_values)
+    prediction_gap_distribution = _distribution([float(record.prediction_gap) for record in records])
     return MemoryModeSummary(
         mode=mode,
         episode_count=episode_count,
@@ -336,6 +497,24 @@ def _summarize_mode(mode: str, records: list[MemoryEpisodeStatsRecord]) -> Memor
         governance_block_rate=governance_block_rate,
         average_retrieval_precision=retrieval_precision,
         average_negative_transfer_risk=negative_transfer,
+        feasible_hit_rate_by_episode=feasible_hit_rate_by_episode,
+        median_step_to_first_feasible=median_step,
+        mean_real_sim_calls_to_first_feasible=round(average_calls, 6),
+        episode_best_metric_summary=_metric_distribution_summary(records),
+        repeated_failure_rate=repeated_failure_rate,
+        dominant_failure_repeat_ratio=dominant_failure_repeat_ratio,
+        measurement_failure_repeat_ratio=measurement_failure_repeat_ratio,
+        same_failure_mode_consecutive_count=round(consecutive_repeat_count, 6),
+        retrieval_activation_rate=retrieval_activation_rate,
+        advice_aligned_selection_rate=advice_aligned_selection_rate,
+        retrieval_to_success_conversion=retrieval_to_success_conversion,
+        episode_index_vs_sim_calls=[float(record.real_simulation_calls) for record in records],
+        episode_index_vs_prediction_gap=[float(record.prediction_gap) for record in records],
+        episode_index_vs_feasible_hit_rate=[1.0 if record.best_feasible_found else 0.0 for record in records],
+        episode_index_vs_failure_repeat_ratio=[1.0 if record.dominant_failure_repeated else 0.0 for record in records],
+        simulation_calls_distribution=simulation_distribution,
+        step_to_feasible_distribution=step_distribution,
+        prediction_gap_distribution=prediction_gap_distribution,
     )
 
 
@@ -399,6 +578,20 @@ def _summarize_transfer_mode(mode: str, records: list[MemoryTransferStatsRecord]
     retrieval_precision = _mean([record.retrieval_precision_proxy for record in records])
     negative_transfer = _mean([record.negative_transfer_risk for record in records])
     harmful_transfer = _mean([1.0 if record.harmful_transfer_applied else 0.0 for record in records])
+    wrong_family_rate = _mean([1.0 if record.wrong_family_retrieval else 0.0 for record in records])
+    harmful_advice_rate = _mean([1.0 if record.harmful_advice_application else 0.0 for record in records])
+    cross_task_failure_after_retrieval_rate = _mean(
+        [1.0 if record.cross_task_failure_after_retrieval else 0.0 for record in records]
+    )
+    governance_rejection_rate = governance_block_rate
+    advice_aligned_selection_rate = _mean([1.0 if record.advice_aligned_selection else 0.0 for record in records])
+    retrieval_to_success_conversion = _mean(
+        [
+            1.0 if record.retrieval_led_to_success else 0.0
+            for record in records
+            if record.retrieved_episode_count > 0
+        ]
+    )
     return MemoryTransferModeSummary(
         mode=mode,
         episode_count=episode_count,
@@ -414,6 +607,14 @@ def _summarize_transfer_mode(mode: str, records: list[MemoryTransferStatsRecord]
         average_retrieval_precision=retrieval_precision,
         average_negative_transfer_risk=negative_transfer,
         harmful_transfer_rate=harmful_transfer,
+        wrong_family_retrieval_rate=wrong_family_rate,
+        harmful_advice_application_rate=harmful_advice_rate,
+        cross_task_failure_after_retrieval_rate=cross_task_failure_after_retrieval_rate,
+        governance_rejection_rate=governance_rejection_rate,
+        advice_aligned_selection_rate=advice_aligned_selection_rate,
+        retrieval_to_success_conversion=retrieval_to_success_conversion,
+        simulation_calls_distribution=_distribution([float(record.real_simulation_calls) for record in records]),
+        step_to_feasible_distribution=_distribution(step_values),
     )
 
 
@@ -436,6 +637,8 @@ def run_repeated_episode_memory_ablation(
 
     for mode in REPEATED_MEMORY_MODES:
         prior_failure_counts: Counter[str] = Counter()
+        previous_primary_failure: str | None = None
+        consecutive_same_failure_count = 0
         memory_compile = compile_memory_bundle()
         if memory_compile.memory_bundle is None:
             raise ValueError("failed to compile memory bundle for repeated-episode ablation")
@@ -476,6 +679,20 @@ def run_repeated_episode_memory_ablation(
             verification = _primary_verification(response)
             dominant_failures = _dominant_failure_modes(response, verification)
             repeated_failure_count = _repeated_failure_count(response, prior_failure_counts)
+            repeated_measurement_failure_count = sum(
+                1
+                for execution in response.simulation_executions
+                if execution.verification_result.failure_attribution.primary_failure_class == "measurement_failure"
+                and prior_failure_counts["measurement_failure"] > 0
+            )
+            primary_failure = dominant_failures[0] if dominant_failures else None
+            dominant_failure_repeated = bool(primary_failure and prior_failure_counts[primary_failure] > 0)
+            measurement_failure_repeated = repeated_measurement_failure_count > 0
+            if primary_failure is not None and primary_failure == previous_primary_failure:
+                consecutive_same_failure_count += 1
+            else:
+                consecutive_same_failure_count = 0
+            previous_primary_failure = primary_failure
             for failure in dominant_failures:
                 prior_failure_counts[failure] += 1
 
@@ -484,6 +701,16 @@ def run_repeated_episode_memory_ablation(
                 ingestion = MemoryService(bundle).ingest_episode(task, response.final_search_state, verification)
                 bundle = ingestion.memory_bundle
                 episode_memory_id = ingestion.episode_record.episode_memory_id
+
+            advice_aligned_selection = advice_consumed_count > 0 and (
+                response.final_search_state.best_known_feasible is not None or repeated_failure_count == 0
+            )
+            retrieval_led_to_success = (len(retrieval.episode_hits) if retrieval is not None else 0) > 0 and (
+                response.final_search_state.best_known_feasible is not None
+                or any(_is_feasible(execution.verification_result) for execution in response.simulation_executions)
+            )
+            prediction_gap = _mean_prediction_gap_from_response(response)
+            calibration_patch_count = len(response.world_model_bundle.calibration_state.local_patch_history)
 
             all_records.append(
                 MemoryEpisodeStatsRecord(
@@ -507,6 +734,15 @@ def run_repeated_episode_memory_ablation(
                     step_to_first_feasible=_step_to_first_feasible(response),
                     dominant_failure_modes=dominant_failures,
                     repeated_failure_count=repeated_failure_count,
+                    repeated_measurement_failure_count=repeated_measurement_failure_count,
+                    dominant_failure_repeated=dominant_failure_repeated,
+                    measurement_failure_repeated=measurement_failure_repeated,
+                    same_failure_mode_consecutive_count=consecutive_same_failure_count,
+                    prediction_gap=prediction_gap,
+                    calibration_patch_count=calibration_patch_count,
+                    advice_aligned_selection=advice_aligned_selection,
+                    retrieval_led_to_success=retrieval_led_to_success,
+                    best_metric_values=_best_metric_snapshots(verification),
                     episode_memory_id=episode_memory_id,
                 )
             )
@@ -529,6 +765,36 @@ def run_repeated_episode_memory_ablation(
             or reflection_mode.average_repeated_failure_count <= retrieval_only.average_repeated_failure_count
         ),
         governance_preserves_memory_quality=full_memory.governance_block_rate >= 0.0,
+        calibration_and_memory_reduce_prediction_gap=(
+            full_memory.prediction_gap_distribution.mean <= no_memory.prediction_gap_distribution.mean
+        ),
+        retrieval_advice_improves_decision_alignment=(
+            full_memory.advice_aligned_selection_rate >= retrieval_only.advice_aligned_selection_rate
+        ),
+        simulation_call_paired_delta=_paired_delta(
+            [float(record.real_simulation_calls) for record in all_records if record.mode == "no_memory"],
+            [float(record.real_simulation_calls) for record in all_records if record.mode == "full_memory"],
+        ),
+        repeated_failure_paired_delta=_paired_delta(
+            [float(record.repeated_failure_count) for record in all_records if record.mode == "no_memory"],
+            [float(record.repeated_failure_count) for record in all_records if record.mode == "full_memory"],
+        ),
+        prediction_gap_paired_delta=_paired_delta(
+            [float(record.prediction_gap) for record in all_records if record.mode == "no_memory"],
+            [float(record.prediction_gap) for record in all_records if record.mode == "full_memory"],
+        ),
+        simulation_call_effect_size=_effect_size(
+            [float(record.real_simulation_calls) for record in all_records if record.mode == "no_memory"],
+            [float(record.real_simulation_calls) for record in all_records if record.mode == "full_memory"],
+        ),
+        repeated_failure_effect_size=_effect_size(
+            [float(record.repeated_failure_count) for record in all_records if record.mode == "no_memory"],
+            [float(record.repeated_failure_count) for record in all_records if record.mode == "full_memory"],
+        ),
+        prediction_gap_effect_size=_effect_size(
+            [float(record.prediction_gap) for record in all_records if record.mode == "no_memory"],
+            [float(record.prediction_gap) for record in all_records if record.mode == "full_memory"],
+        ),
         notes=[
             f"episodes={episodes}",
             f"task_slug={task_slug}",
@@ -620,6 +886,42 @@ def build_memory_ablation_evidence_bundle(
         caption="Count of dominant failure modes that were already seen in previous episodes. Lower is better.",
         output_path=str(figures_root / "memory_repeated_failures_vs_episode.svg"),
     )
+    figure_prediction_gap = FigureSpec(
+        figure_id="fig_memory_prediction_gap_vs_episode",
+        title="Repeated-Episode Memory Ablation: Prediction Gap",
+        chart_type="line",
+        x_label="Episode Index",
+        y_label="Prediction Gap",
+        series=[
+            FigureSeries(
+                label=mode,
+                x_values=[float(record.episode_index) for record in records_by_mode[mode]],
+                y_values=[float(record.prediction_gap) for record in records_by_mode[mode]],
+                color=REPEATED_MODE_COLORS[mode],
+            )
+            for mode in suite.modes
+        ],
+        caption="Mean absolute prediction gap extracted from calibration residuals after each repeated episode. Lower is better.",
+        output_path=str(figures_root / "memory_prediction_gap_vs_episode.svg"),
+    )
+    figure_feasible_hit = FigureSpec(
+        figure_id="fig_memory_feasible_hit_rate_vs_episode",
+        title="Repeated-Episode Memory Ablation: Feasible Hit by Episode",
+        chart_type="line",
+        x_label="Episode Index",
+        y_label="Feasible Hit",
+        series=[
+            FigureSeries(
+                label=mode,
+                x_values=[float(record.episode_index) for record in records_by_mode[mode]],
+                y_values=[1.0 if record.best_feasible_found else 0.0 for record in records_by_mode[mode]],
+                color=REPEATED_MODE_COLORS[mode],
+            )
+            for mode in suite.modes
+        ],
+        caption="Binary feasibility hit per repeated episode, used to expose whether retrieval translates into solved episodes.",
+        output_path=str(figures_root / "memory_feasible_hit_rate_vs_episode.svg"),
+    )
     figure_advice = FigureSpec(
         figure_id="fig_memory_advice_consumption_vs_episode",
         title="Repeated-Episode Memory Ablation: Advice Consumption",
@@ -658,7 +960,7 @@ def build_memory_ablation_evidence_bundle(
         output_path=str(figures_root / "memory_mode_summary.svg"),
     )
 
-    for figure in (figure_calls, figure_steps, figure_failures, figure_advice):
+    for figure in (figure_calls, figure_steps, figure_failures, figure_prediction_gap, figure_feasible_hit, figure_advice):
         _write_svg_line_chart(figure)
     _write_svg_bar_chart(figure_summary)
 
@@ -676,8 +978,19 @@ def build_memory_ablation_evidence_bundle(
               TableColumn(key="average_advice_consumed_count", label="Avg Advice Consumed"),
               TableColumn(key="advice_consumption_rate", label="Advice Consumption Rate"),
               TableColumn(key="governance_block_rate", label="Governance Block Rate"),
-              TableColumn(key="average_retrieval_precision", label="Retrieval Precision"),
-              TableColumn(key="average_negative_transfer_risk", label="Negative Transfer Risk"),
+            TableColumn(key="average_retrieval_precision", label="Retrieval Precision"),
+            TableColumn(key="average_negative_transfer_risk", label="Negative Transfer Risk"),
+            TableColumn(key="median_step_to_first_feasible", label="Median Step to Feasible"),
+            TableColumn(key="mean_real_sim_calls_to_first_feasible", label="Mean Sim Calls to Feasible"),
+            TableColumn(key="repeated_failure_rate", label="Repeated Failure Rate"),
+            TableColumn(key="dominant_failure_repeat_ratio", label="Dominant Failure Repeat Ratio"),
+            TableColumn(key="measurement_failure_repeat_ratio", label="Measurement Failure Repeat Ratio"),
+            TableColumn(key="same_failure_mode_consecutive_count", label="Same Failure Consecutive Count"),
+            TableColumn(key="retrieval_activation_rate", label="Retrieval Activation Rate"),
+            TableColumn(key="advice_aligned_selection_rate", label="Advice-Aligned Selection Rate"),
+            TableColumn(key="retrieval_to_success_conversion", label="Retrieval-to-Success Conversion"),
+            TableColumn(key="prediction_gap_mean", label="Prediction Gap Mean"),
+            TableColumn(key="prediction_gap_iqr", label="Prediction Gap IQR"),
           ],
         rows=[
             TableRow(
@@ -694,6 +1007,17 @@ def build_memory_ablation_evidence_bundle(
                       "governance_block_rate": summary.governance_block_rate,
                       "average_retrieval_precision": summary.average_retrieval_precision,
                       "average_negative_transfer_risk": summary.average_negative_transfer_risk,
+                      "median_step_to_first_feasible": summary.median_step_to_first_feasible,
+                      "mean_real_sim_calls_to_first_feasible": summary.mean_real_sim_calls_to_first_feasible,
+                      "repeated_failure_rate": summary.repeated_failure_rate,
+                      "dominant_failure_repeat_ratio": summary.dominant_failure_repeat_ratio,
+                      "measurement_failure_repeat_ratio": summary.measurement_failure_repeat_ratio,
+                      "same_failure_mode_consecutive_count": summary.same_failure_mode_consecutive_count,
+                      "retrieval_activation_rate": summary.retrieval_activation_rate,
+                      "advice_aligned_selection_rate": summary.advice_aligned_selection_rate,
+                      "retrieval_to_success_conversion": summary.retrieval_to_success_conversion,
+                      "prediction_gap_mean": summary.prediction_gap_distribution.mean,
+                      "prediction_gap_iqr": summary.prediction_gap_distribution.iqr,
                   }
             )
             for summary in suite.mode_summaries
@@ -715,8 +1039,15 @@ def build_memory_ablation_evidence_bundle(
               TableColumn(key="real_simulation_calls", label="Real Sim Calls"),
               TableColumn(key="step_to_first_feasible", label="Step to Feasible"),
               TableColumn(key="repeated_failure_count", label="Repeated Failures"),
-            TableColumn(key="retrieved_episode_count", label="Retrieved Episodes"),
+              TableColumn(key="repeated_measurement_failure_count", label="Repeated Measurement Failures"),
+              TableColumn(key="dominant_failure_repeated", label="Dominant Failure Repeated"),
+              TableColumn(key="same_failure_mode_consecutive_count", label="Same Failure Consecutive Count"),
+              TableColumn(key="prediction_gap", label="Prediction Gap"),
+              TableColumn(key="calibration_patch_count", label="Calibration Patch Count"),
+              TableColumn(key="retrieved_episode_count", label="Retrieved Episodes"),
             TableColumn(key="retrieval_precision_proxy", label="Retrieval Precision"),
+            TableColumn(key="advice_aligned_selection", label="Advice Aligned"),
+            TableColumn(key="retrieval_led_to_success", label="Retrieval to Success"),
         ],
         rows=[
             TableRow(
@@ -730,8 +1061,15 @@ def build_memory_ablation_evidence_bundle(
                       "real_simulation_calls": record.real_simulation_calls,
                       "step_to_first_feasible": record.step_to_first_feasible if record.step_to_first_feasible is not None else "na",
                       "repeated_failure_count": record.repeated_failure_count,
+                      "repeated_measurement_failure_count": record.repeated_measurement_failure_count,
+                      "dominant_failure_repeated": record.dominant_failure_repeated,
+                      "same_failure_mode_consecutive_count": record.same_failure_mode_consecutive_count,
+                      "prediction_gap": record.prediction_gap,
+                      "calibration_patch_count": record.calibration_patch_count,
                     "retrieved_episode_count": record.retrieved_episode_count,
                     "retrieval_precision_proxy": record.retrieval_precision_proxy,
+                    "advice_aligned_selection": record.advice_aligned_selection,
+                    "retrieval_led_to_success": record.retrieval_led_to_success,
                 }
             )
             for record in suite.episode_records
@@ -748,7 +1086,7 @@ def build_memory_ablation_evidence_bundle(
     bundle = MemoryAblationEvidenceBundle(
         task_id=suite.task_id,
         modes=suite.modes,
-        figures=[figure_calls, figure_steps, figure_failures, figure_advice, figure_summary],
+        figures=[figure_calls, figure_steps, figure_failures, figure_prediction_gap, figure_feasible_hit, figure_advice, figure_summary],
         tables=[comparison_table, episode_table],
         summary=suite.summary,
         json_output_path=str(json_output_path),
@@ -851,6 +1189,21 @@ def run_cross_task_memory_transfer_suite(
                 and negative_transfer_risk >= 0.5
                 and repeated_failure_count > 0
             )
+            wrong_family_retrieval = (
+                transfer_kind == "cross_family" and retrieved_episode_count > 0 and retrieval_precision < 0.5
+            )
+            harmful_advice_application = harmful_transfer and advice_consumed_count > 0
+            cross_task_failure_after_retrieval = retrieved_episode_count > 0 and not (
+                response.final_search_state.best_known_feasible is not None
+                or any(_is_feasible(execution.verification_result) for execution in response.simulation_executions)
+            )
+            advice_aligned_selection = advice_consumed_count > 0 and not harmful_advice_application and (
+                response.final_search_state.best_known_feasible is not None or repeated_failure_count == 0
+            )
+            retrieval_led_to_success = retrieved_episode_count > 0 and (
+                response.final_search_state.best_known_feasible is not None
+                or any(_is_feasible(execution.verification_result) for execution in response.simulation_executions)
+            )
 
             records.append(
                 MemoryTransferStatsRecord(
@@ -874,6 +1227,12 @@ def run_cross_task_memory_transfer_suite(
                     step_to_first_feasible=_step_to_first_feasible(response),
                     repeated_failure_count=repeated_failure_count,
                     harmful_transfer_applied=harmful_transfer,
+                    wrong_family_retrieval=wrong_family_retrieval,
+                    harmful_advice_application=harmful_advice_application,
+                    cross_task_failure_after_retrieval=cross_task_failure_after_retrieval,
+                    advice_aligned_selection=advice_aligned_selection,
+                    retrieval_led_to_success=retrieval_led_to_success,
+                    best_metric_values=_best_metric_snapshots(verification),
                 )
             )
 
@@ -894,6 +1253,22 @@ def run_cross_task_memory_transfer_suite(
         governance_blocks_harmful_transfer=governed.harmful_transfer_rate < forced.harmful_transfer_rate,
         no_governance_exposes_harmful_transfer=no_governance.harmful_transfer_rate >= governed.harmful_transfer_rate,
         forced_transfer_exposes_negative_transfer=forced.harmful_transfer_rate > 0.0,
+        governed_vs_no_memory_simulation_delta=round(
+            governed.average_real_simulation_calls - no_memory.average_real_simulation_calls,
+            6,
+        ),
+        governed_vs_no_memory_step_delta=round(
+            governed.average_step_to_first_feasible - no_memory.average_step_to_first_feasible,
+            6,
+        ),
+        governed_vs_no_governance_harmful_delta=round(
+            governed.harmful_transfer_rate - no_governance.harmful_transfer_rate,
+            6,
+        ),
+        harmful_transfer_effect_size=_effect_size(
+            [float(record.harmful_transfer_applied) for record in records if record.mode == "governed_transfer"],
+            [float(record.harmful_transfer_applied) for record in records if record.mode == "no_governance"],
+        ),
         notes=[
             f"source_episodes={source_episodes}",
             f"target_episodes={target_episodes}",
@@ -1016,6 +1391,12 @@ def build_memory_transfer_evidence_bundle(
               TableColumn(key="average_retrieval_precision", label="Retrieval Precision"),
               TableColumn(key="average_negative_transfer_risk", label="Negative Transfer Risk"),
               TableColumn(key="harmful_transfer_rate", label="Harmful Transfer Rate"),
+              TableColumn(key="wrong_family_retrieval_rate", label="Wrong-Family Retrieval Rate"),
+              TableColumn(key="harmful_advice_application_rate", label="Harmful Advice Application Rate"),
+              TableColumn(key="cross_task_failure_after_retrieval_rate", label="Cross-Task Failure After Retrieval"),
+              TableColumn(key="governance_rejection_rate", label="Governance Rejection Rate"),
+              TableColumn(key="advice_aligned_selection_rate", label="Advice-Aligned Selection Rate"),
+              TableColumn(key="retrieval_to_success_conversion", label="Retrieval-to-Success Conversion"),
         ],
         rows=[
             TableRow(
@@ -1033,6 +1414,12 @@ def build_memory_transfer_evidence_bundle(
                       "average_retrieval_precision": summary.average_retrieval_precision,
                       "average_negative_transfer_risk": summary.average_negative_transfer_risk,
                       "harmful_transfer_rate": summary.harmful_transfer_rate,
+                      "wrong_family_retrieval_rate": summary.wrong_family_retrieval_rate,
+                      "harmful_advice_application_rate": summary.harmful_advice_application_rate,
+                      "cross_task_failure_after_retrieval_rate": summary.cross_task_failure_after_retrieval_rate,
+                      "governance_rejection_rate": summary.governance_rejection_rate,
+                      "advice_aligned_selection_rate": summary.advice_aligned_selection_rate,
+                      "retrieval_to_success_conversion": summary.retrieval_to_success_conversion,
                 }
             )
             for summary in suite.mode_summaries
@@ -1057,6 +1444,10 @@ def build_memory_transfer_evidence_bundle(
               TableColumn(key="governance_block_count", label="Governance Blocks"),
               TableColumn(key="negative_transfer_risk", label="Negative Transfer Risk"),
               TableColumn(key="harmful_transfer_applied", label="Harmful Transfer"),
+              TableColumn(key="wrong_family_retrieval", label="Wrong-Family Retrieval"),
+              TableColumn(key="harmful_advice_application", label="Harmful Advice Applied"),
+              TableColumn(key="cross_task_failure_after_retrieval", label="Cross-Task Failure After Retrieval"),
+              TableColumn(key="advice_aligned_selection", label="Advice Aligned"),
           ],
         rows=[
             TableRow(
@@ -1073,6 +1464,10 @@ def build_memory_transfer_evidence_bundle(
                       "governance_block_count": record.governance_block_count,
                       "negative_transfer_risk": record.negative_transfer_risk,
                       "harmful_transfer_applied": record.harmful_transfer_applied,
+                      "wrong_family_retrieval": record.wrong_family_retrieval,
+                      "harmful_advice_application": record.harmful_advice_application,
+                      "cross_task_failure_after_retrieval": record.cross_task_failure_after_retrieval,
+                      "advice_aligned_selection": record.advice_aligned_selection,
                   }
             )
             for record in suite.transfer_records
@@ -1170,6 +1565,48 @@ def build_memory_chapter_evidence_bundle(
         caption="Repeated failure suppression across repeated episodes and tasks.",
         output_path=str(figures_root / "memory_chapter_repeated_episode_failures.svg"),
     )
+    repeated_step_figure = FigureSpec(
+        figure_id="fig_memory_chapter_step_to_feasible",
+        title="Memory Chapter: Step to First Feasible",
+        chart_type="bar",
+        x_label="Task",
+        y_label="Average Step to First Feasible",
+        series=[
+            FigureSeries(
+                label=mode,
+                x_values=[float(index) + 0.25 * mode_index for index, _task_id in enumerate(repeated_task_labels)],
+                y_values=[
+                    float(repeated_lookup[task_id][mode]["average_step_to_first_feasible"])
+                    for task_id in repeated_task_labels
+                ],
+                color=REPEATED_MODE_COLORS[mode],
+            )
+            for mode_index, mode in enumerate(["no_memory", "episodic_retrieval_only", "episodic_plus_reflection", "full_memory"])
+        ],
+        caption="Repeated-episode step-to-feasible across runnable vertical slices.",
+        output_path=str(figures_root / "memory_chapter_step_to_feasible.svg"),
+    )
+    repeated_prediction_gap_figure = FigureSpec(
+        figure_id="fig_memory_chapter_prediction_gap",
+        title="Memory Chapter: Prediction Gap Reduction",
+        chart_type="bar",
+        x_label="Task",
+        y_label="Average Prediction Gap",
+        series=[
+            FigureSeries(
+                label=mode,
+                x_values=[float(index) + 0.3 * mode_index for index, _task_id in enumerate(repeated_task_labels)],
+                y_values=[
+                    float(repeated_lookup[task_id][mode]["prediction_gap_mean"])
+                    for task_id in repeated_task_labels
+                ],
+                color=REPEATED_MODE_COLORS[mode],
+            )
+            for mode_index, mode in enumerate(["no_memory", "full_memory"])
+        ],
+        caption="Prediction-gap reduction across repeated episodes, exposing the calibration-memory interaction.",
+        output_path=str(figures_root / "memory_chapter_prediction_gap.svg"),
+    )
 
     same_family_calls_figure = FigureSpec(
         figure_id="fig_memory_chapter_same_family_transfer",
@@ -1263,7 +1700,14 @@ def build_memory_chapter_evidence_bundle(
         output_path=str(figures_root / "memory_chapter_cross_family_governance.svg"),
     )
 
-    for figure in (repeated_calls_figure, repeated_failure_figure, same_family_calls_figure, cross_family_harm_figure):
+    for figure in (
+        repeated_calls_figure,
+        repeated_failure_figure,
+        repeated_step_figure,
+        repeated_prediction_gap_figure,
+        same_family_calls_figure,
+        cross_family_harm_figure,
+    ):
         _write_svg_bar_chart(figure)
 
     repeated_table = TableSpec(
@@ -1276,6 +1720,9 @@ def build_memory_chapter_evidence_bundle(
             TableColumn(key="avg_repeated_failures", label="Avg Repeated Failures"),
             TableColumn(key="warm_start_rate", label="Warm-Start Rate"),
             TableColumn(key="advice_consumption_rate", label="Advice Consumption Rate"),
+            TableColumn(key="prediction_gap_mean", label="Prediction Gap Mean"),
+            TableColumn(key="retrieval_activation_rate", label="Retrieval Activation Rate"),
+            TableColumn(key="advice_aligned_selection_rate", label="Advice-Aligned Selection Rate"),
         ],
         rows=[
             TableRow(
@@ -1286,6 +1733,9 @@ def build_memory_chapter_evidence_bundle(
                     "avg_repeated_failures": row.values["average_repeated_failure_count"],
                     "warm_start_rate": row.values["warm_start_application_rate"],
                     "advice_consumption_rate": row.values["advice_consumption_rate"],
+                    "prediction_gap_mean": row.values["prediction_gap_mean"],
+                    "retrieval_activation_rate": row.values["retrieval_activation_rate"],
+                    "advice_aligned_selection_rate": row.values["advice_aligned_selection_rate"],
                 }
             )
             for bundle in repeated_bundles
@@ -1307,6 +1757,8 @@ def build_memory_chapter_evidence_bundle(
             TableColumn(key="forced_harmful_rate", label="Forced Harmful Rate"),
             TableColumn(key="governance_blocks_harm", label="Governance Blocks Harm"),
             TableColumn(key="beneficial", label="Governed Beneficial"),
+            TableColumn(key="wrong_family_retrieval_rate", label="Wrong-Family Retrieval Rate"),
+            TableColumn(key="governance_rejection_rate", label="Governance Rejection Rate"),
         ],
         rows=[
             TableRow(
@@ -1330,6 +1782,16 @@ def build_memory_chapter_evidence_bundle(
                     ),
                     "governance_blocks_harm": bundle.summary.governance_blocks_harmful_transfer,
                     "beneficial": bundle.summary.governed_transfer_beneficial,
+                    "wrong_family_retrieval_rate": next(
+                        row.values["wrong_family_retrieval_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
+                    "governance_rejection_rate": next(
+                        row.values["governance_rejection_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
                 }
             )
             for bundle in [*same_family_bundles, *cross_family_bundles]
@@ -1338,8 +1800,70 @@ def build_memory_chapter_evidence_bundle(
         csv_output_path=str(tables_root / "memory_chapter_transfer_summary.csv"),
         markdown_output_path=str(tables_root / "memory_chapter_transfer_summary.md"),
     )
+    negative_transfer_table = TableSpec(
+        table_id="tbl_memory_chapter_negative_transfer",
+        title="Negative Transfer Analysis",
+        columns=[
+            TableColumn(key="pair", label="Transfer Pair"),
+            TableColumn(key="governed_harmful_rate", label="Governed Harmful Rate"),
+            TableColumn(key="no_governance_harmful_rate", label="No-Governance Harmful Rate"),
+            TableColumn(key="forced_harmful_rate", label="Forced Harmful Rate"),
+            TableColumn(key="wrong_family_retrieval_rate", label="Wrong-Family Retrieval Rate"),
+            TableColumn(key="harmful_advice_application_rate", label="Harmful Advice Application Rate"),
+            TableColumn(key="cross_task_failure_after_retrieval_rate", label="Cross-Task Failure After Retrieval Rate"),
+            TableColumn(key="governance_rejection_rate", label="Governance Rejection Rate"),
+            TableColumn(key="governance_blocks_harm", label="Governance Blocks Harm"),
+        ],
+        rows=[
+            TableRow(
+                values={
+                    "pair": f"{bundle.source_task_slug}->{bundle.target_task_slug}",
+                    "governed_harmful_rate": next(
+                        row.values["harmful_transfer_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
+                    "no_governance_harmful_rate": next(
+                        row.values["harmful_transfer_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "no_governance"
+                    ),
+                    "forced_harmful_rate": next(
+                        row.values["harmful_transfer_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "forced_transfer"
+                    ),
+                    "wrong_family_retrieval_rate": next(
+                        row.values["wrong_family_retrieval_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
+                    "harmful_advice_application_rate": next(
+                        row.values["harmful_advice_application_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
+                    "cross_task_failure_after_retrieval_rate": next(
+                        row.values["cross_task_failure_after_retrieval_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
+                    "governance_rejection_rate": next(
+                        row.values["governance_rejection_rate"]
+                        for row in bundle.tables[0].rows
+                        if row.values["mode"] == "governed_transfer"
+                    ),
+                    "governance_blocks_harm": bundle.summary.governance_blocks_harmful_transfer,
+                }
+            )
+            for bundle in cross_family_bundles
+        ],
+        caption="Cross-family negative-transfer analysis highlighting governance behavior.",
+        csv_output_path=str(tables_root / "memory_chapter_negative_transfer.csv"),
+        markdown_output_path=str(tables_root / "memory_chapter_negative_transfer.md"),
+    )
 
-    for table in (repeated_table, transfer_table):
+    for table in (repeated_table, transfer_table, negative_transfer_table):
         _write_table_csv(table)
         _write_table_markdown(table)
 
@@ -1389,6 +1913,15 @@ def build_memory_chapter_evidence_bundle(
         governance_blocks_cross_family_negative_transfer=cross_family_governed_mean < cross_family_no_governance_mean,
         no_governance_exposes_negative_transfer=cross_family_no_governance_mean > cross_family_governed_mean,
         forced_transfer_exposes_negative_transfer=cross_family_forced_mean > cross_family_governed_mean,
+        calibration_and_memory_reduce_prediction_gap=all(
+            next(row.values["prediction_gap_mean"] for row in bundle.tables[0].rows if row.values["mode"] == "full_memory")
+            <= next(row.values["prediction_gap_mean"] for row in bundle.tables[0].rows if row.values["mode"] == "no_memory")
+            for bundle in repeated_bundles
+        ),
+        retrieval_utility_observable=all(
+            next(row.values["retrieval_activation_rate"] for row in bundle.tables[0].rows if row.values["mode"] == "full_memory") > 0.0
+            for bundle in repeated_bundles
+        ),
         notes=[
             f"same_family_pairs={','.join(same_family_labels)}",
             f"cross_family_pairs={','.join(cross_family_labels)}",
@@ -1401,8 +1934,15 @@ def build_memory_chapter_evidence_bundle(
         repeated_episode_tasks=repeated_task_labels,
         same_family_pairs=same_family_labels,
         cross_family_pairs=cross_family_labels,
-        figures=[repeated_calls_figure, repeated_failure_figure, same_family_calls_figure, cross_family_harm_figure],
-        tables=[repeated_table, transfer_table],
+        figures=[
+            repeated_calls_figure,
+            repeated_failure_figure,
+            repeated_step_figure,
+            repeated_prediction_gap_figure,
+            same_family_calls_figure,
+            cross_family_harm_figure,
+        ],
+        tables=[repeated_table, transfer_table, negative_transfer_table],
         summary=summary,
         json_output_path=str(json_output_path),
     )
@@ -1533,14 +2073,18 @@ def build_memory_paper_layout_bundle(
     main_figure_paths = [
         _copy_file(chapter_bundle.figures[0].output_path, main_figs_root / "fig_memory_repeated_episode_calls.svg"),
         _copy_file(chapter_bundle.figures[1].output_path, main_figs_root / "fig_memory_repeated_episode_failures.svg"),
-        _copy_file(chapter_bundle.figures[2].output_path, main_figs_root / "fig_memory_same_family_transfer.svg"),
-        _copy_file(chapter_bundle.figures[3].output_path, main_figs_root / "fig_memory_cross_family_governance.svg"),
+        _copy_file(chapter_bundle.figures[2].output_path, main_figs_root / "fig_memory_step_to_feasible.svg"),
+        _copy_file(chapter_bundle.figures[3].output_path, main_figs_root / "fig_memory_prediction_gap.svg"),
+        _copy_file(chapter_bundle.figures[4].output_path, main_figs_root / "fig_memory_same_family_transfer.svg"),
+        _copy_file(chapter_bundle.figures[5].output_path, main_figs_root / "fig_memory_cross_family_governance.svg"),
     ]
     main_table_paths = [
         _copy_file(chapter_bundle.tables[0].csv_output_path, main_tables_root / "tbl_memory_repeated_episode.csv"),
         _copy_file(chapter_bundle.tables[0].markdown_output_path, main_tables_root / "tbl_memory_repeated_episode.md"),
         _copy_file(chapter_bundle.tables[1].csv_output_path, main_tables_root / "tbl_memory_transfer_summary.csv"),
         _copy_file(chapter_bundle.tables[1].markdown_output_path, main_tables_root / "tbl_memory_transfer_summary.md"),
+        _copy_file(chapter_bundle.tables[2].csv_output_path, main_tables_root / "tbl_memory_negative_transfer.csv"),
+        _copy_file(chapter_bundle.tables[2].markdown_output_path, main_tables_root / "tbl_memory_negative_transfer.md"),
     ]
 
     appendix_figure_paths: list[str] = []
@@ -1588,7 +2132,7 @@ def build_memory_paper_layout_bundle(
     notes = [
         f"profile={profile_name}",
         f"repeated_tasks={','.join(chapter_bundle.repeated_episode_tasks)}",
-        "main_text should highlight repeated-episode calls/failures first, then same-family transfer, then cross-family governance.",
+        "main_text should highlight repeated-episode calls/steps/failures first, then prediction-gap reduction, then same-family transfer, then cross-family governance.",
         "appendix should carry per-task mode breakdowns and pair-specific transfer breakdowns.",
     ]
     layout_bundle = MemoryPaperLayoutBundle(
