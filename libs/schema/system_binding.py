@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from libs.schema.design_task import DesignTask
+from libs.schema.experiment import ExperimentSuiteResult, MethodComparisonResult
 from libs.schema.memory import EpisodeMemoryRecord, MemoryBundle
 from libs.schema.planning import CandidateRecord, PlanningBestResult, PlanningBundle, SearchState
 from libs.schema.simulation import SimulationExecutionResponse
@@ -219,3 +220,45 @@ class SystemAcceptanceResult(BaseModel):
     verification_stats: list[VerificationStatsRecord] = Field(default_factory=list)
     stats_summary: StatsAggregationResult | None = None
     acceptance_summary: AcceptanceSummary
+
+
+class FinalSystemCheckSummary(BaseModel):
+    """Structured Day-12 submission-ready closure check."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    l5_real_backend_primary: bool
+    l5_quick_truth_established: bool
+    l5_focused_truth_established: bool
+    l5_measurement_contract_stable: bool
+    l3_consumes_real_calibration_feedback: bool
+    l3_world_model_is_calibratable: bool
+    l4_updates_search_from_verification: bool
+    l4_budget_and_fidelity_aware: bool
+    l6_persists_real_episode_memory: bool
+    l6_distinguishes_truth_levels: bool
+    l2_to_l6_closed_loop: bool
+    acceptance_suite_available: bool
+    stats_foundation_available: bool
+    ota_v1_acceptance_ok: bool
+    ota_v1_experiment_ok: bool
+    stats_export_ok: bool
+    method_comparison_ok: bool
+    current_truth_level: str
+    real_pdk_connected: bool
+    multi_task_supported: bool
+    submission_ready: bool
+    closure_statement: str
+    notes: list[str] = Field(default_factory=list)
+
+
+class SystemClosureResult(BaseModel):
+    """Top-level Day-12 submission-ready freeze result."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    acceptance_result: SystemAcceptanceResult
+    baseline_suite: ExperimentSuiteResult
+    methodology_suite: ExperimentSuiteResult
+    method_conclusions: MethodComparisonResult
+    final_check_summary: FinalSystemCheckSummary
