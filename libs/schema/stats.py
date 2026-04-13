@@ -122,6 +122,7 @@ class ExperimentStatsRecord(BaseModel):
         "random_search_baseline",
         "bayesopt_baseline",
         "cmaes_baseline",
+        "rl_baseline",
         "no_world_model_baseline",
         "full_system",
         "no_world_model",

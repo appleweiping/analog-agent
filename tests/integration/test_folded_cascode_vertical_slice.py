@@ -34,7 +34,7 @@ class FoldedCascodeVerticalSliceIntegrationTest(unittest.TestCase):
         self.assertIsNotNone(suite.aggregated_stats)
         self.assertEqual(suite.aggregated_stats.aggregation_scope, "benchmark_suite")
         self.assertGreaterEqual(suite.aggregated_stats.total_real_simulation_calls, 1)
-        self.assertEqual(sorted(suite.modes), ["bayesopt_baseline", "cmaes_baseline", "full_simulation_baseline", "full_system", "no_world_model_baseline", "random_search_baseline"])
+        self.assertEqual(sorted(suite.modes), ["bayesopt_baseline", "cmaes_baseline", "full_simulation_baseline", "full_system", "no_world_model_baseline", "random_search_baseline", "rl_baseline"])
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = export_stats_json(suite, Path(tmpdir) / "folded_stats.json")
             csv_path = export_stats_csv(suite, Path(tmpdir) / "folded_stats.csv")

@@ -82,7 +82,7 @@ class StatsPipelineIntegrationTests(unittest.TestCase):
         task = _task("stats-experiment-ota")
         suite = run_experiment_suite(
             task,
-            modes=["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "full_system"],
+            modes=["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "rl_baseline", "full_system"],
             budget=ExperimentBudget(max_simulations=4, max_candidates_per_step=2),
             steps=2,
             repeat_runs=2,

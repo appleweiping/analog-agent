@@ -31,7 +31,7 @@ At the current stage, the repository includes:
 - a second runnable amplifier vertical slice (`folded_cascode_v1`) that reuses the same system contracts while changing topology, headroom behavior, and benchmark role.
 - a runnable regulator vertical slice (`ldo_v1`) that extends the same contracts into output regulation, loop stability, and output-voltage verification.
 - a runnable reference vertical slice (`bandgap_v1`) that extends the same contracts into low-power reference generation, temperature-stability proxies, and line-regulation verification.
-- research-grade benchmark baselines that now include `random_search_baseline` and `bayesopt_baseline` inside the same experiment runner, stats pipeline, benchmark exports, and API routes as the full agent system.
+- research-grade benchmark baselines that now include `random_search_baseline`, `bayesopt_baseline`, `cmaes_baseline`, and `rl_baseline` inside the same experiment runner, stats pipeline, benchmark exports, and API routes as the full agent system.
 
 This is still an active research codebase rather than a finished release. The first six system layers are now present in formal schema-and-service form, while research-tuned backend details and later experimental extensions remain under active iteration.
 
@@ -89,7 +89,9 @@ analog-agent/
 |   |-- benchmarks/
 |   |-- baselines/
 |   |   |-- random_search/
-|   |   `-- bayesopt/
+|   |   |-- bayesopt/
+|   |   |-- cmaes/
+|   |   `-- rl/
 |   |-- vertical_slices/
 |   `-- papers/
 |-- scripts/
@@ -102,6 +104,8 @@ analog-agent/
     `-- integration/
         |-- test_random_search_baseline.py
         |-- test_bayesopt_baseline.py
+        |-- test_cmaes_baseline.py
+        |-- test_rl_baseline.py
         |-- test_ota_vertical_slice.py
         |-- test_folded_cascode_vertical_slice.py
         |-- test_ldo_vertical_slice.py
@@ -210,6 +214,8 @@ Across these slices, the default benchmark-facing comparison stack now includes:
 - `full_simulation_baseline`
 - `random_search_baseline`
 - `bayesopt_baseline`
+- `cmaes_baseline`
+- `rl_baseline`
 - `no_world_model_baseline`
 - `full_system`
 

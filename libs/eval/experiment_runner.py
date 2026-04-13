@@ -15,6 +15,9 @@ from libs.eval.cmaes import build_observation as build_cmaes_observation
 from libs.eval.cmaes import build_surrogate_predictions as build_cmaes_surrogate_predictions
 from libs.eval.cmaes import propose_parameter_batch as propose_cmaes_parameter_batch
 from libs.eval.random_search import deterministic_unit, sample_parameter_values
+from libs.eval.rl_baseline import build_observation as build_rl_observation
+from libs.eval.rl_baseline import build_surrogate_predictions as build_rl_surrogate_predictions
+from libs.eval.rl_baseline import propose_parameter_batch as propose_rl_parameter_batch
 from libs.eval.stats import aggregate_stats, build_experiment_stats_record
 from libs.planner.budget_controller import initialize_budget_state, remaining_simulations
 from libs.planner.candidate_manager import append_decision_event, append_evaluation_event
@@ -250,6 +253,18 @@ def _mode_config(mode: ExperimentMode) -> MethodComponentConfig:
             use_bayesopt_baseline=False,
             use_cmaes_baseline=True,
         )
+    if mode == "rl_baseline":
+        return MethodComponentConfig(
+            mode=mode,
+            use_world_model=False,
+            use_calibration=False,
+            use_fidelity_escalation=False,
+            use_full_simulation_baseline=False,
+            use_random_search_baseline=False,
+            use_bayesopt_baseline=False,
+            use_cmaes_baseline=False,
+            use_rl_baseline=True,
+        )
     if mode == "no_calibration":
         return MethodComponentConfig(
             mode=mode,
@@ -283,6 +298,7 @@ def _uses_baseline_predictions(config: MethodComponentConfig) -> bool:
         and not config.use_random_search_baseline
         and not config.use_bayesopt_baseline
         and not config.use_cmaes_baseline
+        and not config.use_rl_baseline
     )
 
 
@@ -709,6 +725,91 @@ def _propose_cmaes_candidates(service: PlanningService, search_state: SearchStat
     )
 
 
+def _propose_rl_candidates(service: PlanningService, search_state: SearchState, observations, run_index: int, step_index: int):
+    batch_size = min(
+        service.planning_bundle.budget_controller.batch_size,
+        remaining_simulations(search_state.budget_state),
+    )
+    if batch_size <= 0:
+        return search_state
+    proposal_values = propose_rl_parameter_batch(
+        service.task,
+        observations=observations,
+        run_label=f"rl_baseline|{run_index}",
+        step_index=step_index,
+        population_size=batch_size,
+    )
+    candidate_records = []
+    ranking_scores: dict[str, float] = {}
+    for sample_index, parameter_values in enumerate(proposal_values):
+        next_state = build_world_state(
+            service.task,
+            parameter_values=parameter_values,
+            provenance_type="trajectory_replay",
+            provenance_stage="predicted",
+        )
+        candidate = service._candidate_record(
+            next_state,
+            parent_candidate_id=None,
+            proposal_source="restart_policy",
+            action_chain=[],
+            generation_depth=0,
+        )
+        metrics_prediction, feasibility_prediction, simulation_value, acquisition = build_rl_surrogate_predictions(
+            service.task,
+            next_state.state_id,
+            parameter_values,
+            observations=observations,
+            seed=f"{candidate.candidate_id}|{run_index}|{step_index}|{sample_index}",
+        )
+        candidate = append_evaluation_event(
+            candidate.model_copy(
+                update={
+                    "predicted_metrics": metrics_prediction,
+                    "predicted_feasibility": feasibility_prediction,
+                    "predicted_uncertainty": feasibility_prediction.trust_assessment,
+                    "simulation_value_estimate": simulation_value,
+                    "lifecycle_state": "frontier",
+                    "lifecycle_status": "frontier",
+                }
+            ),
+            "predicted",
+            [f"mode=rl_baseline", f"observation_count={len(observations)}"],
+        )
+        candidate_records.append(candidate)
+        ranking_scores[candidate.world_state_ref] = acquisition
+    candidate_records = apply_priority_scores(candidate_records, ranking_scores=ranking_scores, policy=service.planning_bundle.selection_policy)
+    from libs.planner.budget_controller import consume_proxy_evaluations
+
+    budget_state = consume_proxy_evaluations(search_state.budget_state, len(candidate_records))
+    pool_state = search_state.candidate_pool_state
+    for candidate in candidate_records:
+        pool_state = upsert_candidate(pool_state, candidate)
+    trace = service._make_trace(
+        search_state,
+        outcome_tag="candidate_proposed",
+        selected_candidate_id=candidate_records[0].candidate_id if candidate_records else None,
+        executed_action_chain=[],
+        world_model_queries=[],
+        simulation_decision=SimulationDecision(
+            decision="prioritize",
+            candidate_ids=[candidate.candidate_id for candidate in candidate_records],
+            reasons=["rl_baseline"],
+        ),
+        decision_rationale=["ranked sampled candidates with a lightweight policy-learning surrogate built from verified history"],
+        reward_or_progress_signal=max((candidate.priority_score for candidate in candidate_records), default=0.0),
+        trust_snapshot=candidate_records[0].predicted_uncertainty if candidate_records else None,
+    )
+    return service._refresh_search_state(
+        search_state,
+        pool_state=pool_state,
+        frontier_ids=[candidate.candidate_id for candidate in candidate_records],
+        budget_state=budget_state,
+        provenance_source="candidate_proposal",
+        traces=[trace],
+    )
+
+
 def _select_candidates_for_mode(service: PlanningService, search_state: SearchState, mode: str):
     if mode == "random_search_baseline":
         frontier_ids = set(search_state.frontier_state.frontier_candidate_ids)
@@ -745,6 +846,59 @@ def _select_candidates_for_mode(service: PlanningService, search_state: SearchSt
                 requested_fidelity="quick_truth" if queued else None,
             ),
             decision_rationale=["simulate each sampled random-search candidate without planner ranking"],
+            reward_or_progress_signal=max((candidate.priority_score for candidate in queued), default=0.0),
+            trust_snapshot=queued[0].predicted_uncertainty if queued else None,
+        )
+        updated_state = service._refresh_search_state(
+            search_state,
+            pool_state=pool_state,
+            frontier_ids=[candidate.candidate_id for candidate in frontier_candidates(pool_state)],
+            budget_state=budget_state,
+            provenance_source="candidate_evaluation",
+            traces=[trace],
+        ).model_copy(update={"pending_simulation_refs": [*search_state.pending_simulation_refs, *[candidate.candidate_id for candidate in queued]]})
+        return SimulationSelectionResponse(
+            search_state=updated_state,
+            selected_candidates=queued,
+            requested_fidelity_map={candidate.candidate_id: "quick_truth" for candidate in queued},
+            traces=[trace],
+        )
+    if mode == "rl_baseline":
+        frontier_ids = set(search_state.frontier_state.frontier_candidate_ids)
+        frontier = [
+            candidate
+            for candidate in search_state.candidate_pool_state.candidates
+            if candidate.candidate_id in frontier_ids and candidate.lifecycle_status in {"proposed", "frontier"}
+        ]
+        ranked = sorted(frontier, key=lambda item: item.priority_score, reverse=True)
+        selected = ranked[: min(service.planning_bundle.budget_controller.batch_size, remaining_simulations(search_state.budget_state))]
+        queued = [
+            append_decision_event(
+                candidate.model_copy(update={"lifecycle_state": "queued_for_simulation", "lifecycle_status": "queued_for_simulation"}),
+                "simulate",
+                "rl_baseline",
+            )
+            for candidate in selected
+        ]
+        pool_state = search_state.candidate_pool_state
+        for candidate in queued:
+            pool_state = upsert_candidate(pool_state, candidate)
+        from libs.planner.budget_controller import consume_simulations
+
+        budget_state = consume_simulations(search_state.budget_state, len(queued))
+        trace = service._make_trace(
+            search_state,
+            outcome_tag="simulation_selected",
+            selected_candidate_id=queued[0].candidate_id if queued else None,
+            executed_action_chain=[],
+            world_model_queries=[],
+            simulation_decision=SimulationDecision(
+                decision="simulate" if queued else "defer",
+                candidate_ids=[candidate.candidate_id for candidate in queued],
+                reasons=["rl_baseline"],
+                requested_fidelity="quick_truth" if queued else None,
+            ),
+            decision_rationale=["selected the top policy-ranked RL baseline candidates for real simulation"],
             reward_or_progress_signal=max((candidate.priority_score for candidate in queued), default=0.0),
             trust_snapshot=queued[0].predicted_uncertainty if queued else None,
         )
@@ -988,7 +1142,12 @@ def run_experiment(
         }
     )
     service = PlanningService(planning_bundle, task, world_model_bundle)
-    if component_config.use_random_search_baseline or component_config.use_bayesopt_baseline or component_config.use_cmaes_baseline:
+    if (
+        component_config.use_random_search_baseline
+        or component_config.use_bayesopt_baseline
+        or component_config.use_cmaes_baseline
+        or component_config.use_rl_baseline
+    ):
         search_state = _initialize_random_search_state(service, mode, run_index)
     elif _uses_baseline_predictions(component_config):
         search_state = _initialize_baseline_state(service, mode, run_index)
@@ -1005,6 +1164,7 @@ def run_experiment(
     prediction_gap_by_step: list[dict[str, float]] = []
     bayesopt_observations = []
     cmaes_observations = []
+    rl_observations = []
 
     for step_index in range(steps):
         if component_config.use_random_search_baseline:
@@ -1013,6 +1173,8 @@ def run_experiment(
             search_state = _propose_bayesopt_candidates(service, search_state, bayesopt_observations, run_index, step_index)
         elif component_config.use_cmaes_baseline:
             search_state = _propose_cmaes_candidates(service, search_state, cmaes_observations, run_index, step_index)
+        elif component_config.use_rl_baseline:
+            search_state = _propose_rl_candidates(service, search_state, rl_observations, run_index, step_index)
         elif _uses_baseline_predictions(component_config):
             search_state = _propose_baseline_candidates(service, search_state, mode, run_index)
         else:
@@ -1053,6 +1215,8 @@ def run_experiment(
                 bayesopt_observations.append(build_bayesopt_observation(service.task, execution))
             if component_config.use_cmaes_baseline:
                 cmaes_observations.append(build_cmaes_observation(service.task, execution))
+            if component_config.use_rl_baseline:
+                rl_observations.append(build_rl_observation(service.task, execution))
             feedback = service.ingest_simulation_feedback(
                 search_state,
                 candidate.candidate_id,

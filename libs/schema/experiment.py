@@ -14,6 +14,7 @@ ExperimentMode = Literal[
     "random_search_baseline",
     "bayesopt_baseline",
     "cmaes_baseline",
+    "rl_baseline",
     "no_world_model_baseline",
     "full_system",
     "no_world_model",
@@ -26,6 +27,7 @@ EXPERIMENT_MODES = (
     "random_search_baseline",
     "bayesopt_baseline",
     "cmaes_baseline",
+    "rl_baseline",
     "no_world_model_baseline",
     "full_system",
     "no_world_model",
@@ -47,6 +49,7 @@ class MethodComponentConfig(BaseModel):
     use_random_search_baseline: bool = False
     use_bayesopt_baseline: bool = False
     use_cmaes_baseline: bool = False
+    use_rl_baseline: bool = False
 
 
 class ExperimentBudget(BaseModel):
