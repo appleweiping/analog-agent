@@ -10,11 +10,14 @@ from libs.schema.paper_evidence import FigureSpec, TableSpec
 
 MEMORY_ABLATION_MODES = (
     "no_memory",
+    "episodic_retrieval_only",
+    "episodic_plus_reflection",
     "full_memory",
 )
 MEMORY_TRANSFER_MODES = (
     "no_memory",
     "governed_transfer",
+    "no_governance",
     "forced_transfer",
 )
 
@@ -25,12 +28,14 @@ class MemoryEpisodeStatsRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     episode_index: int
-    mode: Literal["no_memory", "full_memory"]
+    mode: Literal["no_memory", "episodic_retrieval_only", "episodic_plus_reflection", "full_memory"]
     task_id: str
     family: str
     memory_episode_count_before: int = 0
     retrieved_episode_count: int = 0
     advice_count: int = 0
+    advice_consumed_count: int = 0
+    governance_block_count: int = 0
     retrieval_precision_proxy: float = 0.0
     negative_transfer_risk: float = 0.0
     warm_start_applied: bool = False
@@ -56,19 +61,25 @@ class MemoryModeSummary(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mode: Literal["no_memory", "full_memory"]
+    mode: Literal["no_memory", "episodic_retrieval_only", "episodic_plus_reflection", "full_memory"]
     episode_count: int
     feasible_hit_rate: float
     average_real_simulation_calls: float
     average_step_to_first_feasible: float
     average_repeated_failure_count: float
     warm_start_application_rate: float
+    average_advice_count: float
+    average_advice_consumed_count: float
+    advice_consumption_rate: float
+    governance_block_rate: float
     average_retrieval_precision: float
     average_negative_transfer_risk: float
 
     @field_validator(
         "feasible_hit_rate",
         "warm_start_application_rate",
+        "advice_consumption_rate",
+        "governance_block_rate",
         "average_retrieval_precision",
         "average_negative_transfer_risk",
     )
@@ -88,6 +99,8 @@ class MemoryAblationSummary(BaseModel):
     memory_reduces_step_to_first_feasible: bool
     memory_reduces_repeated_failures: bool
     memory_uses_retrieval_in_practice: bool
+    reflection_improves_over_retrieval_only: bool
+    governance_preserves_memory_quality: bool
     notes: list[str] = Field(default_factory=list)
 
 
@@ -97,7 +110,7 @@ class MemoryAblationSuiteResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_id: str
-    modes: list[Literal["no_memory", "full_memory"]] = Field(default_factory=list)
+    modes: list[Literal["no_memory", "episodic_retrieval_only", "episodic_plus_reflection", "full_memory"]] = Field(default_factory=list)
     episode_records: list[MemoryEpisodeStatsRecord] = Field(default_factory=list)
     mode_summaries: list[MemoryModeSummary] = Field(default_factory=list)
     summary: MemoryAblationSummary
@@ -109,7 +122,7 @@ class MemoryAblationEvidenceBundle(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_id: str
-    modes: list[Literal["no_memory", "full_memory"]] = Field(default_factory=list)
+    modes: list[Literal["no_memory", "episodic_retrieval_only", "episodic_plus_reflection", "full_memory"]] = Field(default_factory=list)
     figures: list[FigureSpec] = Field(default_factory=list)
     tables: list[TableSpec] = Field(default_factory=list)
     summary: MemoryAblationSummary
@@ -125,9 +138,12 @@ class MemoryTransferStatsRecord(BaseModel):
     target_task_slug: str
     transfer_kind: Literal["same_family", "cross_family"]
     episode_index: int
-    mode: Literal["no_memory", "governed_transfer", "forced_transfer"]
+    mode: Literal["no_memory", "governed_transfer", "no_governance", "forced_transfer"]
     source_episode_count: int = 0
     retrieved_episode_count: int = 0
+    advice_count: int = 0
+    advice_consumed_count: int = 0
+    governance_block_count: int = 0
     retrieval_precision_proxy: float = 0.0
     negative_transfer_risk: float = 0.0
     warm_start_applied: bool = False
@@ -151,13 +167,17 @@ class MemoryTransferModeSummary(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mode: Literal["no_memory", "governed_transfer", "forced_transfer"]
+    mode: Literal["no_memory", "governed_transfer", "no_governance", "forced_transfer"]
     episode_count: int
     feasible_hit_rate: float
     average_real_simulation_calls: float
     average_step_to_first_feasible: float
     average_repeated_failure_count: float
     warm_start_application_rate: float
+    average_advice_count: float
+    average_advice_consumed_count: float
+    advice_consumption_rate: float
+    governance_block_rate: float
     average_retrieval_precision: float
     average_negative_transfer_risk: float
     harmful_transfer_rate: float
@@ -165,6 +185,8 @@ class MemoryTransferModeSummary(BaseModel):
     @field_validator(
         "feasible_hit_rate",
         "warm_start_application_rate",
+        "advice_consumption_rate",
+        "governance_block_rate",
         "average_retrieval_precision",
         "average_negative_transfer_risk",
         "harmful_transfer_rate",
@@ -183,6 +205,7 @@ class MemoryTransferSummary(BaseModel):
 
     governed_transfer_beneficial: bool
     governance_blocks_harmful_transfer: bool
+    no_governance_exposes_harmful_transfer: bool
     forced_transfer_exposes_negative_transfer: bool
     notes: list[str] = Field(default_factory=list)
 
@@ -195,7 +218,7 @@ class MemoryTransferSuiteResult(BaseModel):
     source_task_slug: str
     target_task_slug: str
     transfer_kind: Literal["same_family", "cross_family"]
-    modes: list[Literal["no_memory", "governed_transfer", "forced_transfer"]] = Field(default_factory=list)
+    modes: list[Literal["no_memory", "governed_transfer", "no_governance", "forced_transfer"]] = Field(default_factory=list)
     transfer_records: list[MemoryTransferStatsRecord] = Field(default_factory=list)
     mode_summaries: list[MemoryTransferModeSummary] = Field(default_factory=list)
     summary: MemoryTransferSummary
@@ -209,7 +232,7 @@ class MemoryTransferEvidenceBundle(BaseModel):
     source_task_slug: str
     target_task_slug: str
     transfer_kind: Literal["same_family", "cross_family"]
-    modes: list[Literal["no_memory", "governed_transfer", "forced_transfer"]] = Field(default_factory=list)
+    modes: list[Literal["no_memory", "governed_transfer", "no_governance", "forced_transfer"]] = Field(default_factory=list)
     figures: list[FigureSpec] = Field(default_factory=list)
     tables: list[TableSpec] = Field(default_factory=list)
     summary: MemoryTransferSummary
@@ -222,8 +245,10 @@ class MemoryChapterSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     repeated_episode_beneficial: bool
+    repeated_episode_generalizes_beyond_ota: bool
     same_family_transfer_beneficial: bool
     governance_blocks_cross_family_negative_transfer: bool
+    no_governance_exposes_negative_transfer: bool
     forced_transfer_exposes_negative_transfer: bool
     notes: list[str] = Field(default_factory=list)
 
@@ -234,10 +259,65 @@ class MemoryChapterEvidenceBundle(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     chapter_id: str
-    repeated_episode_task: str
+    repeated_episode_tasks: list[str] = Field(default_factory=list)
     same_family_pairs: list[str] = Field(default_factory=list)
     cross_family_pairs: list[str] = Field(default_factory=list)
     figures: list[FigureSpec] = Field(default_factory=list)
     tables: list[TableSpec] = Field(default_factory=list)
     summary: MemoryChapterSummary
     json_output_path: str
+
+
+class MemoryNegativeTransferCaseStudy(BaseModel):
+    """Structured case study for a governed vs harmful cross-family transfer pair."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    case_study_id: str
+    source_task_slug: str
+    target_task_slug: str
+    selected_as_primary_case: bool = False
+    governed_harmful_transfer_rate: float
+    no_governance_harmful_transfer_rate: float
+    forced_harmful_transfer_rate: float
+    governed_avg_sim_calls: float
+    no_governance_avg_sim_calls: float
+    forced_avg_sim_calls: float
+    governance_block_rate: float
+    average_negative_transfer_risk: float
+    narrative_summary: str
+    markdown_output_path: str
+    json_output_path: str
+
+    @field_validator(
+        "governed_harmful_transfer_rate",
+        "no_governance_harmful_transfer_rate",
+        "forced_harmful_transfer_rate",
+        "governance_block_rate",
+        "average_negative_transfer_risk",
+    )
+    @classmethod
+    def validate_case_rate(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("case-study rates must be within [0, 1]")
+        return round(float(value), 6)
+
+
+class MemoryPaperLayoutBundle(BaseModel):
+    """Submission-facing memory chapter package with main/appendix organization."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    layout_id: str
+    profile_name: str
+    repeated_episode_tasks: list[str] = Field(default_factory=list)
+    same_family_pairs: list[str] = Field(default_factory=list)
+    cross_family_pairs: list[str] = Field(default_factory=list)
+    main_figures: list[str] = Field(default_factory=list)
+    appendix_figures: list[str] = Field(default_factory=list)
+    main_tables: list[str] = Field(default_factory=list)
+    appendix_tables: list[str] = Field(default_factory=list)
+    case_studies: list[str] = Field(default_factory=list)
+    summary_notes: list[str] = Field(default_factory=list)
+    json_output_path: str
+    markdown_output_path: str

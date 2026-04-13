@@ -6,9 +6,14 @@ import json
 from pathlib import Path
 
 from apps.orchestrator.job_runner import run_full_system_acceptance
+from libs.eval.memory_evidence import (
+    build_memory_ablation_evidence_bundle,
+    run_repeated_episode_memory_ablation,
+)
 from libs.eval.experiment_runner import run_experiment_suite
 from libs.eval.stats import export_stats_csv, export_stats_json
 from libs.schema.experiment import ExperimentBudget, ExperimentSuiteResult
+from libs.schema.memory_evidence import MemoryAblationEvidenceBundle, MemoryAblationSuiteResult
 from libs.schema.paper_evidence import PlannerAblationEvidenceBundle, WorldModelEvidenceBundle
 from libs.schema.system_binding import AcceptanceTaskConfig, SystemAcceptanceResult
 from libs.vertical_slices.bandgap_spec import (
@@ -146,4 +151,49 @@ def run_bandgap_planner_evidence(
         backend_preference=backend_preference or config.defaults.backend_preference,
         fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,
         output_root=output_root,
+    )
+
+
+def run_bandgap_memory_ablation_suite(
+    *,
+    episodes: int = 5,
+    max_steps: int = 3,
+    backend_preference: str | None = None,
+    fidelity_level: str | None = None,
+) -> MemoryAblationSuiteResult:
+    """Run repeated-episode memory ablation on the frozen bandgap v1 path."""
+
+    config = load_bandgap_v1_config()
+    return run_repeated_episode_memory_ablation(
+        task_slug="bandgap-v1",
+        task_builder=build_bandgap_v1_design_task,
+        episodes=episodes,
+        max_steps=max_steps,
+        fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,
+        backend_preference=backend_preference or config.defaults.backend_preference,
+    )
+
+
+def run_bandgap_memory_evidence(
+    *,
+    episodes: int = 5,
+    max_steps: int = 3,
+    backend_preference: str | None = None,
+    fidelity_level: str | None = None,
+    output_root: str | Path = "research/papers/bandgap_v1",
+) -> MemoryAblationEvidenceBundle:
+    """Generate repeated-episode memory evidence bundle for bandgap_v1."""
+
+    suite = run_bandgap_memory_ablation_suite(
+        episodes=episodes,
+        max_steps=max_steps,
+        backend_preference=backend_preference,
+        fidelity_level=fidelity_level,
+    )
+    root = Path(output_root)
+    return build_memory_ablation_evidence_bundle(
+        suite,
+        figures_dir=root / "memory_figs",
+        tables_dir=root / "memory_tables",
+        json_output_path=root / "memory_evidence_bundle.json",
     )

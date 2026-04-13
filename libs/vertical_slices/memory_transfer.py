@@ -103,6 +103,50 @@ def run_ota_to_bandgap_memory_transfer_suite(
     )
 
 
+def run_folded_cascode_to_ldo_memory_transfer_suite(
+    *,
+    source_episodes: int = 3,
+    target_episodes: int = 3,
+    max_steps: int = 3,
+    fidelity_level: str = "focused_truth",
+    backend_preference: str = "ngspice",
+) -> MemoryTransferSuiteResult:
+    return run_cross_task_memory_transfer_suite(
+        source_task_slug="folded_cascode-v1",
+        source_task_builder=build_folded_cascode_v1_design_task,
+        target_task_slug="ldo-v1",
+        target_task_builder=build_ldo_v1_design_task,
+        transfer_kind="cross_family",
+        source_episodes=source_episodes,
+        target_episodes=target_episodes,
+        max_steps=max_steps,
+        fidelity_level=fidelity_level,
+        backend_preference=backend_preference,
+    )
+
+
+def run_folded_cascode_to_bandgap_memory_transfer_suite(
+    *,
+    source_episodes: int = 3,
+    target_episodes: int = 3,
+    max_steps: int = 3,
+    fidelity_level: str = "focused_truth",
+    backend_preference: str = "ngspice",
+) -> MemoryTransferSuiteResult:
+    return run_cross_task_memory_transfer_suite(
+        source_task_slug="folded_cascode-v1",
+        source_task_builder=build_folded_cascode_v1_design_task,
+        target_task_slug="bandgap-v1",
+        target_task_builder=build_bandgap_v1_design_task,
+        transfer_kind="cross_family",
+        source_episodes=source_episodes,
+        target_episodes=target_episodes,
+        max_steps=max_steps,
+        fidelity_level=fidelity_level,
+        backend_preference=backend_preference,
+    )
+
+
 def run_memory_transfer_evidence(
     *,
     source_task_slug: str,

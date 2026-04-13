@@ -2,11 +2,13 @@
   "chapter_id": "memory_chapter_v1",
   "cross_family_pairs": [
     "ota2-v1->ldo-v1",
-    "ota2-v1->bandgap-v1"
+    "ota2-v1->bandgap-v1",
+    "folded_cascode-v1->ldo-v1",
+    "folded_cascode-v1->bandgap-v1"
   ],
   "figures": [
     {
-      "caption": "Repeated-episode memory benefit on OTA v1.",
+      "caption": "Repeated-episode memory benefit across runnable vertical slices.",
       "chart_type": "bar",
       "figure_id": "fig_memory_chapter_repeated_episode_calls",
       "output_path": "research\\papers\\memory_chapter\\figs\\memory_chapter_repeated_episode_calls.svg",
@@ -15,26 +17,145 @@
           "color": "#d62728",
           "label": "no_memory",
           "x_values": [
-            0.0
+            0.0,
+            1.0,
+            2.0,
+            3.0
           ],
           "y_values": [
-            2.0
+            3.0,
+            3.0,
+            3.0,
+            1.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.25,
+            1.25,
+            2.25,
+            3.25
+          ],
+          "y_values": [
+            2.1,
+            2.1,
+            2.1,
+            1.0
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.5,
+            1.5,
+            2.5,
+            3.5
+          ],
+          "y_values": [
+            2.1,
+            2.1,
+            2.1,
+            1.0
           ]
         },
         {
           "color": "#1f77b4",
           "label": "full_memory",
           "x_values": [
-            1.0
+            0.75,
+            1.75,
+            2.75,
+            3.75
           ],
           "y_values": [
-            1.333333
+            2.1,
+            2.1,
+            2.1,
+            1.0
           ]
         }
       ],
       "title": "Memory Chapter: Repeated-Episode Real Simulation Calls",
-      "x_label": "Mode",
+      "x_label": "Task",
       "y_label": "Average Real Simulation Calls"
+    },
+    {
+      "caption": "Repeated failure suppression across repeated episodes and tasks.",
+      "chart_type": "bar",
+      "figure_id": "fig_memory_chapter_repeated_episode_failures",
+      "output_path": "research\\papers\\memory_chapter\\figs\\memory_chapter_repeated_episode_failures.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0
+          ],
+          "y_values": [
+            2.9,
+            2.9,
+            2.9,
+            0.9
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.25,
+            1.25,
+            2.25,
+            3.25
+          ],
+          "y_values": [
+            2.0,
+            2.0,
+            2.0,
+            0.9
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.5,
+            1.5,
+            2.5,
+            3.5
+          ],
+          "y_values": [
+            2.0,
+            2.0,
+            2.0,
+            0.9
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            0.75,
+            1.75,
+            2.75,
+            3.75
+          ],
+          "y_values": [
+            1.9,
+            1.7,
+            2.0,
+            0.9
+          ]
+        }
+      ],
+      "title": "Memory Chapter: Repeated Failure Suppression",
+      "x_label": "Task",
+      "y_label": "Average Repeated Failure Count"
     },
     {
       "caption": "Governed same-family transfer compared with no-memory execution.",
@@ -49,7 +170,7 @@
             0.0
           ],
           "y_values": [
-            1.0
+            2.0
           ]
         },
         {
@@ -59,7 +180,7 @@
             1.0
           ],
           "y_values": [
-            1.0
+            2.0
           ]
         },
         {
@@ -69,7 +190,7 @@
             0.35
           ],
           "y_values": [
-            2.0
+            3.0
           ]
         },
         {
@@ -79,7 +200,7 @@
             1.35
           ],
           "y_values": [
-            2.0
+            3.0
           ]
         }
       ],
@@ -114,10 +235,70 @@
           ]
         },
         {
+          "color": "#1f77b4",
+          "label": "ldo-v1",
+          "x_values": [
+            2.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "bandgap-v1",
+          "x_values": [
+            3.0
+          ],
+          "y_values": [
+            0.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "ldo-v1 (no_governance)",
+          "x_values": [
+            0.25
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "bandgap-v1 (no_governance)",
+          "x_values": [
+            1.25
+          ],
+          "y_values": [
+            0.75
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "ldo-v1 (no_governance)",
+          "x_values": [
+            2.25
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "bandgap-v1 (no_governance)",
+          "x_values": [
+            3.25
+          ],
+          "y_values": [
+            0.5
+          ]
+        },
+        {
           "color": "#9467bd",
           "label": "ldo-v1 (forced)",
           "x_values": [
-            0.35
+            0.5
           ],
           "y_values": [
             1.0
@@ -127,7 +308,27 @@
           "color": "#9467bd",
           "label": "bandgap-v1 (forced)",
           "x_values": [
-            1.35
+            1.5
+          ],
+          "y_values": [
+            0.75
+          ]
+        },
+        {
+          "color": "#9467bd",
+          "label": "ldo-v1 (forced)",
+          "x_values": [
+            2.5
+          ],
+          "y_values": [
+            1.0
+          ]
+        },
+        {
+          "color": "#9467bd",
+          "label": "bandgap-v1 (forced)",
+          "x_values": [
+            3.5
           ],
           "y_values": [
             0.5
@@ -140,7 +341,12 @@
     }
   ],
   "json_output_path": "research\\papers\\memory_chapter\\memory_chapter_evidence_bundle.json",
-  "repeated_episode_task": "benchmark-ota2-v1-memory-ablation",
+  "repeated_episode_tasks": [
+    "benchmark-ota2-v1-memory-ablation",
+    "benchmark-folded_cascode-v1-memory-ablation",
+    "benchmark-ldo-v1-memory-ablation",
+    "benchmark-bandgap-v1-memory-ablation"
+  ],
   "same_family_pairs": [
     "ota2-v1->folded_cascode-v1",
     "folded_cascode-v1->ota2-v1"
@@ -148,12 +354,14 @@
   "summary": {
     "forced_transfer_exposes_negative_transfer": true,
     "governance_blocks_cross_family_negative_transfer": true,
+    "no_governance_exposes_negative_transfer": true,
     "notes": [
       "same_family_pairs=ota2-v1->folded_cascode-v1,folded_cascode-v1->ota2-v1",
-      "cross_family_pairs=ota2-v1->ldo-v1,ota2-v1->bandgap-v1",
-      "repeated_task=benchmark-ota2-v1-memory-ablation"
+      "cross_family_pairs=ota2-v1->ldo-v1,ota2-v1->bandgap-v1,folded_cascode-v1->ldo-v1,folded_cascode-v1->bandgap-v1",
+      "repeated_tasks=benchmark-ota2-v1-memory-ablation,benchmark-folded_cascode-v1-memory-ablation,benchmark-ldo-v1-memory-ablation,benchmark-bandgap-v1-memory-ablation"
     ],
     "repeated_episode_beneficial": true,
+    "repeated_episode_generalizes_beyond_ota": true,
     "same_family_transfer_beneficial": true
   },
   "tables": [
@@ -179,6 +387,10 @@
         {
           "key": "warm_start_rate",
           "label": "Warm-Start Rate"
+        },
+        {
+          "key": "advice_consumption_rate",
+          "label": "Advice Consumption Rate"
         }
       ],
       "csv_output_path": "research\\papers\\memory_chapter\\tables\\memory_chapter_repeated_episode.csv",
@@ -186,8 +398,9 @@
       "rows": [
         {
           "values": {
-            "avg_repeated_failures": 1.666667,
-            "avg_sim_calls": 2.0,
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 2.9,
+            "avg_sim_calls": 3.0,
             "mode": "no_memory",
             "task": "benchmark-ota2-v1-memory-ablation",
             "warm_start_rate": 0.0
@@ -195,11 +408,152 @@
         },
         {
           "values": {
-            "avg_repeated_failures": 1.0,
-            "avg_sim_calls": 1.333333,
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 2.0,
+            "avg_sim_calls": 2.1,
+            "mode": "episodic_retrieval_only",
+            "task": "benchmark-ota2-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.045966,
+            "avg_repeated_failures": 2.0,
+            "avg_sim_calls": 2.1,
+            "mode": "episodic_plus_reflection",
+            "task": "benchmark-ota2-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.091931,
+            "avg_repeated_failures": 1.9,
+            "avg_sim_calls": 2.1,
             "mode": "full_memory",
             "task": "benchmark-ota2-v1-memory-ablation",
-            "warm_start_rate": 0.666667
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 2.9,
+            "avg_sim_calls": 3.0,
+            "mode": "no_memory",
+            "task": "benchmark-folded_cascode-v1-memory-ablation",
+            "warm_start_rate": 0.0
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 2.0,
+            "avg_sim_calls": 2.1,
+            "mode": "episodic_retrieval_only",
+            "task": "benchmark-folded_cascode-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.045966,
+            "avg_repeated_failures": 2.0,
+            "avg_sim_calls": 2.1,
+            "mode": "episodic_plus_reflection",
+            "task": "benchmark-folded_cascode-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.091931,
+            "avg_repeated_failures": 1.7,
+            "avg_sim_calls": 2.1,
+            "mode": "full_memory",
+            "task": "benchmark-folded_cascode-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 2.9,
+            "avg_sim_calls": 3.0,
+            "mode": "no_memory",
+            "task": "benchmark-ldo-v1-memory-ablation",
+            "warm_start_rate": 0.0
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 2.0,
+            "avg_sim_calls": 2.1,
+            "mode": "episodic_retrieval_only",
+            "task": "benchmark-ldo-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.062632,
+            "avg_repeated_failures": 2.0,
+            "avg_sim_calls": 2.1,
+            "mode": "episodic_plus_reflection",
+            "task": "benchmark-ldo-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.125265,
+            "avg_repeated_failures": 2.0,
+            "avg_sim_calls": 2.1,
+            "mode": "full_memory",
+            "task": "benchmark-ldo-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 0.9,
+            "avg_sim_calls": 1.0,
+            "mode": "no_memory",
+            "task": "benchmark-bandgap-v1-memory-ablation",
+            "warm_start_rate": 0.0
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.0,
+            "avg_repeated_failures": 0.9,
+            "avg_sim_calls": 1.0,
+            "mode": "episodic_retrieval_only",
+            "task": "benchmark-bandgap-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.062632,
+            "avg_repeated_failures": 0.9,
+            "avg_sim_calls": 1.0,
+            "mode": "episodic_plus_reflection",
+            "task": "benchmark-bandgap-v1-memory-ablation",
+            "warm_start_rate": 0.9
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.125265,
+            "avg_repeated_failures": 0.9,
+            "avg_sim_calls": 1.0,
+            "mode": "full_memory",
+            "task": "benchmark-bandgap-v1-memory-ablation",
+            "warm_start_rate": 0.9
           }
         }
       ],
@@ -222,6 +576,10 @@
           "label": "Governed Avg Sim Calls"
         },
         {
+          "key": "no_governance_harmful_rate",
+          "label": "No-Governance Harmful Rate"
+        },
+        {
           "key": "forced_harmful_rate",
           "label": "Forced Harmful Rate"
         },
@@ -242,7 +600,8 @@
             "beneficial": true,
             "forced_harmful_rate": 1.0,
             "governance_blocks_harm": true,
-            "governed_avg_sim_calls": 1.0,
+            "governed_avg_sim_calls": 2.0,
+            "no_governance_harmful_rate": 1.0,
             "pair": "ota2-v1->folded_cascode-v1",
             "transfer_kind": "same_family"
           }
@@ -252,7 +611,8 @@
             "beneficial": true,
             "forced_harmful_rate": 1.0,
             "governance_blocks_harm": true,
-            "governed_avg_sim_calls": 1.0,
+            "governed_avg_sim_calls": 2.0,
+            "no_governance_harmful_rate": 1.0,
             "pair": "folded_cascode-v1->ota2-v1",
             "transfer_kind": "same_family"
           }
@@ -262,8 +622,31 @@
             "beneficial": false,
             "forced_harmful_rate": 1.0,
             "governance_blocks_harm": true,
-            "governed_avg_sim_calls": 2.0,
+            "governed_avg_sim_calls": 3.0,
+            "no_governance_harmful_rate": 1.0,
             "pair": "ota2-v1->ldo-v1",
+            "transfer_kind": "cross_family"
+          }
+        },
+        {
+          "values": {
+            "beneficial": false,
+            "forced_harmful_rate": 0.75,
+            "governance_blocks_harm": true,
+            "governed_avg_sim_calls": 1.0,
+            "no_governance_harmful_rate": 0.75,
+            "pair": "ota2-v1->bandgap-v1",
+            "transfer_kind": "cross_family"
+          }
+        },
+        {
+          "values": {
+            "beneficial": false,
+            "forced_harmful_rate": 1.0,
+            "governance_blocks_harm": true,
+            "governed_avg_sim_calls": 3.0,
+            "no_governance_harmful_rate": 1.0,
+            "pair": "folded_cascode-v1->ldo-v1",
             "transfer_kind": "cross_family"
           }
         },
@@ -273,7 +656,8 @@
             "forced_harmful_rate": 0.5,
             "governance_blocks_harm": true,
             "governed_avg_sim_calls": 1.0,
-            "pair": "ota2-v1->bandgap-v1",
+            "no_governance_harmful_rate": 0.5,
+            "pair": "folded_cascode-v1->bandgap-v1",
             "transfer_kind": "cross_family"
           }
         }

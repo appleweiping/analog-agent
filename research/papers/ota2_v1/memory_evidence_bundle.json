@@ -21,6 +21,34 @@
           ]
         },
         {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            2.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            2.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
           "color": "#1f77b4",
           "label": "full_memory",
           "x_values": [
@@ -48,6 +76,34 @@
         {
           "color": "#d62728",
           "label": "no_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
           "x_values": [
             0.0,
             1.0,
@@ -99,8 +155,8 @@
           ]
         },
         {
-          "color": "#1f77b4",
-          "label": "full_memory",
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
           "x_values": [
             0.0,
             1.0,
@@ -111,11 +167,106 @@
             1.0,
             1.0
           ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            1.0,
+            0.0,
+            1.0
+          ]
         }
       ],
       "title": "Repeated-Episode Memory Ablation: Repeated Failure Count",
       "x_label": "Episode Index",
       "y_label": "Repeated Failure Count"
+    },
+    {
+      "caption": "How much memory advice is actually consumed by downstream decision making.",
+      "chart_type": "line",
+      "figure_id": "fig_memory_advice_consumption_vs_episode",
+      "output_path": "research\\papers\\ota2_v1\\memory_figs\\memory_advice_consumption_vs_episode.svg",
+      "series": [
+        {
+          "color": "#d62728",
+          "label": "no_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "color": "#1f77b4",
+          "label": "full_memory",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.0,
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "title": "Repeated-Episode Memory Ablation: Advice Consumption",
+      "x_label": "Episode Index",
+      "y_label": "Advice Consumed Count"
     },
     {
       "caption": "Mode-level comparison on average real simulation calls.",
@@ -134,10 +285,30 @@
           ]
         },
         {
+          "color": "#ff7f0e",
+          "label": "episodic_retrieval_only",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            1.333333
+          ]
+        },
+        {
+          "color": "#2ca02c",
+          "label": "episodic_plus_reflection",
+          "x_values": [
+            2.0
+          ],
+          "y_values": [
+            1.333333
+          ]
+        },
+        {
           "color": "#1f77b4",
           "label": "full_memory",
           "x_values": [
-            1.0
+            3.0
           ],
           "y_values": [
             1.333333
@@ -152,9 +323,12 @@
   "json_output_path": "research\\papers\\ota2_v1\\memory_evidence_bundle.json",
   "modes": [
     "no_memory",
+    "episodic_retrieval_only",
+    "episodic_plus_reflection",
     "full_memory"
   ],
   "summary": {
+    "governance_preserves_memory_quality": true,
     "memory_reduces_repeated_failures": true,
     "memory_reduces_simulation_calls": true,
     "memory_reduces_step_to_first_feasible": false,
@@ -163,7 +337,8 @@
       "episodes=3",
       "task_slug=ota2-v1",
       "full_memory_warm_start_rate=0.667"
-    ]
+    ],
+    "reflection_improves_over_retrieval_only": true
   },
   "tables": [
     {
@@ -194,6 +369,22 @@
           "label": "Warm-Start Rate"
         },
         {
+          "key": "average_advice_count",
+          "label": "Avg Advice Count"
+        },
+        {
+          "key": "average_advice_consumed_count",
+          "label": "Avg Advice Consumed"
+        },
+        {
+          "key": "advice_consumption_rate",
+          "label": "Advice Consumption Rate"
+        },
+        {
+          "key": "governance_block_rate",
+          "label": "Governance Block Rate"
+        },
+        {
           "key": "average_retrieval_precision",
           "label": "Retrieval Precision"
         },
@@ -207,24 +398,64 @@
       "rows": [
         {
           "values": {
+            "advice_consumption_rate": 0.0,
+            "average_advice_consumed_count": 0.0,
+            "average_advice_count": 0.0,
             "average_negative_transfer_risk": 0.0,
             "average_real_simulation_calls": 2.0,
             "average_repeated_failure_count": 1.666667,
             "average_retrieval_precision": 0.0,
             "average_step_to_first_feasible": 0.0,
             "feasible_hit_rate": 1.0,
+            "governance_block_rate": 0.0,
             "mode": "no_memory",
             "warm_start_application_rate": 0.0
           }
         },
         {
           "values": {
+            "advice_consumption_rate": 0.0,
+            "average_advice_consumed_count": 0.0,
+            "average_advice_count": 9.0,
             "average_negative_transfer_risk": 0.066667,
             "average_real_simulation_calls": 1.333333,
             "average_repeated_failure_count": 1.0,
             "average_retrieval_precision": 0.6,
             "average_step_to_first_feasible": 0.0,
             "feasible_hit_rate": 1.0,
+            "governance_block_rate": 0.0,
+            "mode": "episodic_retrieval_only",
+            "warm_start_application_rate": 0.666667
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.071429,
+            "average_advice_consumed_count": 0.666667,
+            "average_advice_count": 9.0,
+            "average_negative_transfer_risk": 0.066667,
+            "average_real_simulation_calls": 1.333333,
+            "average_repeated_failure_count": 1.0,
+            "average_retrieval_precision": 0.6,
+            "average_step_to_first_feasible": 0.0,
+            "feasible_hit_rate": 1.0,
+            "governance_block_rate": 0.0,
+            "mode": "episodic_plus_reflection",
+            "warm_start_application_rate": 0.666667
+          }
+        },
+        {
+          "values": {
+            "advice_consumption_rate": 0.142857,
+            "average_advice_consumed_count": 1.333333,
+            "average_advice_count": 9.0,
+            "average_negative_transfer_risk": 0.066667,
+            "average_real_simulation_calls": 1.333333,
+            "average_repeated_failure_count": 0.666667,
+            "average_retrieval_precision": 0.6,
+            "average_step_to_first_feasible": 0.0,
+            "feasible_hit_rate": 1.0,
+            "governance_block_rate": 0.0,
             "mode": "full_memory",
             "warm_start_application_rate": 0.666667
           }
@@ -247,6 +478,18 @@
         {
           "key": "warm_start_applied",
           "label": "Warm Start"
+        },
+        {
+          "key": "advice_count",
+          "label": "Advice Count"
+        },
+        {
+          "key": "advice_consumed_count",
+          "label": "Advice Consumed"
+        },
+        {
+          "key": "governance_block_count",
+          "label": "Governance Blocks"
         },
         {
           "key": "real_simulation_calls",
@@ -274,7 +517,10 @@
       "rows": [
         {
           "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 0,
             "episode_index": 0,
+            "governance_block_count": 0,
             "mode": "no_memory",
             "real_simulation_calls": 2,
             "repeated_failure_count": 1,
@@ -286,7 +532,10 @@
         },
         {
           "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 0,
             "episode_index": 1,
+            "governance_block_count": 0,
             "mode": "no_memory",
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
@@ -298,7 +547,10 @@
         },
         {
           "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 0,
             "episode_index": 2,
+            "governance_block_count": 0,
             "mode": "no_memory",
             "real_simulation_calls": 2,
             "repeated_failure_count": 2,
@@ -310,8 +562,11 @@
         },
         {
           "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 0,
             "episode_index": 0,
-            "mode": "full_memory",
+            "governance_block_count": 0,
+            "mode": "episodic_retrieval_only",
             "real_simulation_calls": 2,
             "repeated_failure_count": 1,
             "retrieval_precision_proxy": 0.0,
@@ -322,8 +577,11 @@
         },
         {
           "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 6,
             "episode_index": 1,
-            "mode": "full_memory",
+            "governance_block_count": 0,
+            "mode": "episodic_retrieval_only",
             "real_simulation_calls": 1,
             "repeated_failure_count": 1,
             "retrieval_precision_proxy": 0.9,
@@ -334,13 +592,106 @@
         },
         {
           "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 21,
             "episode_index": 2,
-            "mode": "full_memory",
+            "governance_block_count": 0,
+            "mode": "episodic_retrieval_only",
             "real_simulation_calls": 1,
             "repeated_failure_count": 1,
             "retrieval_precision_proxy": 0.9,
             "retrieved_episode_count": 2,
             "step_to_first_feasible": 0,
+            "warm_start_applied": true
+          }
+        },
+        {
+          "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 0,
+            "episode_index": 0,
+            "governance_block_count": 0,
+            "mode": "episodic_plus_reflection",
+            "real_simulation_calls": 2,
+            "repeated_failure_count": 1,
+            "retrieval_precision_proxy": 0.0,
+            "retrieved_episode_count": 0,
+            "step_to_first_feasible": 0,
+            "warm_start_applied": false
+          }
+        },
+        {
+          "values": {
+            "advice_consumed_count": 1,
+            "advice_count": 6,
+            "episode_index": 1,
+            "governance_block_count": 0,
+            "mode": "episodic_plus_reflection",
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 1,
+            "retrieval_precision_proxy": 0.9,
+            "retrieved_episode_count": 1,
+            "step_to_first_feasible": 0,
+            "warm_start_applied": true
+          }
+        },
+        {
+          "values": {
+            "advice_consumed_count": 1,
+            "advice_count": 21,
+            "episode_index": 2,
+            "governance_block_count": 0,
+            "mode": "episodic_plus_reflection",
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 1,
+            "retrieval_precision_proxy": 0.9,
+            "retrieved_episode_count": 2,
+            "step_to_first_feasible": 0,
+            "warm_start_applied": true
+          }
+        },
+        {
+          "values": {
+            "advice_consumed_count": 0,
+            "advice_count": 0,
+            "episode_index": 0,
+            "governance_block_count": 0,
+            "mode": "full_memory",
+            "real_simulation_calls": 2,
+            "repeated_failure_count": 1,
+            "retrieval_precision_proxy": 0.0,
+            "retrieved_episode_count": 0,
+            "step_to_first_feasible": 0,
+            "warm_start_applied": false
+          }
+        },
+        {
+          "values": {
+            "advice_consumed_count": 2,
+            "advice_count": 6,
+            "episode_index": 1,
+            "governance_block_count": 0,
+            "mode": "full_memory",
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 0,
+            "retrieval_precision_proxy": 0.9,
+            "retrieved_episode_count": 1,
+            "step_to_first_feasible": "na",
+            "warm_start_applied": true
+          }
+        },
+        {
+          "values": {
+            "advice_consumed_count": 2,
+            "advice_count": 21,
+            "episode_index": 2,
+            "governance_block_count": 0,
+            "mode": "full_memory",
+            "real_simulation_calls": 1,
+            "repeated_failure_count": 1,
+            "retrieval_precision_proxy": 0.9,
+            "retrieved_episode_count": 2,
+            "step_to_first_feasible": "na",
             "warm_start_applied": true
           }
         }
