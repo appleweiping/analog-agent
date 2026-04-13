@@ -46,7 +46,7 @@ class ExperimentApiTests(unittest.TestCase):
             "/experiments/run-suite",
             json={
                 "design_task": task.model_dump(),
-                "modes": ["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "no_world_model_baseline", "full_system"],
+                "modes": ["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "no_world_model_baseline", "full_system"],
                 "budget": {"max_simulations": 6, "max_candidates_per_step": 3},
                 "steps": 3,
                 "repeat_runs": 1,
@@ -64,6 +64,7 @@ class ExperimentApiTests(unittest.TestCase):
         )
         self.assertIn("random_search_baseline", summaries)
         self.assertIn("bayesopt_baseline", summaries)
+        self.assertIn("cmaes_baseline", summaries)
         self.assertGreaterEqual(
             summaries["full_system"]["feasible_hit_rate"],
             1.0,

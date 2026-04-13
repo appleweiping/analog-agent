@@ -60,7 +60,7 @@ def run_ota_experiment_suite(
         if comparison_profile == "methodology":
             selected_modes = ["full_system", "no_world_model", "no_calibration", "no_fidelity_escalation"]
         else:
-            selected_modes = ["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "no_world_model_baseline", "full_system"]
+            selected_modes = ["full_simulation_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "no_world_model_baseline", "full_system"]
     suite = run_experiment_suite(
         build_ota2_v1_design_task(task_id=task_id),
         modes=selected_modes,
