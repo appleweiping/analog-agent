@@ -1,0 +1,484 @@
+{
+  "task_id": "task_c64e18f2f27f",
+  "modes": [
+    "full_simulation_baseline",
+    "full_system",
+    "no_calibration",
+    "no_fidelity_escalation",
+    "no_world_model",
+    "no_world_model_baseline"
+  ],
+  "figures": [
+    {
+      "figure_id": "fig_world_model_prediction_gap_vs_step",
+      "title": "Prediction Gap vs Step",
+      "chart_type": "line",
+      "x_label": "Optimization Step",
+      "y_label": "Average Absolute Prediction Gap",
+      "series": [
+        {
+          "label": "full_system",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            6752964.213609,
+            5801273.948802,
+            5219454.100454
+          ],
+          "color": "#1f77b4"
+        },
+        {
+          "label": "no_calibration",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            6752964.213609,
+            8052262.020005,
+            9404200.154591
+          ],
+          "color": "#d62728"
+        },
+        {
+          "label": "no_world_model",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            7158521.183361,
+            12988957.575028,
+            12287433.399025
+          ],
+          "color": "#2ca02c"
+        }
+      ],
+      "caption": "Average core-metric prediction gap across optimization steps. Lower is better.",
+      "output_path": "research\\papers\\figs\\world_model_prediction_gap_vs_step.svg"
+    },
+    {
+      "figure_id": "fig_world_model_simulation_calls",
+      "title": "Real Simulation Calls by Method Mode",
+      "chart_type": "bar",
+      "x_label": "Method Mode",
+      "y_label": "Average Real Simulation Calls",
+      "series": [
+        {
+          "label": "full_simulation_baseline",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            6.0
+          ],
+          "color": "#7f7f7f"
+        },
+        {
+          "label": "no_world_model_baseline",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            1.0
+          ],
+          "color": "#2ca02c"
+        },
+        {
+          "label": "full_system",
+          "x_values": [
+            2.0
+          ],
+          "y_values": [
+            1.0
+          ],
+          "color": "#1f77b4"
+        }
+      ],
+      "caption": "Average number of real SPICE verifications per run. Lower is better.",
+      "output_path": "research\\papers\\figs\\world_model_simulation_calls.svg"
+    },
+    {
+      "figure_id": "fig_world_model_feasible_hit_rate",
+      "title": "Feasible Hit Rate by Method Mode",
+      "chart_type": "bar",
+      "x_label": "Method Mode",
+      "y_label": "Feasible Hit Rate",
+      "series": [
+        {
+          "label": "full_simulation_baseline",
+          "x_values": [
+            0.0
+          ],
+          "y_values": [
+            1.0
+          ],
+          "color": "#7f7f7f"
+        },
+        {
+          "label": "no_world_model_baseline",
+          "x_values": [
+            1.0
+          ],
+          "y_values": [
+            1.0
+          ],
+          "color": "#2ca02c"
+        },
+        {
+          "label": "full_system",
+          "x_values": [
+            2.0
+          ],
+          "y_values": [
+            1.0
+          ],
+          "color": "#1f77b4"
+        }
+      ],
+      "caption": "Fraction of runs that find a feasible solution.",
+      "output_path": "research\\papers\\figs\\world_model_feasible_hit_rate.svg"
+    },
+    {
+      "figure_id": "fig_world_model_trust_guided_selection",
+      "title": "Selected Candidate Uncertainty vs Step",
+      "chart_type": "line",
+      "x_label": "Optimization Step",
+      "y_label": "Mean Selected Uncertainty",
+      "series": [
+        {
+          "label": "full_system",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.162,
+            0.162,
+            0.162
+          ],
+          "color": "#1f77b4"
+        },
+        {
+          "label": "no_world_model",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.49796,
+            0.49972,
+            0.4866
+          ],
+          "color": "#2ca02c"
+        },
+        {
+          "label": "no_fidelity_escalation",
+          "x_values": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "y_values": [
+            0.162,
+            0.162,
+            0.162
+          ],
+          "color": "#9467bd"
+        }
+      ],
+      "caption": "Selection-time uncertainty profile of candidates chosen for real simulation.",
+      "output_path": "research\\papers\\figs\\world_model_trust_guided_selection.svg"
+    }
+  ],
+  "tables": [
+    {
+      "table_id": "tbl_world_model_method_comparison",
+      "title": "World Model Utility Comparison",
+      "columns": [
+        {
+          "key": "mode",
+          "label": "Mode"
+        },
+        {
+          "key": "simulation_call_count",
+          "label": "Avg Sim Calls"
+        },
+        {
+          "key": "feasible_hit_rate",
+          "label": "Feasible Hit Rate"
+        },
+        {
+          "key": "average_convergence_step",
+          "label": "Avg Convergence Step"
+        },
+        {
+          "key": "focused_truth_ratio",
+          "label": "Focused Truth Ratio"
+        },
+        {
+          "key": "gbw_gap",
+          "label": "GBW Gap"
+        },
+        {
+          "key": "pm_gap",
+          "label": "PM Gap"
+        },
+        {
+          "key": "power_gap",
+          "label": "Power Gap"
+        }
+      ],
+      "rows": [
+        {
+          "values": {
+            "mode": "full_system",
+            "simulation_call_count": 3.0,
+            "feasible_hit_rate": 1.0,
+            "average_convergence_step": 0.0,
+            "focused_truth_ratio": 1.0,
+            "gbw_gap": 23698235.197136,
+            "pm_gap": 1.446809,
+            "power_gap": 0.000585
+          }
+        },
+        {
+          "values": {
+            "mode": "no_world_model",
+            "simulation_call_count": 3.0,
+            "feasible_hit_rate": 1.0,
+            "average_convergence_step": 0.0,
+            "focused_truth_ratio": 0.6,
+            "gbw_gap": 43246521.277198,
+            "pm_gap": 5.510294,
+            "power_gap": 0.001129
+          }
+        },
+        {
+          "values": {
+            "mode": "no_calibration",
+            "simulation_call_count": 3.0,
+            "feasible_hit_rate": 1.0,
+            "average_convergence_step": 0.0,
+            "focused_truth_ratio": 1.0,
+            "gbw_gap": 32279204.842122,
+            "pm_gap": 2.210238,
+            "power_gap": 0.000831
+          }
+        },
+        {
+          "values": {
+            "mode": "no_fidelity_escalation",
+            "simulation_call_count": 3.0,
+            "feasible_hit_rate": 1.0,
+            "average_convergence_step": 0.0,
+            "focused_truth_ratio": 0.0,
+            "gbw_gap": 23710953.49888,
+            "pm_gap": 1.445554,
+            "power_gap": 0.000585
+          }
+        }
+      ],
+      "caption": "Primary methodology comparison table for OTA v1 world-model utility evidence.",
+      "csv_output_path": "research\\papers\\tables\\world_model_method_comparison.csv",
+      "markdown_output_path": "research\\papers\\tables\\world_model_method_comparison.md"
+    },
+    {
+      "table_id": "tbl_prediction_gap_by_step",
+      "title": "Prediction Gap by Step",
+      "columns": [
+        {
+          "key": "step",
+          "label": "Step"
+        },
+        {
+          "key": "full_system",
+          "label": "Full System"
+        },
+        {
+          "key": "no_calibration",
+          "label": "No Calibration"
+        },
+        {
+          "key": "no_world_model",
+          "label": "No World Model"
+        }
+      ],
+      "rows": [
+        {
+          "values": {
+            "step": 0,
+            "full_system": 6752964.213609,
+            "no_calibration": 6752964.213609,
+            "no_world_model": 7158521.183361
+          }
+        },
+        {
+          "values": {
+            "step": 1,
+            "full_system": 5801273.948802,
+            "no_calibration": 8052262.020005,
+            "no_world_model": 12988957.575028
+          }
+        },
+        {
+          "values": {
+            "step": 2,
+            "full_system": 5219454.100454,
+            "no_calibration": 9404200.154591,
+            "no_world_model": 12287433.399025
+          }
+        }
+      ],
+      "caption": "Average core-metric prediction gap per optimization step.",
+      "csv_output_path": "research\\papers\\tables\\prediction_gap_by_step.csv",
+      "markdown_output_path": "research\\papers\\tables\\prediction_gap_by_step.md"
+    },
+    {
+      "table_id": "tbl_selection_behavior",
+      "title": "Trust-Guided Selection Profile",
+      "columns": [
+        {
+          "key": "mode",
+          "label": "Mode"
+        },
+        {
+          "key": "mean_selected_uncertainty",
+          "label": "Mean Selected Uncertainty"
+        },
+        {
+          "key": "mean_selected_confidence",
+          "label": "Mean Selected Confidence"
+        },
+        {
+          "key": "mean_selected_simulation_value",
+          "label": "Mean Sim Value"
+        },
+        {
+          "key": "mean_selected_predicted_feasibility",
+          "label": "Mean Pred Feasibility"
+        }
+      ],
+      "rows": [
+        {
+          "values": {
+            "mode": "full_system",
+            "mean_selected_uncertainty": 0.162,
+            "mean_selected_confidence": 0.8947,
+            "mean_selected_simulation_value": 0.457182,
+            "mean_selected_predicted_feasibility": 0.3767
+          }
+        },
+        {
+          "values": {
+            "mode": "no_world_model",
+            "mean_selected_uncertainty": 0.49476,
+            "mean_selected_confidence": 0.332853,
+            "mean_selected_simulation_value": 0.604725,
+            "mean_selected_predicted_feasibility": 0.26836
+          }
+        },
+        {
+          "values": {
+            "mode": "no_calibration",
+            "mean_selected_uncertainty": 0.162,
+            "mean_selected_confidence": 0.8947,
+            "mean_selected_simulation_value": 0.447496,
+            "mean_selected_predicted_feasibility": 0.352333
+          }
+        },
+        {
+          "values": {
+            "mode": "no_fidelity_escalation",
+            "mean_selected_uncertainty": 0.162,
+            "mean_selected_confidence": 0.8947,
+            "mean_selected_simulation_value": 0.457182,
+            "mean_selected_predicted_feasibility": 0.3767
+          }
+        }
+      ],
+      "caption": "Planner-selection profile aggregated over experiment steps and runs.",
+      "csv_output_path": "research\\papers\\tables\\trust_guided_selection_profile.csv",
+      "markdown_output_path": "research\\papers\\tables\\trust_guided_selection_profile.md"
+    },
+    {
+      "table_id": "tbl_world_model_budget_comparison",
+      "title": "World Model Budget Comparison",
+      "columns": [
+        {
+          "key": "mode",
+          "label": "Mode"
+        },
+        {
+          "key": "avg_sim_calls",
+          "label": "Avg Sim Calls"
+        },
+        {
+          "key": "feasible_hit_rate",
+          "label": "Feasible Hit Rate"
+        },
+        {
+          "key": "efficiency_score",
+          "label": "Efficiency Score"
+        },
+        {
+          "key": "selection_ratio",
+          "label": "Selection Ratio"
+        }
+      ],
+      "rows": [
+        {
+          "values": {
+            "mode": "full_simulation_baseline",
+            "avg_sim_calls": 6.0,
+            "feasible_hit_rate": 1.0,
+            "efficiency_score": 0.166667,
+            "selection_ratio": 0.75
+          }
+        },
+        {
+          "values": {
+            "mode": "no_world_model_baseline",
+            "avg_sim_calls": 1.0,
+            "feasible_hit_rate": 1.0,
+            "efficiency_score": 1.0,
+            "selection_ratio": 0.5
+          }
+        },
+        {
+          "values": {
+            "mode": "full_system",
+            "avg_sim_calls": 1.0,
+            "feasible_hit_rate": 1.0,
+            "efficiency_score": 1.0,
+            "selection_ratio": 0.5
+          }
+        }
+      ],
+      "caption": "Budget-facing comparison for with/without world model under natural execution.",
+      "csv_output_path": "research\\papers\\tables\\world_model_budget_comparison.csv",
+      "markdown_output_path": "research\\papers\\tables\\world_model_budget_comparison.md"
+    }
+  ],
+  "summary": {
+    "world_model_reduces_simulations": false,
+    "world_model_preserves_or_improves_feasible_hit_rate": true,
+    "calibration_reduces_prediction_gap": true,
+    "trust_guides_selection_behavior": true,
+    "notes": [
+      "system_delta_vs_full_sim_baseline_calls=5.0",
+      "world_model_delta_sim_calls=0.0",
+      "world_model_delta_feasible_hit=0.0",
+      "calibration_delta_gbw_gap=8580969.644986",
+      "trust_selection_delta_uncertainty=0.33276"
+    ]
+  },
+  "json_output_path": "research\\papers\\world_model_evidence_bundle.json"
+}

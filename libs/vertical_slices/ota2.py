@@ -51,6 +51,7 @@ def run_ota_experiment_suite(
     modes: list[str] | None = None,
     export_directory: str | Path | None = None,
     task_id: str = "benchmark-ota2-v1",
+    force_full_steps: bool = False,
 ) -> ExperimentSuiteResult:
     """Run the frozen OTA v1 experiment suite and optionally export stats."""
 
@@ -69,6 +70,7 @@ def run_ota_experiment_suite(
         repeat_runs=repeat_runs,
         fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,
         backend_preference=backend_preference or config.defaults.backend_preference,
+        force_full_steps=force_full_steps,
     )
     if suite.aggregated_stats is not None and task_id.startswith("benchmark-"):
         suite = suite.model_copy(

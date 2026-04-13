@@ -78,12 +78,22 @@ class ExperimentLogRecord(BaseModel):
     world_model_enabled: bool = True
     calibration_enabled: bool = True
     fidelity_escalation_enabled: bool = True
+    selected_mean_uncertainty: float = 0.0
+    selected_mean_confidence: float = 0.0
+    selected_mean_simulation_value: float = 0.0
+    selected_mean_predicted_feasibility: float = 0.0
 
-    @field_validator("simulation_selection_ratio")
+    @field_validator(
+        "simulation_selection_ratio",
+        "selected_mean_uncertainty",
+        "selected_mean_confidence",
+        "selected_mean_simulation_value",
+        "selected_mean_predicted_feasibility",
+    )
     @classmethod
     def validate_ratio(cls, value: float) -> float:
         if value < 0.0 or value > 1.0:
-            raise ValueError("simulation_selection_ratio must be within [0, 1]")
+            raise ValueError("experiment log ratios must be within [0, 1]")
         return round(float(value), 6)
 
 
@@ -133,6 +143,7 @@ class ExperimentRunRequest(BaseModel):
     run_index: int = 0
     fidelity_level: str = "focused_validation"
     backend_preference: str = "ngspice"
+    force_full_steps: bool = False
 
 
 class ExperimentSuiteRequest(BaseModel):
@@ -147,6 +158,7 @@ class ExperimentSuiteRequest(BaseModel):
     repeat_runs: int = 5
     fidelity_level: str = "focused_validation"
     backend_preference: str = "ngspice"
+    force_full_steps: bool = False
 
 
 class ExperimentAggregateSummary(BaseModel):

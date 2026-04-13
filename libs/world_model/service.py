@@ -103,18 +103,35 @@ class WorldModelService:
             reasons=reasons,
         )
 
+    def _apply_calibration_correction(self, metric_values: dict[str, float]) -> dict[str, float]:
+        corrected = dict(metric_values)
+        summaries = {item.metric: item for item in self.bundle.calibration_state.per_metric_error_summary}
+        for metric, value in list(corrected.items()):
+            summary = summaries.get(metric)
+            if summary is None or summary.sample_count <= 0:
+                continue
+            support = _clip(summary.sample_count / 3.0, 0.0, 1.0)
+            correction = summary.signed_bias * support
+            corrected[metric] = float(value - correction)
+        return corrected
+
     def predict_metrics(self, state: WorldState) -> MetricsPrediction:
         validation = self.validate_state(state)
         if not validation.is_valid:
             raise ValueError(f"invalid world state: {[issue.message for issue in validation.errors]}")
         metric_values, auxiliary = project_metrics(self.task, state)
-        trust = self._trust_assessment(state, evaluate_constraints(self.task, metric_values))
-        estimates = build_metric_estimates(metric_values, trust.uncertainty_score, trust.confidence)
+        calibrated_metric_values = self._apply_calibration_correction(metric_values)
+        trust = self._trust_assessment(state, evaluate_constraints(self.task, calibrated_metric_values))
+        estimates = build_metric_estimates(calibrated_metric_values, trust.uncertainty_score, trust.confidence)
         return MetricsPrediction(
             state_id=state.state_id,
             task_id=state.task_id,
             metrics=estimates,
-            auxiliary_features=auxiliary,
+            auxiliary_features={
+                **auxiliary,
+                "calibration_patch_count": float(len(self.bundle.calibration_state.local_patch_history)),
+                "calibrated_metric_count": float(len(self.bundle.calibration_state.per_metric_error_summary)),
+            },
             trust_assessment=trust,
         )
 
@@ -309,7 +326,8 @@ class WorldModelService:
         metric_index = {item.metric: position for position, item in enumerate(updated_metric_summaries)}
 
         for truth_metric in truth.metrics:
-            error = abs(predicted_by_metric.get(truth_metric.metric, truth_metric.value) - truth_metric.value)
+            signed_error = predicted_by_metric.get(truth_metric.metric, truth_metric.value) - truth_metric.value
+            error = abs(signed_error)
             relative = error / max(abs(truth_metric.value), 1e-12)
             if truth_metric.metric in metric_index:
                 current = updated_metric_summaries[metric_index[truth_metric.metric]]
@@ -317,6 +335,7 @@ class WorldModelService:
                     update={
                         "mae": round((current.mae * current.sample_count + error) / (current.sample_count + 1), 6),
                         "relative_error": round((current.relative_error * current.sample_count + relative) / (current.sample_count + 1), 6),
+                        "signed_bias": round((current.signed_bias * current.sample_count + signed_error) / (current.sample_count + 1), 6),
                         "sample_count": current.sample_count + 1,
                     }
                 )
@@ -328,6 +347,7 @@ class WorldModelService:
                         metric=truth_metric.metric,
                         mae=round(error, 6),
                         relative_error=round(relative, 6),
+                        signed_bias=round(signed_error, 6),
                         rank_correlation=1.0 if error < max(abs(truth_metric.value) * 0.1, 1e-6) else 0.5,
                         boundary_error=round(error, 6),
                         sample_count=1,

@@ -1,0 +1,5 @@
+Mode,Mean Selected Uncertainty,Mean Selected Confidence,Mean Sim Value,Mean Pred Feasibility
+full_system,0.162,0.8947,0.457182,0.3767
+no_world_model,0.49476,0.332853,0.604725,0.26836
+no_calibration,0.162,0.8947,0.447496,0.352333
+no_fidelity_escalation,0.162,0.8947,0.457182,0.3767

@@ -1078,6 +1078,14 @@ def _gap_summary(executions) -> dict[str, float]:
     return {metric: round(sum(values) / len(values), 6) for metric, values in sorted(gap_accumulator.items()) if values}
 
 
+def _mean_selected_value(candidates, extractor) -> float:
+    values = [extractor(candidate) for candidate in candidates]
+    filtered = [float(value) for value in values if value is not None]
+    if not filtered:
+        return 0.0
+    return round(sum(filtered) / len(filtered), 6)
+
+
 def _best_metrics(executions) -> dict[str, float]:
     best: dict[str, float] = {}
     for execution in executions:
@@ -1101,6 +1109,7 @@ def run_experiment(
     run_index: int = 0,
     fidelity_level: str = "focused_validation",
     backend_preference: str = "ngspice",
+    force_full_steps: bool = False,
 ) -> ExperimentResult:
     """Run one structured experiment under a unified execution mode."""
 
@@ -1260,13 +1269,37 @@ def run_experiment(
                 world_model_enabled=component_config.use_world_model,
                 calibration_enabled=component_config.use_calibration,
                 fidelity_escalation_enabled=component_config.use_fidelity_escalation,
+                selected_mean_uncertainty=_mean_selected_value(
+                    selection.selected_candidates,
+                    lambda candidate: candidate.predicted_uncertainty.uncertainty_score if candidate.predicted_uncertainty else None,
+                ),
+                selected_mean_confidence=_mean_selected_value(
+                    selection.selected_candidates,
+                    lambda candidate: candidate.predicted_uncertainty.confidence if candidate.predicted_uncertainty else None,
+                ),
+                selected_mean_simulation_value=_mean_selected_value(
+                    selection.selected_candidates,
+                    lambda candidate: candidate.simulation_value_estimate.estimated_value if candidate.simulation_value_estimate else None,
+                ),
+                selected_mean_predicted_feasibility=_mean_selected_value(
+                    selection.selected_candidates,
+                    lambda candidate: candidate.predicted_feasibility.overall_feasibility if candidate.predicted_feasibility else None,
+                ),
             )
         )
-        if mode != "full_simulation_baseline" and step_feasible_hit:
+        if not force_full_steps and mode != "full_simulation_baseline" and step_feasible_hit:
             break
-        if not _uses_baseline_predictions(component_config) and service.should_terminate(search_state).should_terminate:
+        if (
+            not force_full_steps
+            and not _uses_baseline_predictions(component_config)
+            and service.should_terminate(search_state).should_terminate
+        ):
             break
-        if _uses_baseline_predictions(component_config) and remaining_simulations(search_state.budget_state) <= 0:
+        if (
+            not force_full_steps
+            and _uses_baseline_predictions(component_config)
+            and remaining_simulations(search_state.budget_state) <= 0
+        ):
             break
 
     feasible_truth_executions = [
@@ -1435,6 +1468,7 @@ def run_experiment_suite(
     repeat_runs: int = 5,
     fidelity_level: str = "focused_validation",
     backend_preference: str = "ngspice",
+    force_full_steps: bool = False,
 ) -> ExperimentSuiteResult:
     """Run repeated experiments for several execution modes."""
 
@@ -1447,6 +1481,7 @@ def run_experiment_suite(
             run_index=run_index,
             fidelity_level=fidelity_level,
             backend_preference=backend_preference,
+            force_full_steps=force_full_steps,
         )
         for mode in modes
         for run_index in range(repeat_runs)

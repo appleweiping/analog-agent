@@ -630,6 +630,7 @@ class MetricErrorSummary(BaseModel):
     metric: str
     mae: float
     relative_error: float
+    signed_bias: float = 0.0
     rank_correlation: float
     boundary_error: float
     sample_count: int

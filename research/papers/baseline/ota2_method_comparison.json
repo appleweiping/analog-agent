@@ -1,0 +1,53 @@
+{
+  "conclusions": {
+    "calibration_effective": true,
+    "conclusion_notes": [],
+    "fidelity_effective": true,
+    "world_model_effective": true
+  },
+  "deltas": [],
+  "mode_summaries": [
+    {
+      "average_best_metrics": {
+        "dc_gain_db": 114.8114,
+        "gbw_hz": 167693223.686323,
+        "phase_margin_deg": 72.148652,
+        "power_w": 0.00012,
+        "slew_rate_v_per_us": 1.1247368421052727e+52
+      },
+      "average_calibration_update_count": 1.0,
+      "average_convergence_step": 0.0,
+      "average_prediction_gap": {
+        "dc_gain_db": 28.61705,
+        "gbw_hz": 27011825.443554,
+        "phase_margin_deg": 2.793002,
+        "power_w": 0.000831,
+        "slew_rate_v_per_us": 1.1247368421052727e+52
+      },
+      "component_config": {
+        "mode": "full_system",
+        "use_bayesopt_baseline": false,
+        "use_calibration": true,
+        "use_cmaes_baseline": false,
+        "use_fidelity_escalation": true,
+        "use_full_simulation_baseline": false,
+        "use_random_search_baseline": false,
+        "use_rl_baseline": false,
+        "use_world_model": true
+      },
+      "escalation_count": 5,
+      "failure_type_distribution": {
+        "robustness_failure": 5
+      },
+      "feasible_hit_rate": 1.0,
+      "focused_truth_ratio": 1.0,
+      "mode": "full_system",
+      "run_count": 5,
+      "simulation_call_count": 1.0
+    }
+  ],
+  "modes": [
+    "full_system"
+  ],
+  "task_id": "task_291e8ccd100d"
+}

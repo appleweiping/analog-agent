@@ -22,6 +22,7 @@ def run_single_experiment(request: ExperimentRunRequest) -> ExperimentResult:
         run_index=request.run_index,
         fidelity_level=request.fidelity_level,
         backend_preference=request.backend_preference,
+        force_full_steps=request.force_full_steps,
     )
 
 
@@ -37,4 +38,5 @@ def run_suite(request: ExperimentSuiteRequest) -> ExperimentSuiteResult:
         repeat_runs=request.repeat_runs,
         fidelity_level=request.fidelity_level,
         backend_preference=request.backend_preference,
+        force_full_steps=request.force_full_steps,
     )
