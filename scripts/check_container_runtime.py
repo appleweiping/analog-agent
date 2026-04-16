@@ -8,7 +8,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-import yaml
+try:
+    import yaml  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - exercised via fallback path
+    yaml = None
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +20,100 @@ if str(REPO_ROOT) not in sys.path:
 
 
 from apps.worker_simulator.ngspice_runner import _load_ngspice_config
+
+
+def _parse_compose_without_yaml(text: str) -> dict[str, object]:
+    """Parse the narrow docker-compose shape used by this repo without PyYAML."""
+
+    services: dict[str, object] = {}
+    current_service: str | None = None
+    current_section: str | None = None
+    in_command = False
+    command_lines: list[str] = []
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        indent = len(line) - len(line.lstrip(" "))
+        if indent <= 1 and stripped == "services:":
+            current_section = None
+            continue
+        if indent == 2 and stripped.endswith(":"):
+            current_service = stripped[:-1]
+            services[current_service] = {}
+            current_section = None
+            in_command = False
+            command_lines = []
+            continue
+        if not current_service:
+            continue
+
+        service = services[current_service]
+        assert isinstance(service, dict)
+
+        if in_command:
+            if indent >= 6:
+                command_lines.append(stripped)
+                service["command"] = " ".join(command_lines).strip()
+                continue
+            in_command = False
+
+        if indent == 4 and stripped.startswith("command:"):
+            in_command = True
+            command_lines = []
+            service["command"] = ""
+            current_section = None
+            continue
+
+        if indent == 4 and stripped.endswith(":"):
+            key = stripped[:-1]
+            current_section = key
+            if key in {"environment", "build"}:
+                service[key] = {}
+            elif key in {"volumes", "ports"}:
+                service[key] = []
+            else:
+                service[key] = {}
+            continue
+
+        if indent == 4 and ":" in stripped and current_section is None:
+            key, value = stripped.split(":", 1)
+            service[key.strip()] = value.strip().strip('"')
+            continue
+
+        if indent >= 6 and current_section == "environment" and ":" in stripped:
+            key, value = stripped.split(":", 1)
+            env = service.setdefault("environment", {})
+            assert isinstance(env, dict)
+            env[key.strip()] = value.strip().strip('"')
+            continue
+
+        if indent >= 6 and current_section == "build" and ":" in stripped:
+            key, value = stripped.split(":", 1)
+            build = service.setdefault("build", {})
+            assert isinstance(build, dict)
+            build[key.strip()] = value.strip().strip('"')
+            continue
+
+        if indent >= 6 and current_section in {"volumes", "ports"} and stripped.startswith("- "):
+            items = service.setdefault(current_section, [])
+            assert isinstance(items, list)
+            items.append(stripped[2:].strip().strip('"'))
+            continue
+
+    return {"services": services}
+
+
+def _load_compose(compose_path: Path) -> dict[str, object]:
+    text = compose_path.read_text(encoding="utf-8")
+    if yaml is not None:
+        loaded = yaml.safe_load(text) or {}
+        if isinstance(loaded, dict):
+            return loaded
+    return _parse_compose_without_yaml(text)
 
 
 def _docker_available() -> tuple[bool, str]:
@@ -53,7 +150,7 @@ def build_status() -> dict[str, object]:
     config = _load_ngspice_config()
     compose_path = REPO_ROOT / "docker-compose.yml"
     dockerfile_path = REPO_ROOT / "infra" / "docker" / "Dockerfile.ngspice"
-    compose = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
+    compose = _load_compose(compose_path)
     services = compose.get("services", {})
     service_name = str(config.get("container_service_name", "api"))
     service = services.get(service_name, {})

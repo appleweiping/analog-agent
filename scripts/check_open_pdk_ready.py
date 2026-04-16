@@ -6,7 +6,10 @@ import json
 import sys
 from pathlib import Path
 
-import yaml
+try:
+    import yaml  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - exercised via fallback path
+    yaml = None
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -15,9 +18,66 @@ if str(REPO_ROOT) not in sys.path:
 from apps.worker_simulator.ngspice_runner import configured_pdk_root, external_model_card_path
 
 
+def _parse_contract_without_yaml(text: str) -> dict[str, object]:
+    """Parse the narrow SKY130 contract file shape without PyYAML."""
+
+    data: dict[str, object] = {}
+    current_list_key: str | None = None
+    current_multiline_key: str | None = None
+    multiline_lines: list[str] = []
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        indent = len(line) - len(line.lstrip(" "))
+        if current_multiline_key is not None:
+            if indent >= 2:
+                multiline_lines.append(line[2:] if line.startswith("  ") else stripped)
+                data[current_multiline_key] = "\n".join(multiline_lines).rstrip()
+                continue
+            current_multiline_key = None
+            multiline_lines = []
+
+        if stripped.endswith(":") and ":" not in stripped[:-1]:
+            current_list_key = stripped[:-1]
+            data[current_list_key] = []
+            continue
+
+        if current_list_key and stripped.startswith("- "):
+            items = data.setdefault(current_list_key, [])
+            assert isinstance(items, list)
+            items.append(stripped[2:].strip().strip('"'))
+            continue
+        current_list_key = None
+
+        if ":" in stripped:
+            key, value = stripped.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+            if value == "|":
+                current_multiline_key = key
+                multiline_lines = []
+                data[key] = ""
+                continue
+            lowered = value.lower()
+            if lowered in {"true", "false"}:
+                data[key] = lowered == "true"
+            else:
+                data[key] = value.strip('"')
+
+    return data
+
+
 def _read_contract() -> dict[str, object]:
     contract_path = Path(__file__).resolve().parents[1] / "configs" / "pdk" / "sky130_open.yaml"
-    loaded = yaml.safe_load(contract_path.read_text(encoding="utf-8")) or {}
+    text = contract_path.read_text(encoding="utf-8")
+    if yaml is not None:
+        loaded = yaml.safe_load(text) or {}
+    else:
+        loaded = _parse_contract_without_yaml(text)
     if not isinstance(loaded, dict):
         raise ValueError("sky130_open.yaml must deserialize to a mapping")
     return loaded
