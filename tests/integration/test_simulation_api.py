@@ -124,6 +124,9 @@ class SimulationApiTests(unittest.TestCase):
         self.assertIn("verification_result", payload)
         self.assertIn("backend_report", payload)
         self.assertIn("simulation_request", payload)
+        self.assertEqual(payload["simulation_bundle"]["backend_binding"]["invocation_mode"], "mock_truth")
+        self.assertFalse(payload["simulation_bundle"]["metadata"]["paper_truth_policy"]["paper_mode"])
+        self.assertFalse(payload["verification_result"]["simulation_provenance"]["paper_safe"])
 
     @unittest.skipUnless(native_ngspice_available(), "native ngspice is not available in this environment")
     def test_verify_endpoint_hits_native_ngspice_path(self) -> None:
