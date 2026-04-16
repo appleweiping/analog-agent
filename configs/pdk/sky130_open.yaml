@@ -1,12 +1,19 @@
 name: sky130_open
 distribution: skywater-pdk-open
 version: local_user_managed
+readiness_policy: configured_truth_requires_structured_root
 root_env_vars: ANALOG_AGENT_PDK_ROOT,SKY130_PDK_ROOT,PDK_ROOT
 expected_root_hint: /pdk/sky130A
 required_subpaths:
   - libs.tech/ngspice
   - libs.ref/sky130_fd_pr/spice
 truth_level_when_present: configured_truth_candidate
+validation_state_when_present: strong_if_external_model_present
+validation_state_when_partial: weak
+validation_state_when_missing: invalid
+required_external_model_card: false
+recommended_external_model_card_env_vars: ANALOG_AGENT_EXTERNAL_MODEL_CARD,NGSPICE_MODEL_CARD
+recommended_mount_hint: ${ANALOG_AGENT_PDK_HOST_PATH:-./.pdk/sky130A}:/pdk/sky130A
 notes: |
   This file defines the open-PDK readiness contract for paper-facing native
   truth workflows. It does not download the PDK automatically; users must stage
