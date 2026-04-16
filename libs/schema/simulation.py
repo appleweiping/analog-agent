@@ -498,6 +498,7 @@ class ArtifactRecord(BaseModel):
     path: str
     simulation_provenance: SimulationProvenance | None = None
     validation_status: ValidationStatus | None = None
+    execution_context: ArtifactExecutionContext | None = None
 
 
 class ValidationStatus(BaseModel):
@@ -515,6 +516,20 @@ class ValidationStatus(BaseModel):
     @classmethod
     def dedupe_warnings(cls, values: list[str]) -> list[str]:
         return _ordered_unique(values)
+
+
+class ArtifactExecutionContext(BaseModel):
+    """Replay-oriented execution context attached to persisted artifacts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    paper_mode: bool = False
+    paper_safe: bool = False
+    replayable: bool = False
+    resolved_simulator_binary: str | None = None
+    backend_error_type: str | None = None
+    execution_runtime_sec: float | None = None
+    replay_hint: str | None = None
 
 
 class PaperTruthPolicy(BaseModel):
@@ -542,6 +557,9 @@ class SimulationProvenance(BaseModel):
     fidelity_level: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
     truth_level: Literal["demonstrator_truth", "configured_truth"]
     model_binding: ModelBinding
+    resolved_simulator_binary: str | None = None
+    paper_mode: bool = False
+    paper_safe: bool = False
     artifact_lineage: list[str] = Field(default_factory=list)
     provenance_tags: list[str] = Field(default_factory=list)
 

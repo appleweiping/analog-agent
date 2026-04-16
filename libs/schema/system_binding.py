@@ -133,6 +133,12 @@ class ArtifactTrace(BaseModel):
     model_reference: str
     truth_level: str
     validation_status: str
+    invocation_mode: str | None = None
+    resolved_simulator_binary: str | None = None
+    paper_mode: bool = False
+    paper_safe: bool = False
+    replayable: bool = False
+    replay_hint: str | None = None
 
 
 class CrossLayerTrace(BaseModel):

@@ -107,6 +107,22 @@ class FullSystemAcceptanceIntegrationTests(unittest.TestCase):
             )
         )
 
+    def test_artifact_traces_capture_native_replay_provenance(self) -> None:
+        result = run_full_system_acceptance(
+            AcceptanceTaskConfig(
+                design_task=_acceptance_task("e2e-artifact-provenance-ota"),
+                max_steps=3,
+                default_fidelity="quick_truth",
+                backend_preference="ngspice",
+            )
+        )
+
+        self.assertTrue(result.artifact_traces)
+        self.assertTrue(all(artifact.invocation_mode == "native" for artifact in result.artifact_traces))
+        self.assertTrue(all(artifact.resolved_simulator_binary for artifact in result.artifact_traces))
+        self.assertTrue(all(artifact.replayable for artifact in result.artifact_traces))
+        self.assertTrue(any(artifact.replay_hint for artifact in result.artifact_traces))
+
 
 @unittest.skipUnless(
     importlib.util.find_spec("fastapi") and importlib.util.find_spec("httpx") and native_ngspice_available(),

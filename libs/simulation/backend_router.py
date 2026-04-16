@@ -17,7 +17,7 @@ from libs.schema.simulation import (
     SimulationBundle,
     SimulationRequest,
 )
-from libs.simulation.artifact_registry import persist_json_artifact, register_artifact
+from libs.simulation.artifact_registry import build_artifact_execution_context, persist_json_artifact, register_artifact
 from libs.simulation.batch_executor import order_analyses
 
 
@@ -104,14 +104,43 @@ def execute_bundle(
             f"{analysis.analysis_type}.json",
             raw,
             simulation_provenance=simulation_bundle.simulation_provenance,
+            execution_context=build_artifact_execution_context(
+                simulation_provenance=simulation_bundle.simulation_provenance,
+                validation_status=None,
+                backend_error_type=str(raw.get("error_type", "")) or None,
+                execution_runtime_sec=float(raw.get("runtime_ms", 0)) / 1000.0 if raw.get("runtime_ms") is not None else None,
+                replay_hint=f"rerun {analysis.analysis_type} via {simulation_bundle.backend_binding.backend}",
+            ),
         )
         if use_native:
             netlist_path = str(raw.get("netlist_path", ""))
             log_path = str(raw.get("log_path", ""))
             if netlist_path:
-                registry, _ = register_artifact(registry, "netlist", netlist_path, simulation_provenance=simulation_bundle.simulation_provenance)
+                registry, _ = register_artifact(
+                    registry,
+                    "netlist",
+                    netlist_path,
+                    simulation_provenance=simulation_bundle.simulation_provenance,
+                    execution_context=build_artifact_execution_context(
+                        simulation_provenance=simulation_bundle.simulation_provenance,
+                        validation_status=None,
+                        replay_hint=f"rerun {analysis.analysis_type} netlist with native ngspice",
+                    ),
+                )
             if log_path and Path(log_path).exists():
-                registry, _ = register_artifact(registry, "stdout", log_path, simulation_provenance=simulation_bundle.simulation_provenance)
+                registry, _ = register_artifact(
+                    registry,
+                    "stdout",
+                    log_path,
+                    simulation_provenance=simulation_bundle.simulation_provenance,
+                    execution_context=build_artifact_execution_context(
+                        simulation_provenance=simulation_bundle.simulation_provenance,
+                        validation_status=None,
+                        backend_error_type=str(raw.get("error_type", "")) or None,
+                        execution_runtime_sec=float(raw.get("runtime_ms", 0)) / 1000.0 if raw.get("runtime_ms") is not None else None,
+                        replay_hint=f"inspect {analysis.analysis_type} backend log",
+                    ),
+                )
         parsed = parse_raw_output({**raw, "artifact_ref": artifact_id})
         outputs.append(parsed)
 

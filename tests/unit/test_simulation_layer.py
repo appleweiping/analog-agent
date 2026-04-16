@@ -166,3 +166,23 @@ class SimulationLayerTests(unittest.TestCase):
                 for issue in compiled.report.validation_warnings
             )
         )
+
+    @unittest.skipUnless(native_ngspice_available(), "native ngspice is not available in this environment")
+    def test_native_execution_artifacts_capture_replay_provenance(self) -> None:
+        task, planning_bundle, search_state, candidate_id = self._context()
+        execution = SimulationService(task, planning_bundle, search_state).verify_candidate(
+            candidate_id,
+            fidelity_level="focused_validation",
+            backend_preference="ngspice",
+        )
+
+        self.assertTrue(execution.simulation_bundle.simulation_provenance.resolved_simulator_binary)
+        self.assertFalse(execution.simulation_bundle.simulation_provenance.paper_mode)
+        self.assertFalse(execution.simulation_bundle.simulation_provenance.paper_safe)
+        self.assertTrue(execution.simulation_bundle.artifact_registry.records)
+        for record in execution.simulation_bundle.artifact_registry.records:
+            self.assertIsNotNone(record.execution_context)
+            assert record.execution_context is not None
+            self.assertTrue(record.execution_context.replayable)
+            self.assertTrue(record.execution_context.resolved_simulator_binary)
+            self.assertTrue(record.execution_context.replay_hint)

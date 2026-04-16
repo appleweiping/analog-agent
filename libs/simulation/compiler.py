@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from apps.worker_simulator.ngspice_runner import native_ngspice_available, paper_truth_mode
+from apps.worker_simulator.ngspice_runner import native_ngspice_available, ngspice_binary_path, paper_truth_mode
 from libs.planner.candidate_manager import find_candidate
 from libs.schema.design_task import DesignTask
 from libs.schema.planning import PlanningBundle, SearchState
@@ -132,10 +132,14 @@ def _paper_truth_policy(*, paper_mode: bool) -> PaperTruthPolicy:
     )
 
 
-def _simulation_provenance(bundle_backend: BackendBinding, request: SimulationRequest):
+def _simulation_provenance(bundle_backend: BackendBinding, request: SimulationRequest, *, paper_mode: bool):
     model_binding = request.model_binding
     if model_binding is None:
         raise ValueError("simulation request must carry model_binding before provenance can be built")
+    resolved_binary = None
+    if bundle_backend.backend == "ngspice" and bundle_backend.invocation_mode == "native":
+        resolved_binary = str(ngspice_binary_path())
+    paper_safe = paper_mode and bundle_backend.invocation_mode == "native"
     return SimulationProvenance(
         backend=bundle_backend.backend,
         backend_version=bundle_backend.backend_version,
@@ -143,11 +147,17 @@ def _simulation_provenance(bundle_backend: BackendBinding, request: SimulationRe
         fidelity_level=normalize_fidelity_level(request.fidelity_level),
         truth_level=model_binding.validity_level.truth_level,
         model_binding=model_binding,
+        resolved_simulator_binary=resolved_binary,
+        paper_mode=paper_mode,
+        paper_safe=paper_safe,
         artifact_lineage=[],
         provenance_tags=[
             f"model_type={model_binding.model_type}",
             f"model_source={model_binding.model_source.source_type}",
             f"planner_context={request.planner_context_ref}",
+            f"paper_mode={paper_mode}",
+            f"paper_safe={paper_safe}",
+            *( [f"resolved_binary={resolved_binary}"] if resolved_binary else [] ),
         ],
     )
 
@@ -338,7 +348,7 @@ def compile_simulation_bundle(
         invocation_mode="native" if native_ngspice else "mock_truth",
         support_multi_analysis=True,
     )
-    simulation_provenance = _simulation_provenance(backend_binding, request)
+    simulation_provenance = _simulation_provenance(backend_binding, request, paper_mode=paper_mode)
     physical_validation = _physical_validation_status(
         netlist.model_binding,
         invocation_mode=backend_binding.invocation_mode,

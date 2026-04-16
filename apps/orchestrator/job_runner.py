@@ -305,6 +305,7 @@ def _build_artifact_traces(
     for record in execution.simulation_bundle.artifact_registry.records:
         provenance = record.simulation_provenance or execution.verification_result.simulation_provenance
         validation = record.validation_status or execution.verification_result.validation_status
+        execution_context = record.execution_context
         traces.append(
             ArtifactTrace(
                 artifact_id=record.artifact_id,
@@ -316,6 +317,16 @@ def _build_artifact_traces(
                 model_reference=provenance.model_binding.backend_model_ref,
                 truth_level=validation.truth_level,
                 validation_status=validation.validity_state,
+                invocation_mode=provenance.invocation_mode,
+                resolved_simulator_binary=(
+                    execution_context.resolved_simulator_binary
+                    if execution_context is not None
+                    else provenance.resolved_simulator_binary
+                ),
+                paper_mode=execution_context.paper_mode if execution_context is not None else provenance.paper_mode,
+                paper_safe=execution_context.paper_safe if execution_context is not None else provenance.paper_safe,
+                replayable=execution_context.replayable if execution_context is not None else False,
+                replay_hint=execution_context.replay_hint if execution_context is not None else None,
             )
         )
     return traces
@@ -330,7 +341,7 @@ def _acceptance_summary(
         for trace in result.cross_layer_traces
     )
     artifact_ok = bool(result.artifact_traces) and all(
-        artifact.model_reference and artifact.truth_level and artifact.validation_status
+        artifact.model_reference and artifact.truth_level and artifact.validation_status and artifact.invocation_mode
         for artifact in result.artifact_traces
     )
     fidelity_ok = all(

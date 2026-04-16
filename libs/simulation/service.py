@@ -19,7 +19,7 @@ from libs.schema.simulation import (
     VerificationResult,
 )
 from libs.schema.world_model import WORLD_MODEL_METRICS, TruthCalibrationRecord, TruthConstraint, TruthMetric
-from libs.simulation.artifact_registry import persist_json_artifact, persist_text_artifact
+from libs.simulation.artifact_registry import build_artifact_execution_context, persist_json_artifact, persist_text_artifact
 from libs.simulation.backend_router import execute_bundle, validate_backend
 from libs.simulation.compiler import build_simulation_request, compile_simulation_bundle, normalize_fidelity_level
 from libs.simulation.constraint_verifier import verify_constraints
@@ -95,6 +95,11 @@ class SimulationService:
             simulation_bundle.netlist_instance.rendered_netlist,
             simulation_provenance=simulation_bundle.simulation_provenance,
             validation_status=_physical_validation_from_bundle(simulation_bundle),
+            execution_context=build_artifact_execution_context(
+                simulation_provenance=simulation_bundle.simulation_provenance,
+                validation_status=_physical_validation_from_bundle(simulation_bundle),
+                replay_hint="rerun native truth with candidate.sp",
+            ),
         )
         simulation_bundle.artifact_registry = registry
         return artifact_id
@@ -279,6 +284,11 @@ class SimulationService:
             measurement_report.model_dump(mode="json"),
             simulation_provenance=simulation_bundle.simulation_provenance,
             validation_status=_physical_validation_from_bundle(simulation_bundle),
+            execution_context=build_artifact_execution_context(
+                simulation_provenance=simulation_bundle.simulation_provenance,
+                validation_status=_physical_validation_from_bundle(simulation_bundle),
+                replay_hint="recompute measurement extraction from raw artifacts",
+            ),
         )
         assessments = self.verify_constraints(measurement_report, simulation_bundle)
         robustness = self.certify_robustness(simulation_bundle.candidate_id, simulation_bundle)
@@ -312,6 +322,11 @@ class SimulationService:
             },
             simulation_provenance=simulation_bundle.simulation_provenance,
             validation_status=physical_validation,
+            execution_context=build_artifact_execution_context(
+                simulation_provenance=simulation_bundle.simulation_provenance,
+                validation_status=physical_validation,
+                replay_hint="replay verification aggregation from measurement artifacts",
+            ),
         )
         simulation_bundle.simulation_provenance = simulation_bundle.simulation_provenance.model_copy(
             update={
