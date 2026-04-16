@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from apps.worker_simulator.ngspice_runner import native_ngspice_available
+from apps.worker_simulator.ngspice_runner import native_ngspice_available, paper_truth_mode
 from libs.planner.candidate_manager import find_candidate
 from libs.schema.design_task import DesignTask
 from libs.schema.planning import PlanningBundle, SearchState
@@ -16,6 +16,7 @@ from libs.schema.simulation import (
     FidelityPolicy,
     FidelitySelectionReason,
     MonteCarloSettings,
+    PaperTruthPolicy,
     ResourceBudget,
     RobustnessPolicy,
     ServiceMethodSpec,
@@ -111,6 +112,23 @@ def _physical_validation_status(model_binding, *, invocation_mode: str) -> Valid
         model_binding_present=bool(model_binding.backend_model_ref),
         summary=summary,
         warnings=warnings,
+    )
+
+
+def _paper_truth_policy(*, paper_mode: bool) -> PaperTruthPolicy:
+    policy_name = paper_truth_mode()
+    return PaperTruthPolicy(
+        policy_name=policy_name,
+        paper_mode=paper_mode,
+        native_truth_required=policy_name == "native_truth_required",
+        configured_truth_preferred=True,
+        allow_demonstrator_truth=True,
+        forbid_mock_truth=True,
+        summary=(
+            "paper-facing runs must use native truth; demonstrator truth is allowed but must remain explicitly labeled"
+            if paper_mode
+            else "standard engineering mode; native truth remains preferred but non-paper mock paths are still permitted"
+        ),
     )
 
 
@@ -279,6 +297,7 @@ def compile_simulation_bundle(
     backend_preference: str = "ngspice",
     escalation_reason: str = "planner_requested_truth_verification",
     model_binding_overrides: dict[str, float | int | str | bool] | None = None,
+    paper_mode: bool = False,
 ) -> SimulationCompileResponse:
     """Compile the formal fifth-layer SimulationBundle."""
 
@@ -324,6 +343,7 @@ def compile_simulation_bundle(
         netlist.model_binding,
         invocation_mode=backend_binding.invocation_mode,
     )
+    truth_policy = _paper_truth_policy(paper_mode=paper_mode)
     bundle = SimulationBundle(
         simulation_id=f"sim_{signature[:12]}",
         parent_task_id=task.task_id,
@@ -351,10 +371,12 @@ def compile_simulation_bundle(
             source_task_signature=stable_hash(task.model_dump_json()),
             source_candidate_signature=stable_hash(candidate.model_dump_json()),
             implementation_version="simulation-layer-v1",
+            paper_truth_policy=truth_policy,
             assumptions=[
                 "ground-truth layer remains the only physical verification authority",
                 "backend bindings preserve a unified schema across demonstrator truth and mock_truth modes",
                 "verification outputs are emitted as structured objects for planner and world-model feedback",
+                truth_policy.summary,
                 f"truth_level={physical_validation.truth_level}",
                 f"validation_state={physical_validation.validity_state}",
                 f"native ngspice is currently enabled for {task.circuit_family} fixed-topology quick/focused truth verification" if native_ngspice else "bundle currently executes in mock_truth mode",
@@ -363,6 +385,7 @@ def compile_simulation_bundle(
                 "task_formalization_layer",
                 "planning_layer",
                 "simulation_compiler",
+                f"paper_mode={paper_mode}",
                 f"model_binding={netlist.model_binding.backend_model_ref}",
             ],
         ),

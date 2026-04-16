@@ -59,6 +59,28 @@ class SimulationLayerTests(unittest.TestCase):
         self.assertTrue(compiled.simulation_bundle.analysis_plan.ordered_analyses)
         self.assertTrue(compiled.simulation_bundle.measurement_contract.measurement_definitions)
 
+    def test_paper_mode_rejects_mock_truth_compile_path(self) -> None:
+        task, planning_bundle, search_state, candidate_id = self._context()
+        compiled = compile_simulation_bundle(
+            task,
+            planning_bundle,
+            search_state,
+            candidate_id,
+            fidelity_level="focused_validation",
+            backend_preference="xyce",
+            paper_mode=True,
+        )
+
+        self.assertEqual(compiled.status, "invalid")
+        self.assertIsNone(compiled.simulation_bundle)
+        self.assertTrue(
+            any(
+                issue.path == "backend_binding.invocation_mode"
+                and "paper-facing verification requires native truth" in issue.message
+                for issue in compiled.report.validation_errors
+            )
+        )
+
     def test_execute_standard_validation_pipeline(self) -> None:
         task, planning_bundle, search_state, candidate_id = self._context()
         execution = SimulationService(task, planning_bundle, search_state).verify_candidate(candidate_id, fidelity_level="focused_validation")
@@ -117,3 +139,30 @@ class SimulationLayerTests(unittest.TestCase):
         self.assertIn("phase_margin_deg", metrics)
         self.assertIn("power_w", metrics)
         self.assertGreater(len(execution.verification_result.artifact_refs), 0)
+
+    @unittest.skipUnless(native_ngspice_available(), "native ngspice is not available in this environment")
+    def test_paper_mode_native_compile_is_allowed_but_demonstrator_truth_is_labeled(self) -> None:
+        task, planning_bundle, search_state, candidate_id = self._context()
+        compiled = compile_simulation_bundle(
+            task,
+            planning_bundle,
+            search_state,
+            candidate_id,
+            fidelity_level="focused_validation",
+            backend_preference="ngspice",
+            paper_mode=True,
+        )
+
+        self.assertIn(compiled.status, {"compiled", "compiled_with_warnings"})
+        self.assertIsNotNone(compiled.simulation_bundle)
+        assert compiled.simulation_bundle is not None
+        self.assertTrue(compiled.simulation_bundle.metadata.paper_truth_policy)
+        self.assertTrue(compiled.simulation_bundle.metadata.paper_truth_policy.paper_mode)
+        self.assertEqual(compiled.simulation_bundle.backend_binding.invocation_mode, "native")
+        self.assertTrue(
+            any(
+                issue.path == "model_binding.validity_level"
+                and "configured_truth remains preferred" in issue.message
+                for issue in compiled.report.validation_warnings
+            )
+        )

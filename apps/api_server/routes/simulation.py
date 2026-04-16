@@ -26,6 +26,7 @@ class SimulationCompileRequest(BaseModel):
     fidelity_level: str = "quick_truth"
     backend_preference: str = "ngspice"
     escalation_reason: str = "planner_requested_truth_verification"
+    paper_mode: bool = False
     model_binding_overrides: dict[str, float | int | str | bool] = Field(default_factory=dict)
 
 
@@ -42,6 +43,7 @@ def compile_bundle(request: SimulationCompileRequest) -> SimulationCompileRespon
         backend_preference=request.backend_preference,
         escalation_reason=request.escalation_reason,
         model_binding_overrides=request.model_binding_overrides,
+        paper_mode=request.paper_mode,
     )
 
 
@@ -56,4 +58,5 @@ def verify(request: SimulationCompileRequest) -> SimulationExecutionResponse:
         backend_preference=request.backend_preference,
         escalation_reason=request.escalation_reason,
         model_binding_overrides=request.model_binding_overrides,
+        paper_mode=request.paper_mode,
     )

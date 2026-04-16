@@ -68,6 +68,38 @@ class SimulationApiTests(unittest.TestCase):
         self.assertIn("simulation_bundle", payload)
         self.assertIn("report", payload)
 
+    def test_compile_endpoint_rejects_paper_mode_on_mock_truth_backend(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from apps.api_server.main import app
+
+        task, planning_bundle, search_state, candidate_id = self._context()
+        client = TestClient(app)
+        response = client.post(
+            "/simulation/compile",
+            json={
+                "design_task": task.model_dump(),
+                "planning_bundle": planning_bundle.model_dump(),
+                "search_state": search_state.model_dump(),
+                "candidate_id": candidate_id,
+                "fidelity_level": "focused_validation",
+                "backend_preference": "xyce",
+                "paper_mode": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "invalid")
+        self.assertIsNone(payload["simulation_bundle"])
+        self.assertTrue(
+            any(
+                issue["path"] == "backend_binding.invocation_mode"
+                and "paper-facing verification requires native truth" in issue["message"]
+                for issue in payload["report"]["validation_errors"]
+            )
+        )
+
     def test_verify_endpoint(self) -> None:
         from fastapi.testclient import TestClient
 
@@ -121,3 +153,29 @@ class SimulationApiTests(unittest.TestCase):
         metric_names = {metric["metric"] for metric in payload["verification_result"]["measurement_report"]["measured_metrics"]}
         self.assertTrue({"dc_gain_db", "gbw_hz", "phase_margin_deg", "power_w"}.issubset(metric_names))
         self.assertEqual(payload["verification_result"]["completion_status"], "success")
+
+    @unittest.skipUnless(native_ngspice_available(), "native ngspice is not available in this environment")
+    def test_verify_endpoint_preserves_paper_mode_policy_metadata(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from apps.api_server.main import app
+
+        task, planning_bundle, search_state, candidate_id = self._context()
+        client = TestClient(app)
+        response = client.post(
+            "/simulation/verify",
+            json={
+                "design_task": task.model_dump(),
+                "planning_bundle": planning_bundle.model_dump(),
+                "search_state": search_state.model_dump(),
+                "candidate_id": candidate_id,
+                "fidelity_level": "focused_validation",
+                "backend_preference": "ngspice",
+                "paper_mode": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["simulation_bundle"]["metadata"]["paper_truth_policy"]["paper_mode"])
+        self.assertEqual(payload["simulation_bundle"]["backend_binding"]["invocation_mode"], "native")

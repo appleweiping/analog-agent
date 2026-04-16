@@ -123,6 +123,13 @@ def configured_pdk_root() -> Path | None:
     return env_override
 
 
+def paper_truth_mode() -> str:
+    """Return the configured paper-facing truth policy string."""
+
+    config = _load_ngspice_config()
+    return str(config.get("paper_truth_mode", "native_truth_required")).strip() or "native_truth_required"
+
+
 def _classify_failure(returncode: int | None, log_text: str) -> str:
     """Map ngspice failures into a structured error class."""
 

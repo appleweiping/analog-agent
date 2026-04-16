@@ -517,6 +517,20 @@ class ValidationStatus(BaseModel):
         return _ordered_unique(values)
 
 
+class PaperTruthPolicy(BaseModel):
+    """Formal policy describing which truth path is acceptable for paper-facing runs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    policy_name: str
+    paper_mode: bool = False
+    native_truth_required: bool = True
+    configured_truth_preferred: bool = True
+    allow_demonstrator_truth: bool = True
+    forbid_mock_truth: bool = True
+    summary: str
+
+
 class SimulationProvenance(BaseModel):
     """Structured provenance for fifth-layer truth results."""
 
@@ -721,6 +735,7 @@ class SimulationMetadata(BaseModel):
     source_task_signature: str
     source_candidate_signature: str
     implementation_version: str
+    paper_truth_policy: PaperTruthPolicy | None = None
     assumptions: list[str] = Field(default_factory=list)
     provenance: list[str] = Field(default_factory=list)
 

@@ -100,6 +100,35 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                 severity="warning",
             )
         )
+    truth_policy = simulation_bundle.metadata.paper_truth_policy
+    if truth_policy and truth_policy.paper_mode:
+        if truth_policy.forbid_mock_truth and simulation_bundle.backend_binding.invocation_mode != "native":
+            errors.append(
+                SimulationValidationIssue(
+                    code="backend_binding_failure",
+                    path="backend_binding.invocation_mode",
+                    message="paper-facing verification requires native truth and cannot proceed in mock_truth mode",
+                    severity="error",
+                )
+            )
+        if not truth_policy.allow_demonstrator_truth and simulation_bundle.model_binding.validity_level.truth_level == "demonstrator_truth":
+            errors.append(
+                SimulationValidationIssue(
+                    code="backend_binding_failure",
+                    path="model_binding.validity_level",
+                    message="paper-facing verification policy rejects demonstrator_truth for this run",
+                    severity="error",
+                )
+            )
+        elif truth_policy.configured_truth_preferred and simulation_bundle.model_binding.validity_level.truth_level == "demonstrator_truth":
+            warnings.append(
+                SimulationValidationIssue(
+                    code="backend_binding_failure",
+                    path="model_binding.validity_level",
+                    message="paper-facing verification is using demonstrator_truth; configured_truth remains preferred for stronger physical claims",
+                    severity="warning",
+                )
+            )
     if not simulation_bundle.artifact_registry.run_directory:
         unresolved.append("artifact_registry.run_directory")
 

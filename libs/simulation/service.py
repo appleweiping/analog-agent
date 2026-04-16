@@ -389,6 +389,7 @@ class SimulationService:
         backend_preference: str = "ngspice",
         escalation_reason: str = "planner_requested_truth_verification",
         model_binding_overrides: dict[str, float | int | str | bool] | None = None,
+        paper_mode: bool = False,
     ) -> SimulationExecutionResponse:
         """Formal fifth-layer public entry for candidate verification."""
 
@@ -401,6 +402,7 @@ class SimulationService:
             backend_preference=backend_preference,
             escalation_reason=escalation_reason,
             model_binding_overrides=model_binding_overrides,
+            paper_mode=paper_mode,
         )
         if compiled.simulation_bundle is None:
             raise ValueError("simulation bundle failed to compile")
