@@ -98,9 +98,17 @@ def _physical_validation_status(model_binding, *, invocation_mode: str) -> Valid
         validity_state = "weak"
         summary = "builtin demonstrator model proves real SPICE participation but not industrial accuracy"
         warnings.append("demonstrator_truth_only")
+    elif "pdk_root_candidate" in model_binding.validity_level.detail:
+        validity_state = "weak"
+        summary = "configured truth is structurally routed through an external PDK root candidate but still lacks full validated model-card specificity"
+        warnings.append("configured_truth_candidate_only")
     if model_binding.model_type == "external" and model_binding.model_source.locator in {"", "missing_external_model_card"}:
         validity_state = "invalid"
         summary = "external model binding requested but model source is missing"
+        warnings.append("missing_external_model_source")
+    if model_binding.model_source.locator in {"missing_external_model_card_or_pdk_root", "missing_configured_truth_source"}:
+        validity_state = "invalid"
+        summary = "configured truth was requested but neither an external model card nor a structured PDK root is available"
         warnings.append("missing_external_model_source")
     if invocation_mode != "native":
         warnings.append("non_native_backend_execution")
@@ -130,6 +138,18 @@ def _paper_truth_policy(*, paper_mode: bool) -> PaperTruthPolicy:
             else "standard engineering mode; native truth remains preferred but non-paper mock paths are still permitted"
         ),
     )
+
+
+def _configured_truth_path_label(model_binding) -> str:
+    if model_binding.model_type != "external":
+        return "demonstrator_builtin"
+    locator = model_binding.model_source.locator
+    detail = model_binding.validity_level.detail
+    if "pdk_root_candidate" in detail:
+        return "external_pdk_candidate"
+    if locator in {"missing_external_model_card", "missing_external_model_card_or_pdk_root", "missing_configured_truth_source"}:
+        return "configured_truth_missing_source"
+    return "external_model_card"
 
 
 def _simulation_provenance(bundle_backend: BackendBinding, request: SimulationRequest, *, paper_mode: bool):
@@ -389,6 +409,7 @@ def compile_simulation_bundle(
                 truth_policy.summary,
                 f"truth_level={physical_validation.truth_level}",
                 f"validation_state={physical_validation.validity_state}",
+                f"configured_truth_path={_configured_truth_path_label(netlist.model_binding)}",
                 f"native ngspice is currently enabled for {task.circuit_family} fixed-topology quick/focused truth verification" if native_ngspice else "bundle currently executes in mock_truth mode",
             ],
             provenance=[
@@ -397,6 +418,7 @@ def compile_simulation_bundle(
                 "simulation_compiler",
                 f"paper_mode={paper_mode}",
                 f"model_binding={netlist.model_binding.backend_model_ref}",
+                f"configured_truth_path={_configured_truth_path_label(netlist.model_binding)}",
             ],
         ),
         validation_status=SimulationValidationStatus(
@@ -437,6 +459,7 @@ def compile_simulation_bundle(
             "backend": backend_preference,
             "truth_level": compiled_bundle.simulation_provenance.truth_level,
             "validation_state": physical_validation.validity_state,
+            "configured_truth_path": _configured_truth_path_label(netlist.model_binding),
         },
     )
     return SimulationCompileResponse(

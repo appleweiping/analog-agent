@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from string import Template
 
@@ -50,6 +51,20 @@ def _load_backend_model_config(backend: str) -> dict[str, str | int | bool]:
     return config
 
 
+def _split_csv_names(value: str | int | bool | None) -> list[str]:
+    if not isinstance(value, str):
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _first_env_value(names: list[str]) -> str:
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    return ""
+
+
 def _model_binding_from_config(
     *,
     backend: str,
@@ -63,10 +78,15 @@ def _model_binding_from_config(
     config = _load_backend_model_config(backend)
     if overrides:
         config.update({key: value for key, value in overrides.items() if value not in {None, ""}})
+    configured_truth_mode = str(config.get("configured_truth_mode", "disabled")).strip() or "disabled"
+    configured_truth_contract = str(config.get("configured_truth_contract", "unconfigured")).strip() or "unconfigured"
+    configured_truth_source = str(config.get("configured_truth_model_source", "external_model_card_or_pdk_root")).strip() or "external_model_card_or_pdk_root"
     model_type = str(config.get("model_type", "builtin")).strip() or "builtin"
-    external_path = str(config.get("external_model_card_path", "")).strip()
+    external_path = _first_env_value(_split_csv_names(config.get("external_model_card_env_vars"))) or str(config.get("external_model_card_path", "")).strip()
+    pdk_root = _first_env_value(_split_csv_names(config.get("pdk_root_env_vars"))) or str(config.get("pdk_root", "")).strip()
     builtin_ref = str(config.get("default_builtin_model", default_builtin_ref)).strip() or default_builtin_ref
-    if model_type == "external" and external_path:
+    external_requested = model_type == "external" or configured_truth_mode != "disabled"
+    if external_requested and external_path:
         source = ModelSource(source_type="path", locator=external_path)
         validity = ModelValidityLevel(
             truth_level="configured_truth",
@@ -75,15 +95,31 @@ def _model_binding_from_config(
         )
         binding_confidence = 0.95
         backend_model_ref = external_path
-    elif model_type == "external":
-        source = ModelSource(source_type="path", locator="missing_external_model_card")
+    elif external_requested and configured_truth_source in {"external_model_card_or_pdk_root", "external_pdk_root"} and pdk_root:
+        source = ModelSource(source_type="path", locator=pdk_root)
         validity = ModelValidityLevel(
             truth_level="configured_truth",
-            detail="external_model_card_missing",
+            detail=f"external_pdk_root_candidate:{configured_truth_contract}",
+            industrial_confidence=0.55,
+        )
+        binding_confidence = 0.58
+        backend_model_ref = f"{pdk_root}::pdk_root"
+    elif external_requested:
+        missing_source = "missing_configured_truth_source"
+        if configured_truth_source == "external_pdk_root" or (
+            configured_truth_source == "external_model_card_or_pdk_root" and not external_path and not pdk_root
+        ):
+            missing_source = "missing_external_model_card_or_pdk_root"
+        elif not external_path:
+            missing_source = "missing_external_model_card"
+        source = ModelSource(source_type="path", locator=missing_source)
+        validity = ModelValidityLevel(
+            truth_level="configured_truth",
+            detail=f"configured_truth_requested_but_source_missing:{configured_truth_contract}",
             industrial_confidence=0.25,
         )
         binding_confidence = 0.2
-        backend_model_ref = "missing_external_model_card"
+        backend_model_ref = missing_source
     else:
         source = ModelSource(source_type="registry", locator=builtin_ref, registry_key=builtin_ref)
         validity = ModelValidityLevel(
@@ -94,7 +130,7 @@ def _model_binding_from_config(
         binding_confidence = 0.62
         backend_model_ref = builtin_ref
     return ModelBinding(
-        model_type="external" if model_type == "external" else "builtin",
+        model_type="external" if external_requested else "builtin",
         model_source=source,
         process_node=process_node,
         corner=corner,

@@ -73,6 +73,19 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                 severity="error",
             )
         )
+    if simulation_bundle.model_binding.model_source.locator in {
+        "missing_external_model_card",
+        "missing_external_model_card_or_pdk_root",
+        "missing_configured_truth_source",
+    }:
+        errors.append(
+            SimulationValidationIssue(
+                code="backend_binding_failure",
+                path="model_binding.model_source",
+                message="configured_truth was requested but no external model card or structured PDK root is available",
+                severity="error",
+            )
+        )
     if simulation_bundle.model_binding.binding_confidence < 0.3:
         warnings.append(
             SimulationValidationIssue(
@@ -88,6 +101,15 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                 code="backend_binding_failure",
                 path="model_binding.validity_level",
                 message="bundle is running with demonstrator_truth validity only",
+                severity="warning",
+            )
+        )
+    elif "pdk_root_candidate" in simulation_bundle.model_binding.validity_level.detail:
+        warnings.append(
+            SimulationValidationIssue(
+                code="backend_binding_failure",
+                path="model_binding.validity_level",
+                message="bundle is using a configured_truth candidate path via external PDK root; stronger model-card specificity is still preferred",
                 severity="warning",
             )
         )

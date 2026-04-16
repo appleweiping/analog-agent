@@ -5,6 +5,10 @@ invocation_mode: native
 timeout_seconds: 20
 model_type: builtin
 default_builtin_model: builtin_demo_ota2_small_signal_v1
+configured_truth_mode: disabled
+configured_truth_contract: sky130_open
+configured_truth_model_source: external_model_card_or_pdk_root
+configured_truth_requires_pdk_root: false
 external_model_card_path:
 external_model_card_env_vars: ANALOG_AGENT_EXTERNAL_MODEL_CARD,NGSPICE_MODEL_CARD
 pdk_root:

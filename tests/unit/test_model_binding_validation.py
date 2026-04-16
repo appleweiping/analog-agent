@@ -50,12 +50,63 @@ class ModelBindingValidationTests(unittest.TestCase):
             model_binding_overrides={"model_type": "external"},
         )
 
+        self.assertIsNone(compiled.simulation_bundle)
+        self.assertEqual(compiled.status, "invalid")
+        self.assertTrue(
+            any(
+                issue.path == "model_binding.model_source"
+                and "configured_truth was requested" in issue.message
+                for issue in compiled.report.validation_errors
+            )
+        )
+        self.assertEqual(compiled.report.acceptance_summary["validation_state"], "invalid")
+
+    def test_configured_truth_pdk_candidate_path_is_structurally_compiled(self) -> None:
+        task, planning_bundle, search_state, candidate_id = _context()
+        compiled = compile_simulation_bundle(
+            task,
+            planning_bundle,
+            search_state,
+            candidate_id,
+            backend_preference="ngspice",
+            model_binding_overrides={
+                "configured_truth_mode": "external_pdk_root",
+                "pdk_root": "mock://pdks/sky130A",
+            },
+        )
+
         self.assertIsNotNone(compiled.simulation_bundle)
         bundle = compiled.simulation_bundle
         assert bundle is not None
         self.assertEqual(bundle.model_binding.model_type, "external")
         self.assertEqual(bundle.model_binding.validity_level.truth_level, "configured_truth")
-        self.assertIn("backend_binding_failure", [warning.code for warning in bundle.validation_status.warnings] + [error.code for error in bundle.validation_status.errors])
+        self.assertIn("external_pdk_root_candidate", bundle.model_binding.validity_level.detail)
+        self.assertEqual(bundle.validation_status.is_valid, True)
+        self.assertTrue(
+            any(
+                "configured_truth candidate path via external PDK root" in warning.message
+                for warning in bundle.validation_status.warnings
+            )
+        )
+        self.assertEqual(compiled.report.acceptance_summary["configured_truth_path"], "external_pdk_candidate")
+        self.assertIn("configured_truth_path=external_pdk_candidate", bundle.metadata.assumptions)
+
+    def test_configured_truth_without_any_external_source_is_invalid(self) -> None:
+        task, planning_bundle, search_state, candidate_id = _context()
+        compiled = compile_simulation_bundle(
+            task,
+            planning_bundle,
+            search_state,
+            candidate_id,
+            backend_preference="ngspice",
+            model_binding_overrides={
+                "configured_truth_mode": "external_pdk_root",
+            },
+        )
+
+        self.assertIsNone(compiled.simulation_bundle)
+        self.assertEqual(compiled.status, "invalid")
+        self.assertEqual(compiled.report.acceptance_summary["configured_truth_path"], "configured_truth_missing_source")
         self.assertEqual(compiled.report.acceptance_summary["validation_state"], "invalid")
 
 
