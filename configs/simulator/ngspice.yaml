@@ -14,3 +14,7 @@ smoke_test_netlist: scripts\smoke\test_ngspice_min.cir
 require_explicit_log_path: true
 supports_monte_carlo: false
 paper_truth_mode: native_truth_required
+container_service_name: api
+container_workdir: /workspace
+container_ngspice_bin: /usr/bin/ngspice
+container_pdk_root: /pdk/sky130A
