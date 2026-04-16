@@ -2,14 +2,19 @@ version: "3.9"
 
 services:
   api:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.ngspice
     working_dir: /workspace
     command: >
       sh -c "pip install -e . && uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000"
     environment:
       ANALOG_AGENT_CONFIG: configs/default.yaml
+      ANALOG_AGENT_NGSPICE_BIN: /usr/bin/ngspice
+      ANALOG_AGENT_PDK_ROOT: /pdk/sky130A
       PYTHONUNBUFFERED: "1"
     ports:
       - "8000:8000"
     volumes:
       - .:/workspace
+      - ${ANALOG_AGENT_PDK_HOST_PATH:-./.pdk/sky130A}:/pdk/sky130A

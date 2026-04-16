@@ -1,0 +1,13 @@
+name: sky130_open
+distribution: skywater-pdk-open
+version: local_user_managed
+root_env_vars: ANALOG_AGENT_PDK_ROOT,SKY130_PDK_ROOT,PDK_ROOT
+expected_root_hint: /pdk/sky130A
+required_subpaths:
+  - libs.tech/ngspice
+  - libs.ref/sky130_fd_pr/spice
+truth_level_when_present: configured_truth_candidate
+notes: |
+  This file defines the open-PDK readiness contract for paper-facing native
+  truth workflows. It does not download the PDK automatically; users must stage
+  the open SKY130 PDK locally or mount it into the runtime container.

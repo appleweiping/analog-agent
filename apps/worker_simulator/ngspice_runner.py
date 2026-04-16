@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -35,23 +36,91 @@ def _load_ngspice_config() -> dict[str, str | int | bool]:
     return config
 
 
+def _split_csv_names(value: str | int | bool | None) -> list[str]:
+    if not isinstance(value, str):
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _first_env_path(names: list[str]) -> Path | None:
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return Path(value)
+    return None
+
+
+def _workspace_tool_candidates() -> list[Path]:
+    repo_root = Path(__file__).resolve().parents[2]
+    workspace_root = repo_root.parent
+    return [
+        workspace_root / "tools" / "ngspice" / "bin" / "ngspice.exe",
+        workspace_root / "tools" / "Spice64" / "bin" / "ngspice.exe",
+        workspace_root / "tools" / "ngspice" / "bin" / "ngspice",
+        workspace_root / "tools" / "Spice64" / "bin" / "ngspice",
+    ]
+
+
 def ngspice_binary_path() -> Path:
-    """Return the configured ngspice binary path."""
+    """Return the resolved ngspice binary path."""
 
     config = _load_ngspice_config()
-    configured = Path(str(config["binary"]))
-    if configured.exists():
+    configured_raw = str(config.get("binary", "")).strip()
+    env_override = _first_env_path(_split_csv_names(config.get("binary_env_vars")))
+    if env_override and env_override.exists():
+        return env_override
+    if configured_raw:
+        configured = Path(configured_raw)
+        if configured.exists():
+            return configured
         return configured
+    for candidate in _workspace_tool_candidates():
+        if candidate.exists():
+            return candidate
     discovered = shutil.which("ngspice")
     if discovered:
         return Path(discovered)
-    return configured
+    if env_override:
+        return env_override
+    return Path(configured_raw or "ngspice")
 
 
 def native_ngspice_available() -> bool:
     """Whether the configured native ngspice binary is available."""
 
     return ngspice_binary_path().exists()
+
+
+def external_model_card_path() -> Path | None:
+    """Return a configured external model card path when available."""
+
+    config = _load_ngspice_config()
+    env_override = _first_env_path(_split_csv_names(config.get("external_model_card_env_vars")))
+    if env_override and env_override.exists():
+        return env_override
+    configured_raw = str(config.get("external_model_card_path", "")).strip()
+    if configured_raw:
+        configured = Path(configured_raw)
+        if configured.exists():
+            return configured
+        return configured
+    return env_override
+
+
+def configured_pdk_root() -> Path | None:
+    """Return a configured open-PDK root when available."""
+
+    config = _load_ngspice_config()
+    env_override = _first_env_path(_split_csv_names(config.get("pdk_root_env_vars")))
+    if env_override and env_override.exists():
+        return env_override
+    configured_raw = str(config.get("pdk_root", "")).strip()
+    if configured_raw:
+        configured = Path(configured_raw)
+        if configured.exists():
+            return configured
+        return configured
+    return env_override
 
 
 def _classify_failure(returncode: int | None, log_text: str) -> str:
@@ -152,7 +221,7 @@ def run_ngspice_batch(
 
     config = _load_ngspice_config()
     request = BackendRunRequest(
-        simulator_binary_path=str(ngspice_exe or config["binary"]),
+        simulator_binary_path=str(ngspice_exe or ngspice_binary_path()),
         netlist_path=str(netlist_path),
         log_path=str(log_path),
         timeout_sec=int(timeout_sec or config["timeout_seconds"]),

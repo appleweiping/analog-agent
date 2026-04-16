@@ -206,6 +206,7 @@ paper/
 
 # Local simulation artifacts
 .artifacts/
+.pdk/
 research/
 research/benchmarks/*_experiment_results.json
 research/benchmarks/*_stats_summary.json
