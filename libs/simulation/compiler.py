@@ -102,13 +102,13 @@ def _physical_validation_status(model_binding, *, invocation_mode: str) -> Valid
         validity_state = "weak"
         summary = "configured truth is structurally routed through an external PDK root candidate but still lacks full validated model-card specificity"
         warnings.append("configured_truth_candidate_only")
-    if model_binding.model_type == "external" and model_binding.model_source.locator in {"", "missing_external_model_card"}:
+    if model_binding.model_type == "external" and model_binding.model_source.source_status == "missing":
         validity_state = "invalid"
         summary = "external model binding requested but model source is missing"
         warnings.append("missing_external_model_source")
-    if model_binding.model_source.locator in {"missing_external_model_card_or_pdk_root", "missing_configured_truth_source"}:
+    if model_binding.model_source.source_status == "missing" and model_binding.configured_truth_contract:
         validity_state = "invalid"
-        summary = "configured truth was requested but neither an external model card nor a structured PDK root is available"
+        summary = f"configured truth was requested under contract {model_binding.configured_truth_contract} but no external source is available"
         warnings.append("missing_external_model_source")
     if invocation_mode != "native":
         warnings.append("non_native_backend_execution")
@@ -143,11 +143,9 @@ def _paper_truth_policy(*, paper_mode: bool) -> PaperTruthPolicy:
 def _configured_truth_path_label(model_binding) -> str:
     if model_binding.model_type != "external":
         return "demonstrator_builtin"
-    locator = model_binding.model_source.locator
-    detail = model_binding.validity_level.detail
-    if "pdk_root_candidate" in detail:
+    if model_binding.model_source.source_status == "candidate":
         return "external_pdk_candidate"
-    if locator in {"missing_external_model_card", "missing_external_model_card_or_pdk_root", "missing_configured_truth_source"}:
+    if model_binding.model_source.source_status == "missing":
         return "configured_truth_missing_source"
     return "external_model_card"
 

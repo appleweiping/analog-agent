@@ -57,12 +57,12 @@ def _split_csv_names(value: str | int | bool | None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def _first_env_value(names: list[str]) -> str:
+def _first_env_binding(names: list[str]) -> tuple[str, str]:
     for name in names:
         value = os.environ.get(name, "").strip()
         if value:
-            return value
-    return ""
+            return name, value
+    return "", ""
 
 
 def _model_binding_from_config(
@@ -81,13 +81,23 @@ def _model_binding_from_config(
     configured_truth_mode = str(config.get("configured_truth_mode", "disabled")).strip() or "disabled"
     configured_truth_contract = str(config.get("configured_truth_contract", "unconfigured")).strip() or "unconfigured"
     configured_truth_source = str(config.get("configured_truth_model_source", "external_model_card_or_pdk_root")).strip() or "external_model_card_or_pdk_root"
+    requires_pdk_root = bool(config.get("configured_truth_requires_pdk_root", False))
     model_type = str(config.get("model_type", "builtin")).strip() or "builtin"
-    external_path = _first_env_value(_split_csv_names(config.get("external_model_card_env_vars"))) or str(config.get("external_model_card_path", "")).strip()
-    pdk_root = _first_env_value(_split_csv_names(config.get("pdk_root_env_vars"))) or str(config.get("pdk_root", "")).strip()
+    external_env_name, external_env_value = _first_env_binding(_split_csv_names(config.get("external_model_card_env_vars")))
+    pdk_env_name, pdk_env_value = _first_env_binding(_split_csv_names(config.get("pdk_root_env_vars")))
+    external_path = external_env_value or str(config.get("external_model_card_path", "")).strip()
+    pdk_root = pdk_env_value or str(config.get("pdk_root", "")).strip()
     builtin_ref = str(config.get("default_builtin_model", default_builtin_ref)).strip() or default_builtin_ref
     external_requested = model_type == "external" or configured_truth_mode != "disabled"
     if external_requested and external_path:
-        source = ModelSource(source_type="path", locator=external_path)
+        resolution_basis = "env_external_model_card" if external_env_name else "config_external_model_card"
+        source = ModelSource(
+            source_type="path",
+            locator=external_path,
+            source_status="resolved",
+            resolution_basis=resolution_basis,
+            contract_name=configured_truth_contract,
+        )
         validity = ModelValidityLevel(
             truth_level="configured_truth",
             detail="external_model_card_configured",
@@ -95,8 +105,20 @@ def _model_binding_from_config(
         )
         binding_confidence = 0.95
         backend_model_ref = external_path
+        diagnostics = [
+            f"configured_truth_mode={configured_truth_mode}",
+            "configured_truth_source=external_model_card",
+            f"resolution_basis={resolution_basis}",
+        ]
     elif external_requested and configured_truth_source in {"external_model_card_or_pdk_root", "external_pdk_root"} and pdk_root:
-        source = ModelSource(source_type="path", locator=pdk_root)
+        resolution_basis = "env_pdk_root" if pdk_env_name else "config_pdk_root"
+        source = ModelSource(
+            source_type="path",
+            locator=pdk_root,
+            source_status="candidate",
+            resolution_basis=resolution_basis,
+            contract_name=configured_truth_contract,
+        )
         validity = ModelValidityLevel(
             truth_level="configured_truth",
             detail=f"external_pdk_root_candidate:{configured_truth_contract}",
@@ -104,6 +126,12 @@ def _model_binding_from_config(
         )
         binding_confidence = 0.58
         backend_model_ref = f"{pdk_root}::pdk_root"
+        diagnostics = [
+            f"configured_truth_mode={configured_truth_mode}",
+            "configured_truth_source=external_pdk_root",
+            f"resolution_basis={resolution_basis}",
+            "configured_truth_candidate_only",
+        ]
     elif external_requested:
         missing_source = "missing_configured_truth_source"
         if configured_truth_source == "external_pdk_root" or (
@@ -112,7 +140,13 @@ def _model_binding_from_config(
             missing_source = "missing_external_model_card_or_pdk_root"
         elif not external_path:
             missing_source = "missing_external_model_card"
-        source = ModelSource(source_type="path", locator=missing_source)
+        source = ModelSource(
+            source_type="path",
+            locator=missing_source,
+            source_status="missing",
+            resolution_basis=f"missing:{configured_truth_source}",
+            contract_name=configured_truth_contract,
+        )
         validity = ModelValidityLevel(
             truth_level="configured_truth",
             detail=f"configured_truth_requested_but_source_missing:{configured_truth_contract}",
@@ -120,8 +154,19 @@ def _model_binding_from_config(
         )
         binding_confidence = 0.2
         backend_model_ref = missing_source
+        diagnostics = [
+            f"configured_truth_mode={configured_truth_mode}",
+            f"configured_truth_source={configured_truth_source}",
+            "configured_truth_source_missing",
+        ]
     else:
-        source = ModelSource(source_type="registry", locator=builtin_ref, registry_key=builtin_ref)
+        source = ModelSource(
+            source_type="registry",
+            locator=builtin_ref,
+            source_status="resolved",
+            resolution_basis="builtin_registry",
+            registry_key=builtin_ref,
+        )
         validity = ModelValidityLevel(
             truth_level="demonstrator_truth",
             detail="builtin_demonstrator_model",
@@ -129,6 +174,7 @@ def _model_binding_from_config(
         )
         binding_confidence = 0.62
         backend_model_ref = builtin_ref
+        diagnostics = ["configured_truth_mode=disabled", "configured_truth_source=builtin_registry"]
     return ModelBinding(
         model_type="external" if external_requested else "builtin",
         model_source=source,
@@ -137,8 +183,11 @@ def _model_binding_from_config(
         temperature_c=temperature_c,
         supply_voltage_v=supply_voltage_v,
         backend_model_ref=backend_model_ref,
+        configured_truth_contract=configured_truth_contract if external_requested else None,
+        requires_pdk_root=requires_pdk_root,
         binding_confidence=binding_confidence,
         validity_level=validity,
+        diagnostics=diagnostics,
     )
 
 

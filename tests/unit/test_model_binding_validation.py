@@ -80,6 +80,9 @@ class ModelBindingValidationTests(unittest.TestCase):
         assert bundle is not None
         self.assertEqual(bundle.model_binding.model_type, "external")
         self.assertEqual(bundle.model_binding.validity_level.truth_level, "configured_truth")
+        self.assertEqual(bundle.model_binding.model_source.source_status, "candidate")
+        self.assertEqual(bundle.model_binding.model_source.resolution_basis, "config_pdk_root")
+        self.assertEqual(bundle.model_binding.configured_truth_contract, "sky130_open")
         self.assertIn("external_pdk_root_candidate", bundle.model_binding.validity_level.detail)
         self.assertEqual(bundle.validation_status.is_valid, True)
         self.assertTrue(
@@ -88,6 +91,7 @@ class ModelBindingValidationTests(unittest.TestCase):
                 for warning in bundle.validation_status.warnings
             )
         )
+        self.assertIn("configured_truth_candidate_only", bundle.model_binding.diagnostics)
         self.assertEqual(compiled.report.acceptance_summary["configured_truth_path"], "external_pdk_candidate")
         self.assertIn("configured_truth_path=external_pdk_candidate", bundle.metadata.assumptions)
 
@@ -108,6 +112,24 @@ class ModelBindingValidationTests(unittest.TestCase):
         self.assertEqual(compiled.status, "invalid")
         self.assertEqual(compiled.report.acceptance_summary["configured_truth_path"], "configured_truth_missing_source")
         self.assertEqual(compiled.report.acceptance_summary["validation_state"], "invalid")
+
+    def test_builtin_demonstrator_binding_is_structured_as_resolved_registry_source(self) -> None:
+        task, planning_bundle, search_state, candidate_id = _context()
+        compiled = compile_simulation_bundle(
+            task,
+            planning_bundle,
+            search_state,
+            candidate_id,
+            backend_preference="ngspice",
+        )
+
+        self.assertIsNotNone(compiled.simulation_bundle)
+        bundle = compiled.simulation_bundle
+        assert bundle is not None
+        self.assertEqual(bundle.model_binding.model_type, "builtin")
+        self.assertEqual(bundle.model_binding.model_source.source_status, "resolved")
+        self.assertEqual(bundle.model_binding.model_source.resolution_basis, "builtin_registry")
+        self.assertIsNone(bundle.model_binding.configured_truth_contract)
 
 
 if __name__ == "__main__":

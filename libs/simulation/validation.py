@@ -73,11 +73,7 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                 severity="error",
             )
         )
-    if simulation_bundle.model_binding.model_source.locator in {
-        "missing_external_model_card",
-        "missing_external_model_card_or_pdk_root",
-        "missing_configured_truth_source",
-    }:
+    if simulation_bundle.model_binding.model_source.source_status == "missing":
         errors.append(
             SimulationValidationIssue(
                 code="backend_binding_failure",
@@ -104,7 +100,7 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                 severity="warning",
             )
         )
-    elif "pdk_root_candidate" in simulation_bundle.model_binding.validity_level.detail:
+    elif simulation_bundle.model_binding.model_source.source_status == "candidate":
         warnings.append(
             SimulationValidationIssue(
                 code="backend_binding_failure",

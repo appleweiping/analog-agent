@@ -191,6 +191,9 @@ class ModelSource(BaseModel):
 
     source_type: Literal["path", "registry", "inline"]
     locator: str
+    source_status: Literal["resolved", "candidate", "missing"] = "resolved"
+    resolution_basis: str | None = None
+    contract_name: str | None = None
     registry_key: str | None = None
     inline_signature: str | None = None
 
@@ -224,8 +227,11 @@ class ModelBinding(BaseModel):
     temperature_c: float
     supply_voltage_v: float | None = None
     backend_model_ref: str
+    configured_truth_contract: str | None = None
+    requires_pdk_root: bool = False
     binding_confidence: float
     validity_level: ModelValidityLevel
+    diagnostics: list[str] = Field(default_factory=list)
 
     @field_validator("binding_confidence")
     @classmethod
@@ -233,6 +239,11 @@ class ModelBinding(BaseModel):
         if value < 0.0 or value > 1.0:
             raise ValueError("binding_confidence must be within [0, 1]")
         return round(float(value), 4)
+
+    @field_validator("diagnostics")
+    @classmethod
+    def dedupe_diagnostics(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
 
 
 class StimulusBinding(BaseModel):
