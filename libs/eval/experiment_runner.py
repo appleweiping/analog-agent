@@ -39,6 +39,7 @@ from libs.schema.experiment import (
     MethodConclusionSummary,
     MethodDeltaSummary,
     MethodModeSummary,
+    VerifiedCandidateSnapshot,
 )
 from libs.schema.planning import CandidatePoolState, FrontierState, SearchProvenance, SearchState, SimulationDecision, SimulationSelectionResponse, StrategyContext
 from libs.schema.world_model import FeasibilityPrediction, MetricEstimate, MetricsPrediction, SimulationValueEstimate, TrustAssessment
@@ -96,6 +97,51 @@ def _baseline_metric_value(metric: str, seed: str) -> float:
     }
     low, high = ranges.get(metric, (0.1, 1.0))
     return round(low + (high - low) * ratio, 6)
+
+
+def _verified_candidate_snapshot(task, candidate) -> VerifiedCandidateSnapshot:
+    parameter_values: dict[str, float | int | str | bool] = {}
+    normalized_parameters: dict[str, float] = {}
+    for parameter in candidate.world_state_snapshot.parameter_state:
+        parameter_values[parameter.variable_name] = parameter.value
+        normalized_parameters[parameter.variable_name] = round(float(parameter.normalized_value), 6)
+
+    predicted_metrics: dict[str, float] = {}
+    if candidate.predicted_metrics is not None:
+        predicted_metrics = {
+            metric.metric: round(float(metric.value), 6)
+            for metric in candidate.predicted_metrics.metrics
+        }
+
+    environment = {
+        "corner": candidate.world_state_snapshot.environment_state.corner,
+        "temperature_c": candidate.world_state_snapshot.environment_state.temperature_c,
+        "supply_voltage_v": candidate.world_state_snapshot.environment_state.supply_voltage_v,
+        "load_cap_f": candidate.world_state_snapshot.environment_state.load_cap_f,
+        "output_load_ohm": candidate.world_state_snapshot.environment_state.output_load_ohm,
+        "bias_mode": candidate.world_state_snapshot.environment_state.bias_mode,
+    }
+
+    return VerifiedCandidateSnapshot(
+        candidate_id=candidate.candidate_id,
+        task_id=task.task_id,
+        family=task.circuit_family,
+        parameter_values=parameter_values,
+        normalized_parameters=normalized_parameters,
+        environment=environment,
+        predicted_metrics=predicted_metrics,
+        predicted_feasibility=(
+            round(float(candidate.predicted_feasibility.overall_feasibility), 6)
+            if candidate.predicted_feasibility is not None
+            else None
+        ),
+        predicted_uncertainty=(
+            round(float(candidate.predicted_uncertainty.uncertainty_score), 6)
+            if candidate.predicted_uncertainty is not None
+            else None
+        ),
+        artifact_refs=list(candidate.artifact_refs),
+    )
 
 
 def _baseline_trust(mode: str, seed: str) -> TrustAssessment:
@@ -1369,6 +1415,7 @@ def run_experiment(
         search_state = service.initialize_search().search_state
 
     simulation_executions = []
+    verified_candidate_snapshots: list[VerifiedCandidateSnapshot] = []
     logs: list[ExperimentLogRecord] = []
     convergence_step: int | None = None
     total_selectable_candidates = 0
@@ -1419,6 +1466,7 @@ def run_experiment(
         step_calibration_updates = 0
         for candidate in selection.selected_candidates:
             requested_fidelity = _requested_fidelity(component_config, selection, candidate, fidelity_level)
+            verified_candidate_snapshots.append(_verified_candidate_snapshot(task, candidate))
             execution = SimulationService(task, planning_bundle, search_state).verify_candidate(
                 candidate.candidate_id,
                 fidelity_level=requested_fidelity,
@@ -1571,6 +1619,7 @@ def run_experiment(
         focused_truth_call_count=focused_truth_call_count,
         structured_log=logs,
         verification_stats=[execution.verification_stats for execution in simulation_executions],
+        verified_candidate_snapshots=verified_candidate_snapshots,
     )
     return result.model_copy(update={"stats_record": build_experiment_stats_record(result)})
 

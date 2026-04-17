@@ -118,6 +118,34 @@ class ExperimentLogRecord(BaseModel):
         return round(float(value), 6)
 
 
+class VerifiedCandidateSnapshot(BaseModel):
+    """Compact verified-candidate snapshot kept for dataset export and replay."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    candidate_id: str
+    task_id: str
+    family: str
+    parameter_values: dict[str, float | int | str | bool] = Field(default_factory=dict)
+    normalized_parameters: dict[str, float] = Field(default_factory=dict)
+    environment: dict[str, float | int | str | bool | None] = Field(default_factory=dict)
+    predicted_metrics: dict[str, float] = Field(default_factory=dict)
+    predicted_feasibility: float | None = None
+    predicted_uncertainty: float | None = None
+    artifact_refs: list[str] = Field(default_factory=list)
+
+    @field_validator("artifact_refs")
+    @classmethod
+    def dedupe_artifacts(cls, values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for value in values:
+            if value not in seen:
+                seen.add(value)
+                deduped.append(value)
+        return deduped
+
+
 class ExperimentResult(BaseModel):
     """Formal result for one experiment run."""
 
@@ -142,6 +170,7 @@ class ExperimentResult(BaseModel):
     focused_truth_call_count: int = 0
     structured_log: list[ExperimentLogRecord] = Field(default_factory=list)
     verification_stats: list[VerificationStatsRecord] = Field(default_factory=list)
+    verified_candidate_snapshots: list[VerifiedCandidateSnapshot] = Field(default_factory=list)
     stats_record: ExperimentStatsRecord | None = None
 
     @field_validator("simulation_selection_ratio", "feasible_hit_rate")
