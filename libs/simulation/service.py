@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from libs.planner.candidate_manager import find_candidate
 from libs.eval.stats import build_verification_stats_record
@@ -25,6 +26,7 @@ from libs.simulation.compiler import build_simulation_request, compile_simulatio
 from libs.simulation.constraint_verifier import verify_constraints
 from libs.simulation.failure_analyzer import attribute_failures
 from libs.simulation.measurement_extractors import extract_measurement_report
+from libs.simulation.replay_tools import build_replay_manifest
 from libs.simulation.robustness_evaluator import certify_robustness
 from libs.simulation.validation import validate_verification_result
 from libs.utils.hashing import stable_hash
@@ -328,6 +330,28 @@ class SimulationService:
                 replay_hint="replay verification aggregation from measurement artifacts",
             ),
         )
+        measurement_report_path = str(Path(simulation_bundle.artifact_registry.run_directory) / "measurement_report.json")
+        verification_report_path = str(Path(simulation_bundle.artifact_registry.run_directory) / "verification_result.json")
+        replay_manifest = build_replay_manifest(
+            simulation_bundle,
+            simulation_request,
+            validation_status=physical_validation,
+            measurement_report_path=measurement_report_path,
+            verification_report_path=verification_report_path,
+        )
+        simulation_bundle.artifact_registry, replay_manifest_artifact = persist_json_artifact(
+            simulation_bundle.artifact_registry,
+            "replay_manifest",
+            "replay_manifest.json",
+            replay_manifest.model_dump(mode="json"),
+            simulation_provenance=simulation_bundle.simulation_provenance,
+            validation_status=physical_validation,
+            execution_context=build_artifact_execution_context(
+                simulation_provenance=simulation_bundle.simulation_provenance,
+                validation_status=physical_validation,
+                replay_hint="inspect replay_manifest.json for native rerun instructions",
+            ),
+        )
         simulation_bundle.simulation_provenance = simulation_bundle.simulation_provenance.model_copy(
             update={
                 "artifact_lineage": [record.artifact_id for record in simulation_bundle.artifact_registry.records],
@@ -375,8 +399,10 @@ class SimulationService:
                 "critical_failure_count": sum(1 for item in assessments if not item.is_satisfied and item.severity == "critical"),
                 "truth_level": physical_validation.truth_level,
                 "validation_state": physical_validation.validity_state,
+                "claim_profile": simulation_bundle.metadata.physical_claim_scope.nominal_profile if simulation_bundle.metadata.physical_claim_scope else "",
+                "truth_claim_tier": simulation_bundle.metadata.physical_claim_scope.truth_claim_tier if simulation_bundle.metadata.physical_claim_scope else "",
             },
-            artifact_refs=[netlist_artifact, measurement_artifact, verification_artifact, *[record.artifact_id for record in simulation_bundle.artifact_registry.records]],
+            artifact_refs=[netlist_artifact, measurement_artifact, verification_artifact, replay_manifest_artifact, *[record.artifact_id for record in simulation_bundle.artifact_registry.records]],
             calibration_payload=calibration_feedback,
             planner_feedback=planner_feedback,
             completion_status=completion_status,

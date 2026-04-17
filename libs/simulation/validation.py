@@ -119,6 +119,25 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
             )
         )
     truth_policy = simulation_bundle.metadata.paper_truth_policy
+    claim_scope = simulation_bundle.metadata.physical_claim_scope
+    if claim_scope and claim_scope.nominal_profile == "single_point_nominal":
+        warnings.append(
+            SimulationValidationIssue(
+                code="verification_policy_failure",
+                path="metadata.physical_claim_scope",
+                message="compiled verification run covers only single-point nominal conditions",
+                severity="warning",
+            )
+        )
+    if claim_scope and claim_scope.nominal_profile == "robustness_style" and claim_scope.truth_claim_tier != "configured_strong":
+        warnings.append(
+            SimulationValidationIssue(
+                code="verification_policy_failure",
+                path="metadata.physical_claim_scope",
+                message="robustness-style evaluation is present, but physical claim strength remains below configured_strong",
+                severity="warning",
+            )
+        )
     if truth_policy and truth_policy.paper_mode:
         if truth_policy.forbid_mock_truth and simulation_bundle.backend_binding.invocation_mode != "native":
             errors.append(
@@ -144,6 +163,24 @@ def validate_simulation_bundle(simulation_bundle: SimulationBundle, task: Design
                     code="backend_binding_failure",
                     path="model_binding.validity_level",
                     message="paper-facing verification is using demonstrator_truth; configured_truth remains preferred for stronger physical claims",
+                    severity="warning",
+                )
+            )
+        if claim_scope and claim_scope.truth_claim_tier == "demonstrator_only":
+            warnings.append(
+                SimulationValidationIssue(
+                    code="verification_policy_failure",
+                    path="metadata.physical_claim_scope",
+                    message="paper-facing run must keep its physical claim at demonstrator level",
+                    severity="warning",
+                )
+            )
+        elif claim_scope and claim_scope.truth_claim_tier == "configured_candidate":
+            warnings.append(
+                SimulationValidationIssue(
+                    code="verification_policy_failure",
+                    path="metadata.physical_claim_scope",
+                    message="paper-facing run is on a configured-truth candidate path and still needs stronger source validation",
                     severity="warning",
                 )
             )

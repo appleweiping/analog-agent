@@ -1,6 +1,9 @@
 name: sky130_open
 distribution: skywater-pdk-open
 version: local_user_managed
+version_lock_required: true
+checksum_policy: user_recorded_manifest
+checksum_manifest_hint: .pdk/sky130A.sha256
 readiness_policy: configured_truth_requires_structured_root
 root_env_vars: ANALOG_AGENT_PDK_ROOT,SKY130_PDK_ROOT,PDK_ROOT
 expected_root_hint: /pdk/sky130A

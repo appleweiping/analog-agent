@@ -17,6 +17,7 @@ from libs.schema.simulation import (
     FidelitySelectionReason,
     MonteCarloSettings,
     PaperTruthPolicy,
+    PhysicalClaimScope,
     ResourceBudget,
     RobustnessPolicy,
     ServiceMethodSpec,
@@ -148,6 +149,61 @@ def _configured_truth_path_label(model_binding) -> str:
     if model_binding.model_source.source_status == "missing":
         return "configured_truth_missing_source"
     return "external_model_card"
+
+
+def _policy_value_count(policy) -> int:
+    if not policy.values:
+        return 1
+    return max(1, len(policy.values))
+
+
+def _physical_claim_scope(task: DesignTask, analysis_plan, model_binding) -> PhysicalClaimScope:
+    resolved_fidelity = normalize_fidelity_level(analysis_plan.fidelity_level)
+    corner_count = _policy_value_count(task.evaluation_plan.corners_policy)
+    temperature_count = _policy_value_count(task.evaluation_plan.temperature_policy)
+    load_count = _policy_value_count(task.evaluation_plan.load_policy)
+    analysis_types = [analysis.analysis_type for analysis in analysis_plan.ordered_analyses]
+    if resolved_fidelity == "full_robustness_certification":
+        nominal_profile = "robustness_style"
+    elif max(corner_count, temperature_count, load_count) > 1:
+        nominal_profile = "multi_condition_nominal"
+    else:
+        nominal_profile = "single_point_nominal"
+
+    if model_binding.validity_level.truth_level == "demonstrator_truth":
+        truth_claim_tier = "demonstrator_only"
+    elif model_binding.model_source.source_status == "candidate":
+        truth_claim_tier = "configured_candidate"
+    else:
+        truth_claim_tier = "configured_strong"
+
+    claim_notes: list[str] = []
+    if nominal_profile == "single_point_nominal":
+        claim_notes.append("scope limited to single-point nominal conditions")
+    elif nominal_profile == "multi_condition_nominal":
+        claim_notes.append("scope covers limited multi-condition nominal checks, not full robustness certification")
+    else:
+        claim_notes.append("scope targets broader robustness-style evaluation")
+    if truth_claim_tier == "demonstrator_only":
+        claim_notes.append("physical claims must stay at demonstrator level")
+    elif truth_claim_tier == "configured_candidate":
+        claim_notes.append("configured truth remains candidate-only until an external model card or stronger validation is present")
+    else:
+        claim_notes.append("configured truth path is structurally strong enough for stronger physical claims")
+    if "tran" in analysis_types:
+        claim_notes.append("includes transient sanity checking")
+    if "noise" in analysis_types:
+        claim_notes.append("includes explicit noise analysis")
+
+    return PhysicalClaimScope(
+        nominal_profile=nominal_profile,
+        corner_count=corner_count,
+        temperature_count=temperature_count,
+        load_count=load_count,
+        analysis_types=analysis_types,
+        truth_claim_tier=truth_claim_tier,
+        claim_notes=claim_notes,
+    )
 
 
 def _simulation_provenance(bundle_backend: BackendBinding, request: SimulationRequest, *, paper_mode: bool):
@@ -371,6 +427,7 @@ def compile_simulation_bundle(
         netlist.model_binding,
         invocation_mode=backend_binding.invocation_mode,
     )
+    physical_claim_scope = _physical_claim_scope(task, analysis_plan, netlist.model_binding)
     truth_policy = _paper_truth_policy(paper_mode=paper_mode)
     bundle = SimulationBundle(
         simulation_id=f"sim_{signature[:12]}",
@@ -400,6 +457,7 @@ def compile_simulation_bundle(
             source_candidate_signature=stable_hash(candidate.model_dump_json()),
             implementation_version="simulation-layer-v1",
             paper_truth_policy=truth_policy,
+            physical_claim_scope=physical_claim_scope,
             assumptions=[
                 "ground-truth layer remains the only physical verification authority",
                 "backend bindings preserve a unified schema across demonstrator truth and mock_truth modes",
@@ -408,6 +466,8 @@ def compile_simulation_bundle(
                 f"truth_level={physical_validation.truth_level}",
                 f"validation_state={physical_validation.validity_state}",
                 f"configured_truth_path={_configured_truth_path_label(netlist.model_binding)}",
+                f"nominal_profile={physical_claim_scope.nominal_profile}",
+                f"truth_claim_tier={physical_claim_scope.truth_claim_tier}",
                 f"native ngspice is currently enabled for {task.circuit_family} fixed-topology quick/focused truth verification" if native_ngspice else "bundle currently executes in mock_truth mode",
             ],
             provenance=[
@@ -417,6 +477,7 @@ def compile_simulation_bundle(
                 f"paper_mode={paper_mode}",
                 f"model_binding={netlist.model_binding.backend_model_ref}",
                 f"configured_truth_path={_configured_truth_path_label(netlist.model_binding)}",
+                f"claim_profile={physical_claim_scope.nominal_profile}",
             ],
         ),
         validation_status=SimulationValidationStatus(
@@ -458,6 +519,8 @@ def compile_simulation_bundle(
             "truth_level": compiled_bundle.simulation_provenance.truth_level,
             "validation_state": physical_validation.validity_state,
             "configured_truth_path": _configured_truth_path_label(netlist.model_binding),
+            "claim_profile": physical_claim_scope.nominal_profile,
+            "truth_claim_tier": physical_claim_scope.truth_claim_tier,
         },
     )
     return SimulationCompileResponse(

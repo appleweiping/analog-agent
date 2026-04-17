@@ -122,6 +122,7 @@ class FullSystemAcceptanceIntegrationTests(unittest.TestCase):
         self.assertTrue(all(artifact.resolved_simulator_binary for artifact in result.artifact_traces))
         self.assertTrue(all(artifact.replayable for artifact in result.artifact_traces))
         self.assertTrue(any(artifact.replay_hint for artifact in result.artifact_traces))
+        self.assertTrue(all(artifact.claim_profile for artifact in result.artifact_traces))
 
 
 @unittest.skipUnless(

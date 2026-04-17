@@ -139,6 +139,8 @@ class ArtifactTrace(BaseModel):
     paper_safe: bool = False
     replayable: bool = False
     replay_hint: str | None = None
+    claim_profile: str | None = None
+    truth_claim_tier: str | None = None
 
 
 class CrossLayerTrace(BaseModel):
@@ -162,6 +164,8 @@ class CrossLayerTrace(BaseModel):
     executed_fidelity: str
     truth_level: str
     validation_status: str
+    claim_profile: str | None = None
+    truth_claim_tier: str | None = None
     planner_lifecycle_update: str
     memory_recorded: bool = False
 

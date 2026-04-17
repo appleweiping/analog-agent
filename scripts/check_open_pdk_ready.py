@@ -120,6 +120,9 @@ def build_status() -> dict[str, object]:
         )
     if missing:
         recommended_actions.extend(f"populate_required_subpath:{path}" for path in missing)
+    if bool(contract.get("version_lock_required", False)):
+        recommended_actions.append(f"record_version_lock:{contract.get('version', 'user_managed')}")
+        recommended_actions.append(f"record_checksum_manifest:{contract.get('checksum_manifest_hint', '.pdk/sky130A.sha256')}")
     if model_card is None:
         recommended_actions.append("external_model_card_optional_but_recommended")
     else:
@@ -131,6 +134,9 @@ def build_status() -> dict[str, object]:
         "contract_name": contract.get("name", "sky130_open"),
         "distribution": contract.get("distribution", ""),
         "version": contract.get("version", ""),
+        "version_lock_required": bool(contract.get("version_lock_required", False)),
+        "checksum_policy": contract.get("checksum_policy", ""),
+        "checksum_manifest_hint": contract.get("checksum_manifest_hint", ""),
         "readiness_policy": contract.get("readiness_policy", ""),
         "pdk_root": str(root) if root else "",
         "pdk_root_present": root_present,

@@ -302,6 +302,7 @@ def _build_artifact_traces(
     execution: SimulationExecutionResponse,
 ) -> list[ArtifactTrace]:
     traces: list[ArtifactTrace] = []
+    claim_scope = execution.simulation_bundle.metadata.physical_claim_scope
     for record in execution.simulation_bundle.artifact_registry.records:
         provenance = record.simulation_provenance or execution.verification_result.simulation_provenance
         validation = record.validation_status or execution.verification_result.validation_status
@@ -327,6 +328,8 @@ def _build_artifact_traces(
                 paper_safe=execution_context.paper_safe if execution_context is not None else provenance.paper_safe,
                 replayable=execution_context.replayable if execution_context is not None else False,
                 replay_hint=execution_context.replay_hint if execution_context is not None else None,
+                claim_profile=claim_scope.nominal_profile if claim_scope is not None else None,
+                truth_claim_tier=claim_scope.truth_claim_tier if claim_scope is not None else None,
             )
         )
     return traces
@@ -476,6 +479,12 @@ def run_full_system_acceptance(task_config: AcceptanceTaskConfig) -> SystemAccep
                     executed_fidelity=execution.verification_result.executed_fidelity,
                     truth_level=execution.verification_result.validation_status.truth_level,
                     validation_status=execution.verification_result.validation_status.validity_state,
+                    claim_profile=execution.simulation_bundle.metadata.physical_claim_scope.nominal_profile
+                    if execution.simulation_bundle.metadata.physical_claim_scope is not None
+                    else None,
+                    truth_claim_tier=execution.simulation_bundle.metadata.physical_claim_scope.truth_claim_tier
+                    if execution.simulation_bundle.metadata.physical_claim_scope is not None
+                    else None,
                     planner_lifecycle_update=execution.verification_result.planner_feedback.lifecycle_update,
                     memory_recorded=False,
                 )

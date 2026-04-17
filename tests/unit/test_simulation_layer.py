@@ -180,6 +180,8 @@ class SimulationLayerTests(unittest.TestCase):
         self.assertFalse(execution.simulation_bundle.simulation_provenance.paper_mode)
         self.assertFalse(execution.simulation_bundle.simulation_provenance.paper_safe)
         self.assertTrue(execution.simulation_bundle.artifact_registry.records)
+        artifact_types = {record.artifact_type for record in execution.simulation_bundle.artifact_registry.records}
+        self.assertIn("replay_manifest", artifact_types)
         for record in execution.simulation_bundle.artifact_registry.records:
             self.assertIsNotNone(record.execution_context)
             assert record.execution_context is not None

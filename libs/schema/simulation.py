@@ -505,7 +505,7 @@ class ArtifactRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     artifact_id: str
-    artifact_type: Literal["netlist", "stdout", "stderr", "raw_waveform", "measurement_table", "verification_report"]
+    artifact_type: Literal["netlist", "stdout", "stderr", "raw_waveform", "measurement_table", "verification_report", "replay_manifest"]
     path: str
     simulation_provenance: SimulationProvenance | None = None
     validation_status: ValidationStatus | None = None
@@ -529,6 +529,33 @@ class ValidationStatus(BaseModel):
         return _ordered_unique(values)
 
 
+class PhysicalClaimScope(BaseModel):
+    """Structured statement of what a verification run can physically claim."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    nominal_profile: Literal["single_point_nominal", "multi_condition_nominal", "robustness_style"]
+    corner_count: int = 1
+    temperature_count: int = 1
+    load_count: int = 1
+    analysis_types: list[str] = Field(default_factory=list)
+    truth_claim_tier: Literal["demonstrator_only", "configured_candidate", "configured_strong"]
+    claim_notes: list[str] = Field(default_factory=list)
+
+    @field_validator("analysis_types")
+    @classmethod
+    def validate_analysis_types(cls, values: list[str]) -> list[str]:
+        invalid = [value for value in values if value not in ANALYSIS_TYPES]
+        if invalid:
+            raise ValueError(f"unsupported analysis_types: {invalid}")
+        return _ordered_unique(values, ANALYSIS_TYPES)
+
+    @field_validator("claim_notes")
+    @classmethod
+    def dedupe_claim_notes(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
 class ArtifactExecutionContext(BaseModel):
     """Replay-oriented execution context attached to persisted artifacts."""
 
@@ -541,6 +568,36 @@ class ArtifactExecutionContext(BaseModel):
     backend_error_type: str | None = None
     execution_runtime_sec: float | None = None
     replay_hint: str | None = None
+
+
+class ArtifactReplayManifest(BaseModel):
+    """Replay-oriented manifest for one persisted simulation run."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    simulation_id: str
+    candidate_id: str
+    request_id: str
+    run_directory: str
+    invocation_mode: Literal["native", "compat", "mock_truth"]
+    replayable: bool = False
+    resolved_simulator_binary: str | None = None
+    truth_level: Literal["demonstrator_truth", "configured_truth"]
+    validation_status: Literal["strong", "weak", "invalid"]
+    fidelity_level: Literal["quick_truth", "focused_truth", "full_robustness_certification", "targeted_failure_analysis"]
+    physical_claim_scope: PhysicalClaimScope | None = None
+    netlist_paths: list[str] = Field(default_factory=list)
+    log_paths: list[str] = Field(default_factory=list)
+    raw_output_paths: list[str] = Field(default_factory=list)
+    measurement_report_path: str | None = None
+    verification_report_path: str | None = None
+    replay_commands: list[str] = Field(default_factory=list)
+    missing_requirements: list[str] = Field(default_factory=list)
+
+    @field_validator("netlist_paths", "log_paths", "raw_output_paths", "replay_commands", "missing_requirements")
+    @classmethod
+    def dedupe_lists(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
 
 
 class PaperTruthPolicy(BaseModel):
@@ -765,6 +822,7 @@ class SimulationMetadata(BaseModel):
     source_candidate_signature: str
     implementation_version: str
     paper_truth_policy: PaperTruthPolicy | None = None
+    physical_claim_scope: PhysicalClaimScope | None = None
     assumptions: list[str] = Field(default_factory=list)
     provenance: list[str] = Field(default_factory=list)
 

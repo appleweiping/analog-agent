@@ -21,6 +21,8 @@ class OpenPdkReadinessTests(unittest.TestCase):
         self.assertFalse(status["pdk_root_present"])
         self.assertTrue(status["missing_required_subpaths"])
         self.assertIn("stage_or_mount_pdk_root_at:/pdk/sky130A", status["recommended_actions"])
+        self.assertTrue(status["version_lock_required"])
+        self.assertEqual(status["checksum_policy"], "user_recorded_manifest")
 
     def test_partial_root_is_classified_as_partial(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -51,6 +53,7 @@ class OpenPdkReadinessTests(unittest.TestCase):
         self.assertEqual(status["missing_required_subpaths"], [])
         self.assertTrue(status["external_model_card_present"])
         self.assertIn("external_model_card_present", status["recommended_actions"])
+        self.assertIn("record_checksum_manifest:.pdk/sky130A.sha256", status["recommended_actions"])
 
 
 if __name__ == "__main__":
