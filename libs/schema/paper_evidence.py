@@ -70,7 +70,13 @@ class WorldModelUtilitySummary(BaseModel):
     world_model_reduces_simulations: bool
     world_model_preserves_or_improves_feasible_hit_rate: bool
     calibration_reduces_prediction_gap: bool
+    prediction_gap_beats_no_world_model: bool
     trust_guides_selection_behavior: bool
+    reliability_alignment_improves: bool
+    ranking_improves_efficiency: bool
+    ranking_preserves_or_improves_feasible_hit_rate: bool
+    calibration_improves_convergence: bool
+    calibration_updates_observable: bool
     notes: list[str] = Field(default_factory=list)
 
 
@@ -93,10 +99,33 @@ class PlannerAblationSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     planner_beats_top_k: bool
+    planner_reduces_simulations_vs_top_k: bool
+    planner_preserves_or_improves_feasible_hit_rate_vs_top_k: bool
+    planner_improves_efficiency_vs_top_k: bool
     fidelity_escalation_effective: bool
+    fidelity_escalation_reduces_simulations: bool
+    fidelity_escalation_preserves_or_improves_feasible_hit_rate: bool
     phase_updates_effective: bool
+    phase_updates_improve_convergence: bool
+    phase_updates_observable: bool
     calibration_replanning_effective: bool
+    calibration_replanning_improves_convergence: bool
+    calibration_replanning_observable: bool
     rollout_guidance_effective: bool
+    rollout_guidance_improves_convergence: bool
+    rollout_guidance_preserves_or_improves_feasible_hit_rate: bool
+    rollout_guidance_observable: bool
+    rollout_claim_supported_without_mpc_overclaim: bool
+    rollout_claim_limited_to_short_horizon_guidance: bool
+    rollout_evidence_real_not_placeholder: bool
+    rollout_placeholder_risk: bool
+    rollout_claim_scope: str
+    rollout_claim_status: str
+    dominant_failure_mode: str
+    planner_reduces_failure_pressure: bool
+    failure_synthesis_ready: bool
+    efficiency_synthesis_ready: bool
+    efficiency_frontier_consistent: bool
     notes: list[str] = Field(default_factory=list)
 
 
@@ -111,3 +140,23 @@ class PlannerAblationEvidenceBundle(BaseModel):
     tables: list[TableSpec] = Field(default_factory=list)
     summary: PlannerAblationSummary
     json_output_path: str
+
+
+class PlannerPaperLayoutBundle(BaseModel):
+    """Submission-facing planner paper layout with main/appendix organization."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    layout_id: str
+    profile_name: str
+    main_figures: list[str] = Field(default_factory=list)
+    appendix_figures: list[str] = Field(default_factory=list)
+    main_tables: list[str] = Field(default_factory=list)
+    appendix_tables: list[str] = Field(default_factory=list)
+    main_figure_captions: dict[str, str] = Field(default_factory=dict)
+    appendix_figure_captions: dict[str, str] = Field(default_factory=dict)
+    main_table_captions: dict[str, str] = Field(default_factory=dict)
+    appendix_table_captions: dict[str, str] = Field(default_factory=dict)
+    summary_notes: list[str] = Field(default_factory=list)
+    json_output_path: str
+    markdown_output_path: str

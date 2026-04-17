@@ -146,6 +146,11 @@ class WorldModelDatasetTests(unittest.TestCase):
         self.assertGreater(run.evaluation_record_count, 0)
         self.assertGreater(len(run.per_metric_summary), 0)
         self.assertEqual(run.config.model_family, "tabular_knn")
+        self.assertTrue(run.reproducibility.training_signature)
+        self.assertIn(run.split_summary.split_source, {"dataset_declared", "single_record_reuse", "fallback_missing_eval", "fallback_missing_train"})
+        self.assertTrue(run.coverage_summary)
+        self.assertEqual(run.confidence_alignment.calibration_status, "uncalibrated")
+        self.assertIn("training_examples", run.model_payload)
 
 
 if __name__ == "__main__":

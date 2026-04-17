@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from apps.orchestrator.job_runner import run_full_system_acceptance
+from libs.eval.benchmark_protocol import benchmark_modes_for_profile, default_benchmark_budget
 from libs.eval.memory_evidence import (
     build_memory_ablation_evidence_bundle,
     run_repeated_episode_memory_ablation,
@@ -63,23 +64,11 @@ def run_folded_cascode_experiment_suite(
     config = load_folded_cascode_v1_config()
     selected_modes = modes
     if selected_modes is None:
-        if comparison_profile == "methodology":
-            selected_modes = ["full_system", "no_world_model", "no_calibration", "no_fidelity_escalation"]
-        elif comparison_profile == "planner_ablation":
-            selected_modes = [
-                "full_system",
-                "top_k_baseline",
-                "no_fidelity_escalation",
-                "no_phase_updates",
-                "no_calibration_replanning",
-                "no_rollout_planning",
-            ]
-        else:
-            selected_modes = ["full_simulation_baseline", "top_k_baseline", "random_search_baseline", "bayesopt_baseline", "cmaes_baseline", "rl_baseline", "no_world_model_baseline", "full_system"]
+        selected_modes = benchmark_modes_for_profile(comparison_profile)
     suite = run_experiment_suite(
         build_folded_cascode_v1_design_task(task_id=task_id),
         modes=selected_modes,
-        budget=budget or ExperimentBudget(max_simulations=6, max_candidates_per_step=3),
+        budget=budget or default_benchmark_budget(),
         steps=steps,
         repeat_runs=repeat_runs,
         fidelity_level=fidelity_level or config.defaults.fidelity_policy.promoted_fidelity,

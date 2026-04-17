@@ -14,11 +14,14 @@ from libs.schema.world_model import (
     HistoryContext,
     HistoryEntry,
     LocalPatchRecord,
+    MetricUncertaintySummary,
     MetricsPrediction,
+    PredictionUncertaintySummary,
     RankedCandidate,
     RolloutResponse,
     RolloutStep,
     SimulationValueEstimate,
+    SurrogateBackendSummary,
     TransitionPrediction,
     TruthCalibrationRecord,
     TrustAssessment,
@@ -29,7 +32,9 @@ from libs.schema.world_model import (
 )
 from libs.utils.hashing import stable_hash
 from libs.world_model.feature_projection import build_metric_estimates, evaluate_constraints, project_metrics
+from libs.world_model.design_task_adapter import resolve_active_family
 from libs.world_model.state_builder import build_world_state, build_world_state_from_design_task
+from libs.world_model.trainable_surrogate import build_state_feature_vector, predict_with_training_examples
 from libs.world_model.validation import validate_design_action, validate_world_state
 
 
@@ -53,13 +58,17 @@ class WorldModelService:
         constraints: list[ConstraintObservation],
         *,
         transition_confidence: float | None = None,
+        surrogate_uncertainty_score: float | None = None,
     ) -> TrustAssessment:
         boundary_risk = max((1.0 / (1.0 + abs(item.margin)) for item in constraints), default=0.0)
-        uncertainty = _clip(
-            0.6 * state.uncertainty_context.epistemic_score + 0.4 * state.uncertainty_context.aleatoric_score,
-            0.0,
-            1.0,
-        )
+        if surrogate_uncertainty_score is None:
+            uncertainty = _clip(
+                0.6 * state.uncertainty_context.epistemic_score + 0.4 * state.uncertainty_context.aleatoric_score,
+                0.0,
+                1.0,
+            )
+        else:
+            uncertainty = _clip(float(surrogate_uncertainty_score), 0.0, 1.0)
         confidence = transition_confidence if transition_confidence is not None else _clip(1.0 - (0.65 * uncertainty + 0.35 * state.uncertainty_context.ood_score), 0.0, 1.0)
         reasons: list[str] = []
         must_escalate = False
@@ -103,6 +112,190 @@ class WorldModelService:
             reasons=reasons,
         )
 
+    def _heuristic_backend_summary(self, *, fallback_reason: str | None = None) -> SurrogateBackendSummary:
+        return SurrogateBackendSummary(
+            backend_kind="heuristic_proxy",
+            backend_label="heuristic_proxy_world_model",
+            supported_families=list(self.bundle.supported_circuit_families),
+            target_metrics=list(self.bundle.prediction_heads.metric_prediction_head.supported_metrics),
+            uncertainty_status="heuristic_proxy",
+            calibration_status="not_applicable",
+            fallback_reason=fallback_reason,
+        )
+
+    def _trained_backend_summary(self, *, fallback_reason: str | None = None) -> SurrogateBackendSummary:
+        checkpoint = self.bundle.training_state.trained_surrogate_checkpoint
+        if checkpoint is None:
+            return self._heuristic_backend_summary(fallback_reason=fallback_reason or "missing_trained_checkpoint")
+        return SurrogateBackendSummary(
+            backend_kind="trainable_tabular_surrogate",
+            backend_label=checkpoint.config_name,
+            training_run_id=checkpoint.training_run_id,
+            training_signature=checkpoint.training_signature,
+            dataset_signature=checkpoint.dataset_signature,
+            supported_families=list(checkpoint.supported_families),
+            target_metrics=list(checkpoint.target_metrics),
+            uncertainty_status="uncalibrated_neighbor_spread",
+            calibration_status=checkpoint.calibration_status,
+            fallback_reason=fallback_reason,
+        )
+
+    def _heuristic_uncertainty_summary(
+        self,
+        metric_values: dict[str, float],
+        trust: TrustAssessment,
+        state: WorldState,
+    ) -> PredictionUncertaintySummary:
+        per_metric: list[MetricUncertaintySummary] = []
+        width = max(1e-12, trust.uncertainty_score)
+        for metric, value in sorted(metric_values.items()):
+            span = abs(value) * max(0.03, 0.18 * width) + (0.1 if abs(value) < 1.0 else 0.0)
+            per_metric.append(
+                MetricUncertaintySummary(
+                    metric=metric,
+                    predicted_value=float(value),
+                    uncertainty=round(width, 6),
+                    lower_bound=float(value - span),
+                    upper_bound=float(value + span),
+                    relative_uncertainty=round(min(1.0, span / max(abs(value), 1e-9)), 6),
+                    support_score=round(trust.confidence, 6),
+                    calibration_status="not_applicable",
+                )
+            )
+        return PredictionUncertaintySummary(
+            summary_status="heuristic_proxy",
+            calibration_status="not_applicable",
+            aggregate_uncertainty=round(trust.uncertainty_score, 6),
+            aggregate_support=round(trust.confidence, 6),
+            target_coverage=None,
+            empirical_coverage=None,
+            ood_score=round(state.uncertainty_context.ood_score, 6),
+            per_metric=per_metric,
+            notes=["heuristic proxy intervals are derived from trust width, not from trainable-surrogate neighbor spread"],
+        )
+
+    def _trained_surrogate_prediction(
+        self,
+        state: WorldState,
+        heuristic_metric_values: dict[str, float],
+    ) -> tuple[dict[str, float], PredictionUncertaintySummary, SurrogateBackendSummary, TrustAssessment] | None:
+        checkpoint = self.bundle.training_state.trained_surrogate_checkpoint
+        if checkpoint is None:
+            return None
+        training_examples = list(checkpoint.model_payload.get("training_examples", []))
+        if not training_examples:
+            return None
+        parameter_values = {parameter.variable_name: parameter.value for parameter in state.parameter_state}
+        family = resolve_active_family(self.task, parameter_values)
+        if family not in checkpoint.supported_families:
+            return None
+
+        inference = predict_with_training_examples(
+            feature_vector=build_state_feature_vector(state, list(checkpoint.feature_keys)),
+            family=family,
+            target_metrics=list(checkpoint.target_metrics),
+            training_examples=training_examples,
+            k_neighbors=int(checkpoint.model_payload.get("k_neighbors", 1)),
+        )
+        coverage_summary = {
+            str(item.get("metric")): item
+            for item in list(checkpoint.model_payload.get("coverage_summary", []))
+            if isinstance(item, dict)
+        }
+        merged_metric_values = dict(heuristic_metric_values)
+        merged_metric_values.update({metric: float(value) for metric, value in dict(inference["predictions"]).items()})
+        merged_metric_values = self._apply_calibration_correction(merged_metric_values)
+
+        per_metric: list[MetricUncertaintySummary] = []
+        relative_uncertainties: list[float] = []
+        empirical_coverages: list[float] = []
+        for metric in checkpoint.target_metrics:
+            predicted_value = float(merged_metric_values.get(metric, 0.0))
+            spread = float(dict(inference["spreads"]).get(metric, 0.0))
+            half_width = max(abs(predicted_value) * 0.03, spread * checkpoint.coverage_interval_scale, 1e-9)
+            relative_uncertainty = round(min(1.0, spread / max(abs(predicted_value), 1e-9)), 6)
+            relative_uncertainties.append(relative_uncertainty)
+            if metric in coverage_summary:
+                empirical_coverages.append(float(coverage_summary[metric].get("empirical_coverage", checkpoint.target_coverage or 0.0)))
+            per_metric.append(
+                MetricUncertaintySummary(
+                    metric=metric,
+                    predicted_value=predicted_value,
+                    uncertainty=round(spread, 6),
+                    lower_bound=round(predicted_value - half_width, 6),
+                    upper_bound=round(predicted_value + half_width, 6),
+                    relative_uncertainty=relative_uncertainty,
+                    support_score=float(inference["support_score"]),
+                    calibration_status=checkpoint.calibration_status,
+                )
+            )
+
+        aggregate_uncertainty = round(
+            _clip(
+                (sum(relative_uncertainties) / max(1, len(relative_uncertainties))) * 0.75
+                + state.uncertainty_context.ood_score * 0.25,
+                0.0,
+                1.0,
+            ),
+            6,
+        )
+        confidence = round(
+            _clip(float(inference["confidence"]) * (1.0 - 0.25 * state.uncertainty_context.ood_score), 0.0, 1.0),
+            6,
+        )
+        constraints = evaluate_constraints(self.task, merged_metric_values)
+        trust = self._trust_assessment(
+            state,
+            constraints,
+            transition_confidence=confidence,
+            surrogate_uncertainty_score=aggregate_uncertainty,
+        )
+        uncertainty_summary = PredictionUncertaintySummary(
+            summary_status="uncalibrated_neighbor_spread",
+            calibration_status=checkpoint.calibration_status,
+            aggregate_uncertainty=aggregate_uncertainty,
+            aggregate_support=round(float(inference["support_score"]), 6),
+            target_coverage=checkpoint.target_coverage,
+            empirical_coverage=round(sum(empirical_coverages) / max(1, len(empirical_coverages)), 6) if empirical_coverages else None,
+            ood_score=round(state.uncertainty_context.ood_score, 6),
+            per_metric=per_metric,
+            notes=[
+                "trainable surrogate intervals are derived from raw neighbor spread",
+                "coverage values remain uncalibrated until a later calibration stage is attached",
+            ],
+        )
+        return merged_metric_values, uncertainty_summary, self._trained_backend_summary(), trust
+
+    def _build_metric_estimates(
+        self,
+        metric_values: dict[str, float],
+        trust: TrustAssessment,
+        uncertainty_summary: PredictionUncertaintySummary,
+    ) -> list[MetricEstimate]:
+        if not uncertainty_summary.per_metric:
+            return build_metric_estimates(metric_values, trust.uncertainty_score, trust.confidence)
+
+        uncertainty_by_metric = {item.metric: item for item in uncertainty_summary.per_metric}
+        trust_level = "high" if trust.confidence >= 0.8 else "medium" if trust.confidence >= 0.6 else "low"
+        estimates: list[MetricEstimate] = []
+        for metric, value in sorted(metric_values.items()):
+            metric_uncertainty = uncertainty_by_metric.get(metric)
+            if metric_uncertainty is None:
+                estimates.extend(build_metric_estimates({metric: value}, trust.uncertainty_score, trust.confidence))
+                continue
+            estimates.append(
+                MetricEstimate(
+                    metric=metric,
+                    value=float(value),
+                    lower_bound=float(metric_uncertainty.lower_bound),
+                    upper_bound=float(metric_uncertainty.upper_bound),
+                    uncertainty=float(metric_uncertainty.uncertainty),
+                    trust_level=trust_level,
+                    source="calibrated" if uncertainty_summary.calibration_status == "calibrated" else "prediction",
+                )
+            )
+        return estimates
+
     def _apply_calibration_correction(self, metric_values: dict[str, float]) -> dict[str, float]:
         corrected = dict(metric_values)
         summaries = {item.metric: item for item in self.bundle.calibration_state.per_metric_error_summary}
@@ -121,10 +314,17 @@ class WorldModelService:
         validation = self.validate_state(state)
         if not validation.is_valid:
             raise ValueError(f"invalid world state: {[issue.message for issue in validation.errors]}")
-        metric_values, auxiliary = project_metrics(self.task, state)
-        calibrated_metric_values = self._apply_calibration_correction(metric_values)
-        trust = self._trust_assessment(state, evaluate_constraints(self.task, calibrated_metric_values))
-        estimates = build_metric_estimates(calibrated_metric_values, trust.uncertainty_score, trust.confidence)
+        heuristic_metric_values, auxiliary = project_metrics(self.task, state)
+        trained_prediction = self._trained_surrogate_prediction(state, heuristic_metric_values)
+        if trained_prediction is None:
+            calibrated_metric_values = self._apply_calibration_correction(heuristic_metric_values)
+            trust = self._trust_assessment(state, evaluate_constraints(self.task, calibrated_metric_values))
+            fallback_reason = "trained_surrogate_unavailable_for_state" if self.bundle.training_state.trained_surrogate_checkpoint is not None else None
+            backend = self._heuristic_backend_summary(fallback_reason=fallback_reason)
+            uncertainty_summary = self._heuristic_uncertainty_summary(calibrated_metric_values, trust, state)
+        else:
+            calibrated_metric_values, uncertainty_summary, backend, trust = trained_prediction
+        estimates = self._build_metric_estimates(calibrated_metric_values, trust, uncertainty_summary)
         return MetricsPrediction(
             state_id=state.state_id,
             task_id=state.task_id,
@@ -134,6 +334,8 @@ class WorldModelService:
                 "calibration_patch_count": float(len(self.bundle.calibration_state.local_patch_history)),
                 "calibrated_metric_count": float(len(self.bundle.calibration_state.per_metric_error_summary)),
             },
+            surrogate_backend=backend,
+            uncertainty_summary=uncertainty_summary,
             trust_assessment=trust,
         )
 
@@ -146,15 +348,16 @@ class WorldModelService:
             overall *= max(0.05, item.satisfied_probability)
             if item.margin < 0.0:
                 failure_reasons.append(item.constraint_name)
-        trust = self._trust_assessment(state, constraints)
         return FeasibilityPrediction(
             state_id=state.state_id,
             task_id=state.task_id,
             overall_feasibility=_clip(overall, 0.0, 1.0),
             per_group_constraints=constraints,
             most_likely_failure_reasons=failure_reasons,
-            confidence=trust.confidence,
-            trust_assessment=trust,
+            confidence=metric_prediction.trust_assessment.confidence,
+            surrogate_backend=metric_prediction.surrogate_backend,
+            uncertainty_summary=metric_prediction.uncertainty_summary,
+            trust_assessment=metric_prediction.trust_assessment,
         )
 
     def _apply_action(self, state: WorldState, action: DesignAction) -> dict[str, float | int | str | bool]:
@@ -244,6 +447,8 @@ class WorldModelService:
             predicted_metrics=predicted_metrics.metrics,
             predicted_constraints=predicted_feasibility.per_group_constraints,
             analysis_fidelity=next_state.evaluation_context.analysis_fidelity,
+            surrogate_backend=predicted_metrics.surrogate_backend,
+            uncertainty_summary=predicted_metrics.uncertainty_summary,
             trust_assessment=predicted_feasibility.trust_assessment,
         )
 

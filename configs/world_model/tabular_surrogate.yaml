@@ -7,3 +7,5 @@ train_fraction: 0.8
 minimum_eval_records: 1
 family_balanced: true
 uncertainty_mode: neighbor_spread
+target_coverage: 0.9
+coverage_interval_scale: 1.0

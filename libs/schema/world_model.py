@@ -41,6 +41,9 @@ MODEL_HEAD_NAMES = (
 CALIBRATION_READINESS = ("experimental", "screening", "rollout_ready")
 UPDATE_POLICIES = ("offline_retrain", "periodic_incremental", "online_finetune")
 LABEL_QUALITIES = ("high_fidelity", "partial_fidelity", "pseudo_label")
+SURROGATE_BACKEND_KINDS = ("heuristic_proxy", "trainable_tabular_surrogate")
+UNCERTAINTY_SUMMARY_STATUSES = ("heuristic_proxy", "uncalibrated_neighbor_spread", "calibrated")
+CALIBRATION_STATUSES = ("not_applicable", "uncalibrated", "calibrated")
 VALIDATION_ERROR_CODES = (
     "schema_failure",
     "unsupported_family",
@@ -551,6 +554,105 @@ class TrustAssessment(BaseModel):
         return _ordered_unique(values)
 
 
+class SurrogateBackendSummary(BaseModel):
+    """Explicit serving-boundary summary for one prediction path."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    backend_kind: Literal["heuristic_proxy", "trainable_tabular_surrogate"]
+    backend_label: str
+    training_run_id: str | None = None
+    training_signature: str | None = None
+    dataset_signature: str | None = None
+    supported_families: list[str] = Field(default_factory=list)
+    target_metrics: list[str] = Field(default_factory=list)
+    uncertainty_status: Literal["heuristic_proxy", "uncalibrated_neighbor_spread", "calibrated"]
+    calibration_status: Literal["not_applicable", "uncalibrated", "calibrated"]
+    fallback_reason: str | None = None
+
+    @field_validator("supported_families")
+    @classmethod
+    def validate_supported_families(cls, values: list[str]) -> list[str]:
+        invalid = [value for value in values if value not in CIRCUIT_FAMILIES]
+        if invalid:
+            raise ValueError(f"unsupported backend families: {invalid}")
+        return _ordered_unique(values, CIRCUIT_FAMILIES)
+
+    @field_validator("target_metrics")
+    @classmethod
+    def validate_target_metrics(cls, values: list[str]) -> list[str]:
+        invalid = [value for value in values if value not in WORLD_MODEL_METRICS]
+        if invalid:
+            raise ValueError(f"unsupported backend target metrics: {invalid}")
+        return _ordered_unique(values, WORLD_MODEL_METRICS)
+
+
+class MetricUncertaintySummary(BaseModel):
+    """Per-metric uncertainty summary for one prediction."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str
+    predicted_value: float
+    uncertainty: float
+    lower_bound: float
+    upper_bound: float
+    relative_uncertainty: float
+    support_score: float
+    calibration_status: Literal["not_applicable", "uncalibrated", "calibrated"]
+
+    @field_validator("metric")
+    @classmethod
+    def validate_metric(cls, value: str) -> str:
+        if value not in WORLD_MODEL_METRICS:
+            raise ValueError(f"unsupported uncertainty metric: {value}")
+        return value
+
+    @field_validator("support_score")
+    @classmethod
+    def validate_support(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("support_score must be within [0, 1]")
+        return round(float(value), 6)
+
+
+class PredictionUncertaintySummary(BaseModel):
+    """Structured uncertainty output accompanying one prediction."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    summary_status: Literal["heuristic_proxy", "uncalibrated_neighbor_spread", "calibrated"]
+    calibration_status: Literal["not_applicable", "uncalibrated", "calibrated"]
+    aggregate_uncertainty: float
+    aggregate_support: float
+    target_coverage: float | None = None
+    empirical_coverage: float | None = None
+    ood_score: float
+    per_metric: list[MetricUncertaintySummary] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+    @field_validator("aggregate_uncertainty", "aggregate_support", "ood_score")
+    @classmethod
+    def validate_scores(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("uncertainty summary scores must be within [0, 1]")
+        return round(float(value), 6)
+
+    @field_validator("target_coverage", "empirical_coverage")
+    @classmethod
+    def validate_optional_probabilities(cls, value: float | None) -> float | None:
+        if value is None:
+            return None
+        if value < 0.0 or value > 1.0:
+            raise ValueError("coverage values must be within [0, 1]")
+        return round(float(value), 6)
+
+    @field_validator("notes")
+    @classmethod
+    def dedupe_notes(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
 class TransitionRecord(BaseModel):
     """Structured transition record used for training and rollout archiving."""
 
@@ -770,6 +872,66 @@ class ReplayStatistics(BaseModel):
         return round(float(value), 4)
 
 
+class TrainedSurrogateCheckpoint(BaseModel):
+    """Serialized trainable-surrogate checkpoint attached to a serving bundle."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    checkpoint_ref: str
+    backend_kind: Literal["heuristic_proxy", "trainable_tabular_surrogate"]
+    training_run_id: str
+    dataset_signature: str
+    config_signature: str
+    training_signature: str
+    config_name: str
+    supported_families: list[str] = Field(default_factory=list)
+    feature_keys: list[str] = Field(default_factory=list)
+    target_metrics: list[str] = Field(default_factory=list)
+    uncertainty_mode: str
+    target_coverage: float | None = None
+    coverage_interval_scale: float = 1.0
+    calibration_status: Literal["not_applicable", "uncalibrated", "calibrated"]
+    model_payload: dict[str, object] = Field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
+
+    @field_validator("supported_families")
+    @classmethod
+    def validate_supported_families(cls, values: list[str]) -> list[str]:
+        invalid = [value for value in values if value not in CIRCUIT_FAMILIES]
+        if invalid:
+            raise ValueError(f"unsupported checkpoint families: {invalid}")
+        return _ordered_unique(values, CIRCUIT_FAMILIES)
+
+    @field_validator("target_metrics")
+    @classmethod
+    def validate_target_metrics(cls, values: list[str]) -> list[str]:
+        invalid = [value for value in values if value not in WORLD_MODEL_METRICS]
+        if invalid:
+            raise ValueError(f"unsupported checkpoint target metrics: {invalid}")
+        return _ordered_unique(values, WORLD_MODEL_METRICS)
+
+    @field_validator("target_coverage")
+    @classmethod
+    def validate_optional_target_coverage(cls, value: float | None) -> float | None:
+        if value is None:
+            return None
+        if value < 0.0 or value > 1.0:
+            raise ValueError("target_coverage must be within [0, 1]")
+        return round(float(value), 6)
+
+    @field_validator("coverage_interval_scale")
+    @classmethod
+    def validate_interval_scale(cls, value: float) -> float:
+        if value <= 0.0:
+            raise ValueError("coverage_interval_scale must be > 0")
+        return round(float(value), 6)
+
+    @field_validator("notes")
+    @classmethod
+    def dedupe_notes(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
 class TrainingState(BaseModel):
     """Structured training governance state."""
 
@@ -783,6 +945,7 @@ class TrainingState(BaseModel):
     constraint_mix: list[str] = Field(default_factory=list)
     loss_summary: LossSummary
     best_checkpoint_ref: str
+    trained_surrogate_checkpoint: TrainedSurrogateCheckpoint | None = None
     update_policy: Literal["offline_retrain", "periodic_incremental", "online_finetune"]
     replay_statistics: ReplayStatistics
 
@@ -1003,6 +1166,8 @@ class MetricsPrediction(BaseModel):
     task_id: str
     metrics: list[MetricEstimate] = Field(default_factory=list)
     auxiliary_features: dict[str, float] = Field(default_factory=dict)
+    surrogate_backend: SurrogateBackendSummary | None = None
+    uncertainty_summary: PredictionUncertaintySummary | None = None
     trust_assessment: TrustAssessment
 
 
@@ -1017,6 +1182,8 @@ class FeasibilityPrediction(BaseModel):
     per_group_constraints: list[ConstraintObservation] = Field(default_factory=list)
     most_likely_failure_reasons: list[str] = Field(default_factory=list)
     confidence: float
+    surrogate_backend: SurrogateBackendSummary | None = None
+    uncertainty_summary: PredictionUncertaintySummary | None = None
     trust_assessment: TrustAssessment
 
     @field_validator("overall_feasibility", "confidence")
@@ -1044,6 +1211,8 @@ class TransitionPrediction(BaseModel):
     predicted_metrics: list[MetricEstimate] = Field(default_factory=list)
     predicted_constraints: list[ConstraintObservation] = Field(default_factory=list)
     analysis_fidelity: Literal["quick_screening", "partial_simulation", "full_ground_truth"]
+    surrogate_backend: SurrogateBackendSummary | None = None
+    uncertainty_summary: PredictionUncertaintySummary | None = None
     trust_assessment: TrustAssessment
 
 

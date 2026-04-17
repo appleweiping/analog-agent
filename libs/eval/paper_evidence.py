@@ -70,6 +70,21 @@ def _average_gap_over_metrics(summary, metrics: list[str]) -> float:
     return _mean(values)
 
 
+def _mode_gap_vector(summary, metrics: list[str]) -> list[float]:
+    return [abs(float(summary.average_prediction_gap.get(metric, 0.0))) for metric in metrics]
+
+
+def _mode_log_mean(suite: ExperimentSuiteResult, mode: str, attr: str) -> float:
+    values = [float(getattr(log, attr)) for run in _mode_runs(suite, mode) for log in run.structured_log]
+    return _mean(values)
+
+
+def _mode_reliability_gap(suite: ExperimentSuiteResult, summary_map, mode: str) -> float:
+    confidence = _mode_log_mean(suite, mode, "selected_mean_confidence")
+    feasible_hit = float(summary_map[mode].feasible_hit_rate)
+    return round(abs(confidence - feasible_hit), 6)
+
+
 def _average_step_series(runs, metric_getter):
     if not runs:
         return []
@@ -254,9 +269,15 @@ def build_world_model_evidence_bundle(
     no_calibration_runs = _mode_runs(suite, "no_calibration")
     no_fidelity_runs = _mode_runs(suite, "no_fidelity_escalation")
     summary_map = _mode_summary_map(suite)
+    aggregate_summary_map = _aggregate_summary_map(suite)
     baseline_suite = baseline_suite or suite
     baseline_summary_map = _aggregate_summary_map(baseline_suite)
     relevant_gap_metrics = _relevant_gap_metrics(suite, preferred_metrics=core_gap_metrics)
+    full_summary = summary_map["full_system"]
+    no_world_summary = summary_map["no_world_model"]
+    no_cal_summary = summary_map["no_calibration"]
+    budget_full_summary = baseline_summary_map["full_system"]
+    budget_no_world_summary = baseline_summary_map["no_world_model_baseline"]
 
     figure_gap = FigureSpec(
         figure_id="fig_world_model_prediction_gap_vs_step",
@@ -348,7 +369,108 @@ def build_world_model_evidence_bundle(
         output_path=str(figures_root / "world_model_trust_guided_selection.svg"),
     )
 
-    for figure in (figure_gap, figure_sim_calls, figure_feasible_hit, figure_trust):
+    figure_reliability = FigureSpec(
+        figure_id="fig_world_model_reliability_alignment",
+        title="Confidence and Feasible Hit Alignment",
+        chart_type="line",
+        x_label="Method Mode Index",
+        y_label="Rate / Confidence",
+        series=[
+            FigureSeries(
+                label="mean_selected_confidence",
+                x_values=[0.0, 1.0, 2.0],
+                y_values=[
+                    _mode_log_mean(suite, "no_world_model", "selected_mean_confidence"),
+                    _mode_log_mean(suite, "no_calibration", "selected_mean_confidence"),
+                    _mode_log_mean(suite, "full_system", "selected_mean_confidence"),
+                ],
+                color="#ff7f0e",
+            ),
+            FigureSeries(
+                label="feasible_hit_rate",
+                x_values=[0.0, 1.0, 2.0],
+                y_values=[
+                    summary_map["no_world_model"].feasible_hit_rate,
+                    summary_map["no_calibration"].feasible_hit_rate,
+                    summary_map["full_system"].feasible_hit_rate,
+                ],
+                color="#17becf",
+            ),
+        ],
+        caption="Alignment between selection-time confidence and realized feasible-hit rate across methodology modes.",
+        output_path=str(figures_root / "world_model_reliability_alignment.svg"),
+    )
+
+    figure_metric_gap = FigureSpec(
+        figure_id="fig_world_model_metric_gap_profile",
+        title="Per-Metric Prediction Gap Profile",
+        chart_type="line",
+        x_label="Core Metric Index",
+        y_label="Average Absolute Prediction Gap",
+        series=[
+            FigureSeries(
+                label="full_system",
+                x_values=[float(index) for index, _metric in enumerate(relevant_gap_metrics)],
+                y_values=_mode_gap_vector(full_summary, relevant_gap_metrics),
+                color="#1f77b4",
+            ),
+            FigureSeries(
+                label="no_calibration",
+                x_values=[float(index) for index, _metric in enumerate(relevant_gap_metrics)],
+                y_values=_mode_gap_vector(summary_map["no_calibration"], relevant_gap_metrics),
+                color="#d62728",
+            ),
+            FigureSeries(
+                label="no_world_model",
+                x_values=[float(index) for index, _metric in enumerate(relevant_gap_metrics)],
+                y_values=_mode_gap_vector(no_world_summary, relevant_gap_metrics),
+                color="#2ca02c",
+            ),
+        ],
+        caption="Per-metric prediction-gap profile for the main methodology modes.",
+        output_path=str(figures_root / "world_model_metric_gap_profile.svg"),
+    )
+
+    figure_ranking = FigureSpec(
+        figure_id="fig_world_model_ranking_efficiency",
+        title="Ranking Utility Efficiency",
+        chart_type="bar",
+        x_label="Method Mode",
+        y_label="Average Efficiency Score",
+        series=[
+            FigureSeries(label="no_world_model", x_values=[0.0], y_values=[aggregate_summary_map["no_world_model"].average_efficiency_score], color="#2ca02c"),
+            FigureSeries(label="no_fidelity_escalation", x_values=[1.0], y_values=[aggregate_summary_map["no_fidelity_escalation"].average_efficiency_score], color="#9467bd"),
+            FigureSeries(label="full_system", x_values=[2.0], y_values=[aggregate_summary_map["full_system"].average_efficiency_score], color="#1f77b4"),
+        ],
+        caption="Efficiency-oriented utility of the ranking-enabled full system relative to weaker methodology modes.",
+        output_path=str(figures_root / "world_model_ranking_efficiency.svg"),
+    )
+
+    figure_calibration = FigureSpec(
+        figure_id="fig_world_model_calibration_utility",
+        title="Calibration Utility by Mode",
+        chart_type="bar",
+        x_label="Method Mode",
+        y_label="Average Convergence Step",
+        series=[
+            FigureSeries(label="no_world_model", x_values=[0.0], y_values=[summary_map["no_world_model"].average_convergence_step], color="#2ca02c"),
+            FigureSeries(label="no_calibration", x_values=[1.0], y_values=[summary_map["no_calibration"].average_convergence_step], color="#d62728"),
+            FigureSeries(label="full_system", x_values=[2.0], y_values=[summary_map["full_system"].average_convergence_step], color="#1f77b4"),
+        ],
+        caption="Convergence-step comparison exposing the utility of calibration-enabled world-model updates.",
+        output_path=str(figures_root / "world_model_calibration_utility.svg"),
+    )
+
+    for figure in (
+        figure_gap,
+        figure_sim_calls,
+        figure_feasible_hit,
+        figure_trust,
+        figure_reliability,
+        figure_metric_gap,
+        figure_ranking,
+        figure_calibration,
+    ):
         if figure.chart_type == "line":
             _write_svg_line_chart(figure)
         else:
@@ -466,25 +588,156 @@ def build_world_model_evidence_bundle(
         markdown_output_path=str(tables_root / "world_model_budget_comparison.md"),
     )
 
-    for table in (comparison_table, step_table, trust_table, baseline_table):
+    reliability_table = TableSpec(
+        table_id="tbl_world_model_reliability_alignment",
+        title="World Model Reliability Alignment",
+        columns=[
+            TableColumn(key="mode", label="Mode"),
+            TableColumn(key="mean_selected_confidence", label="Mean Selected Confidence"),
+            TableColumn(key="feasible_hit_rate", label="Feasible Hit Rate"),
+            TableColumn(key="reliability_gap", label="Reliability Gap"),
+            TableColumn(key="mean_selected_uncertainty", label="Mean Selected Uncertainty"),
+        ],
+        rows=[
+            TableRow(
+                values={
+                    "mode": mode,
+                    "mean_selected_confidence": _mode_log_mean(suite, mode, "selected_mean_confidence"),
+                    "feasible_hit_rate": summary_map[mode].feasible_hit_rate,
+                    "reliability_gap": _mode_reliability_gap(suite, summary_map, mode),
+                    "mean_selected_uncertainty": _mode_log_mean(suite, mode, "selected_mean_uncertainty"),
+                }
+            )
+            for mode in ("no_world_model", "no_calibration", "full_system")
+        ],
+        caption="Alignment between selection-time confidence and realized feasible-hit rate for the main methodology modes.",
+        csv_output_path=str(tables_root / "world_model_reliability_alignment.csv"),
+        markdown_output_path=str(tables_root / "world_model_reliability_alignment.md"),
+    )
+
+    metric_gap_table = TableSpec(
+        table_id="tbl_world_model_metric_gap_profile",
+        title="Per Metric Gap Profile",
+        columns=[
+            TableColumn(key="metric", label="Metric"),
+            TableColumn(key="full_system", label="Full System"),
+            TableColumn(key="no_calibration", label="No Calibration"),
+            TableColumn(key="no_world_model", label="No World Model"),
+        ],
+        rows=[
+            TableRow(
+                values={
+                    "metric": metric,
+                    "full_system": abs(float(full_summary.average_prediction_gap.get(metric, 0.0))),
+                    "no_calibration": abs(float(no_cal_summary.average_prediction_gap.get(metric, 0.0))),
+                    "no_world_model": abs(float(no_world_summary.average_prediction_gap.get(metric, 0.0))),
+                }
+            )
+            for metric in relevant_gap_metrics
+        ],
+        caption="Per-metric average absolute prediction gap for the main methodology modes.",
+        csv_output_path=str(tables_root / "world_model_metric_gap_profile.csv"),
+        markdown_output_path=str(tables_root / "world_model_metric_gap_profile.md"),
+    )
+
+    ranking_table = TableSpec(
+        table_id="tbl_world_model_ranking_utility",
+        title="Ranking Utility Comparison",
+        columns=[
+            TableColumn(key="mode", label="Mode"),
+            TableColumn(key="efficiency_score", label="Efficiency Score"),
+            TableColumn(key="avg_convergence_step", label="Avg Convergence Step"),
+            TableColumn(key="selection_ratio", label="Selection Ratio"),
+            TableColumn(key="mean_selected_simulation_value", label="Mean Sim Value"),
+            TableColumn(key="mean_selected_predicted_feasibility", label="Mean Pred Feasibility"),
+        ],
+        rows=[
+            TableRow(
+                values={
+                    "mode": mode,
+                    "efficiency_score": aggregate_summary_map[mode].average_efficiency_score,
+                    "avg_convergence_step": summary_map[mode].average_convergence_step,
+                    "selection_ratio": aggregate_summary_map[mode].average_selection_ratio,
+                    "mean_selected_simulation_value": _mode_log_mean(suite, mode, "selected_mean_simulation_value"),
+                    "mean_selected_predicted_feasibility": _mode_log_mean(suite, mode, "selected_mean_predicted_feasibility"),
+                }
+            )
+            for mode in ("no_world_model", "no_fidelity_escalation", "full_system")
+        ],
+        caption="Ranking-facing utility comparison across methodology modes that differ in world-model guidance strength.",
+        csv_output_path=str(tables_root / "world_model_ranking_utility.csv"),
+        markdown_output_path=str(tables_root / "world_model_ranking_utility.md"),
+    )
+
+    calibration_table = TableSpec(
+        table_id="tbl_world_model_calibration_utility",
+        title="Calibration Utility Comparison",
+        columns=[
+            TableColumn(key="mode", label="Mode"),
+            TableColumn(key="avg_core_metric_gap", label="Avg Core Metric Gap"),
+            TableColumn(key="avg_convergence_step", label="Avg Convergence Step"),
+            TableColumn(key="avg_calibration_updates", label="Avg Calibration Updates"),
+            TableColumn(key="feasible_hit_rate", label="Feasible Hit Rate"),
+        ],
+        rows=[
+            TableRow(
+                values={
+                    "mode": mode,
+                    "avg_core_metric_gap": _average_gap_over_metrics(summary_map[mode], relevant_gap_metrics),
+                    "avg_convergence_step": summary_map[mode].average_convergence_step,
+                    "avg_calibration_updates": summary_map[mode].average_calibration_update_count,
+                    "feasible_hit_rate": summary_map[mode].feasible_hit_rate,
+                }
+            )
+            for mode in ("no_world_model", "no_calibration", "full_system")
+        ],
+        caption="Calibration-facing utility comparison with explicit with/without calibration rows.",
+        csv_output_path=str(tables_root / "world_model_calibration_utility.csv"),
+        markdown_output_path=str(tables_root / "world_model_calibration_utility.md"),
+    )
+
+    for table in (
+        comparison_table,
+        step_table,
+        trust_table,
+        baseline_table,
+        reliability_table,
+        metric_gap_table,
+        ranking_table,
+        calibration_table,
+    ):
         _write_table_csv(table)
         _write_table_markdown(table)
 
-    full_summary = summary_map["full_system"]
-    no_world_summary = summary_map["no_world_model"]
-    no_cal_summary = summary_map["no_calibration"]
-    budget_full_summary = baseline_summary_map["full_system"]
-    budget_no_world_summary = baseline_summary_map["no_world_model_baseline"]
+    full_confidence = _mode_log_mean(suite, "full_system", "selected_mean_confidence")
+    no_cal_confidence = _mode_log_mean(suite, "no_calibration", "selected_mean_confidence")
+    no_world_confidence = _mode_log_mean(suite, "no_world_model", "selected_mean_confidence")
     summary = WorldModelUtilitySummary(
         world_model_reduces_simulations=budget_full_summary.average_simulation_call_count < budget_no_world_summary.average_simulation_call_count,
         world_model_preserves_or_improves_feasible_hit_rate=budget_full_summary.feasible_hit_rate >= budget_no_world_summary.feasible_hit_rate,
         calibration_reduces_prediction_gap=_average_gap_over_metrics(full_summary, relevant_gap_metrics) < _average_gap_over_metrics(no_cal_summary, relevant_gap_metrics),
+        prediction_gap_beats_no_world_model=_average_gap_over_metrics(full_summary, relevant_gap_metrics) < _average_gap_over_metrics(no_world_summary, relevant_gap_metrics),
         trust_guides_selection_behavior=_mean([log.selected_mean_uncertainty for run in full_runs for log in run.structured_log]) != _mean([log.selected_mean_uncertainty for run in no_world_model_runs for log in run.structured_log]),
+        reliability_alignment_improves=_mode_reliability_gap(suite, summary_map, "full_system") <= min(
+            _mode_reliability_gap(suite, summary_map, "no_world_model"),
+            _mode_reliability_gap(suite, summary_map, "no_calibration"),
+        ),
+        ranking_improves_efficiency=aggregate_summary_map["full_system"].average_efficiency_score >= aggregate_summary_map["no_world_model"].average_efficiency_score,
+        ranking_preserves_or_improves_feasible_hit_rate=summary_map["full_system"].feasible_hit_rate >= summary_map["no_world_model"].feasible_hit_rate,
+        calibration_improves_convergence=full_summary.average_convergence_step <= no_cal_summary.average_convergence_step,
+        calibration_updates_observable=full_summary.average_calibration_update_count > 0.0 and no_cal_summary.average_calibration_update_count == 0.0,
         notes=[
             f"system_delta_vs_full_sim_baseline_calls={round(baseline_summary_map['full_simulation_baseline'].average_simulation_call_count - budget_full_summary.average_simulation_call_count, 6)}",
             f"world_model_delta_sim_calls={round(budget_no_world_summary.average_simulation_call_count - budget_full_summary.average_simulation_call_count, 6)}",
             f"world_model_delta_feasible_hit={round(budget_full_summary.feasible_hit_rate - budget_no_world_summary.feasible_hit_rate, 6)}",
             f"calibration_delta_mean_gap={round(_average_gap_over_metrics(no_cal_summary, relevant_gap_metrics) - _average_gap_over_metrics(full_summary, relevant_gap_metrics), 6)}",
+            f"world_model_delta_mean_gap={round(_average_gap_over_metrics(no_world_summary, relevant_gap_metrics) - _average_gap_over_metrics(full_summary, relevant_gap_metrics), 6)}",
+            f"reliability_gap_full_system={_mode_reliability_gap(suite, summary_map, 'full_system')}",
+            f"reliability_gap_no_calibration={_mode_reliability_gap(suite, summary_map, 'no_calibration')}",
+            f"reliability_gap_no_world_model={_mode_reliability_gap(suite, summary_map, 'no_world_model')}",
+            f"ranking_delta_efficiency={round(aggregate_summary_map['full_system'].average_efficiency_score - aggregate_summary_map['no_world_model'].average_efficiency_score, 6)}",
+            f"calibration_delta_convergence={round(no_cal_summary.average_convergence_step - full_summary.average_convergence_step, 6)}",
+            f"confidence_means=full_system:{full_confidence},no_calibration:{no_cal_confidence},no_world_model:{no_world_confidence}",
             f"gap_metrics={','.join(relevant_gap_metrics)}",
             f"trust_selection_delta_uncertainty={round(_mean([log.selected_mean_uncertainty for run in no_world_model_runs for log in run.structured_log]) - _mean([log.selected_mean_uncertainty for run in full_runs for log in run.structured_log]), 6)}",
         ],
@@ -493,8 +746,26 @@ def build_world_model_evidence_bundle(
     bundle = WorldModelEvidenceBundle(
         task_id=suite.task_id,
         modes=sorted({*suite.modes, *baseline_suite.modes}),
-        figures=[figure_gap, figure_sim_calls, figure_feasible_hit, figure_trust],
-        tables=[comparison_table, step_table, trust_table, baseline_table],
+        figures=[
+            figure_gap,
+            figure_sim_calls,
+            figure_feasible_hit,
+            figure_trust,
+            figure_reliability,
+            figure_metric_gap,
+            figure_ranking,
+            figure_calibration,
+        ],
+        tables=[
+            comparison_table,
+            step_table,
+            trust_table,
+            baseline_table,
+            reliability_table,
+            metric_gap_table,
+            ranking_table,
+            calibration_table,
+        ],
         summary=summary,
         json_output_path=str(json_output_path),
     )

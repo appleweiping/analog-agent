@@ -45,6 +45,7 @@ At the current stage, the repository includes:
 - a runnable regulator vertical slice (`ldo_v1`) that extends the same contracts into output regulation, loop stability, and output-voltage verification.
 - a runnable reference vertical slice (`bandgap_v1`) that extends the same contracts into low-power reference generation, temperature-stability proxies, and line-regulation verification.
 - research-grade benchmark baselines that now include `random_search_baseline`, `bayesopt_baseline`, `cmaes_baseline`, and `rl_baseline` inside the same experiment runner, stats pipeline, benchmark exports, and API routes as the full agent system.
+- submission-facing packaging utilities that freeze benchmark reporting, physical-validity boundaries, main figures/tables, appendix allocation, protocol, limitations, manuscript structure, experiments alignment, and final internal/external paper bundles under the local `research/` workspace.
 
 This is still an active research codebase rather than a finished release. The first six system layers are now present in formal schema-and-service form, while research-tuned backend details and later experimental extensions remain under active iteration.
 
@@ -53,8 +54,11 @@ This is still an active research codebase rather than a finished release. The fi
 - `apps/`: service entrypoints and worker-facing application modules.
 - `configs/`: benchmark, simulator, model, and runtime configuration.
 - `libs/`: core schemas, interaction logic, task compilers, world-model services, planning services, simulation/verification services, memory utilities, and evaluation code.
+- `libs/eval/` now also contains benchmark-reporting and submission-package builders used to freeze the current paper-facing evidence.
+- `libs/schema/` now also contains explicit benchmark-evidence, paper-evidence, and submission-package schemas so writing assets stay typed instead of ad hoc.
 - `templates/`: frozen family-aware netlist, testbench, and measurement-contract assets for canonical verification paths.
 - `scripts/`: command-line utilities for dataset, training, benchmarking, and export workflows.
+- `scripts/` now also includes paper-package and benchmark-synthesis helpers for the local submission workflow.
 - `tests/`: unit, integration, and regression coverage.
 - `infra/`: container, CI, and observability placeholders.
 
@@ -69,8 +73,9 @@ stays focused on system code, configs, templates, scripts, and tests.
 ## Project Tree
 
 The repository now exposes a paper-facing system tree with four runnable benchmark slices,
-unified benchmark baselines, and frozen family-aware templates. Local-only `research/` and
-`paper/` workspaces are intentionally excluded from the tracked tree shown below:
+unified benchmark baselines, benchmark-reporting helpers, and submission-package tooling.
+Local-only `research/` and `paper/` workspaces are intentionally excluded from the tracked
+tree shown below:
 
 ```text
 analog-agent/
@@ -83,10 +88,19 @@ analog-agent/
 |   |   `-- multi_task_suite_v1.yaml
 |-- libs/
 |   |-- eval/
+|   |   |-- benchmark_protocol.py
+|   |   |-- benchmark_reporting.py
 |   |   |-- experiment_runner.py
+|   |   |-- paper_evidence.py
+|   |   |-- planner_evidence.py
 |   |   |-- random_search.py
+|   |   |-- submission_package.py
 |   |   |-- bayesopt.py
 |   |   `-- stats.py
+|   |-- schema/
+|   |   |-- benchmark_evidence.py
+|   |   |-- paper_evidence.py
+|   |   `-- submission_package.py
 |   |-- world_model/
 |   |-- planner/
 |   |-- simulation/
@@ -108,12 +122,24 @@ analog-agent/
 |       |-- ldo/v1/
 |       `-- bandgap/v1/
 |-- scripts/
+|   |-- build_physical_validity_boundary_package.py
+|   |-- build_submission_main_figures.py
+|   |-- build_submission_main_tables.py
+|   |-- build_submission_appendix_allocation.py
+|   |-- build_submission_protocol_finalization.py
+|   |-- build_submission_limitations_finalization.py
+|   |-- build_submission_manuscript_structure_freeze.py
+|   |-- build_submission_experiments_alignment.py
+|   |-- build_final_internal_submission_package.py
 |   |-- run_benchmark.py
 |   |-- run_ota_experiment_suite.py
 |   |-- run_folded_cascode_experiment_suite.py
 |   |-- run_ldo_experiment_suite.py
 |   `-- run_bandgap_experiment_suite.py
 `-- tests/
+    |-- unit/
+    |   |-- test_stage_e_review.py
+    |   `-- test_submission_package.py
     `-- integration/
         |-- test_random_search_baseline.py
         |-- test_bayesopt_baseline.py
@@ -126,7 +152,7 @@ analog-agent/
 ```
 
 The full tracked repository snapshot is stored in [`project_tree`](./project_tree) and updated
-alongside the runnable benchmark paths.
+alongside the runnable benchmark, reporting, and submission-package paths.
 
 ## Paper-Facing Storyline
 
@@ -145,6 +171,8 @@ The repository therefore supports three distinct layers of evidence:
 - system evidence: end-to-end acceptance and real-SPICE closure;
 - method evidence: world model, planner, and memory ablations;
 - benchmark evidence: multi-task comparisons against research baselines.
+
+Within the local-only `research/papers/submission_package/` workspace, the current demonstrator-truth package now reaches `external_submission_ready = true` for the frozen `ngspice` path. The remaining major upgrades are the separate `configured_truth` / external-PDK and Spectre-oriented lines rather than missing paper-package wiring.
 
 ## Getting Started
 

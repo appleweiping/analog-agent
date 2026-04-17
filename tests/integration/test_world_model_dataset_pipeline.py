@@ -15,6 +15,7 @@ class WorldModelDatasetPipelineTests(unittest.TestCase):
             tmp = Path(tmpdir)
             dataset_path = tmp / "world_model_dataset.json"
             training_path = tmp / "world_model_training.json"
+            eval_path = tmp / "world_model_eval.json"
 
             build = subprocess.run(
                 [
@@ -57,6 +58,10 @@ class WorldModelDatasetPipelineTests(unittest.TestCase):
                     "configs/world_model/tabular_surrogate.yaml",
                     "--output",
                     str(training_path),
+                    "--eval-output",
+                    str(eval_path),
+                    "--set",
+                    "k_neighbors=2",
                 ],
                 cwd=repo_root,
                 capture_output=True,
@@ -64,9 +69,15 @@ class WorldModelDatasetPipelineTests(unittest.TestCase):
                 check=True,
             )
             self.assertTrue(training_path.exists(), msg=train.stdout + train.stderr)
+            self.assertTrue(eval_path.exists(), msg=train.stdout + train.stderr)
             training_payload = json.loads(training_path.read_text(encoding="utf-8"))
+            eval_payload = json.loads(eval_path.read_text(encoding="utf-8"))
             self.assertEqual(training_payload["config"]["model_family"], "tabular_knn")
+            self.assertEqual(training_payload["config"]["k_neighbors"], 2)
             self.assertGreater(training_payload["training_record_count"], 0)
+            self.assertIn("reproducibility", training_payload)
+            self.assertIn("coverage_summary", eval_payload)
+            self.assertIn("confidence_alignment", eval_payload)
 
 
 if __name__ == "__main__":

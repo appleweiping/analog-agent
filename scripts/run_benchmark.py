@@ -12,6 +12,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from libs.eval.stats import export_stats_csv, export_stats_json
+from libs.eval.benchmark_protocol import (
+    DEFAULT_BENCHMARK_MAX_CANDIDATES_PER_STEP,
+    DEFAULT_BENCHMARK_MAX_SIMULATIONS,
+    DEFAULT_BENCHMARK_REPEAT_RUNS,
+    DEFAULT_BENCHMARK_STEPS,
+)
 from libs.eval.benchmark_registry import list_benchmark_definitions, load_benchmark_task_definition, load_benchmark_suite_definition
 from libs.schema.experiment import ExperimentBudget
 from libs.vertical_slices.bandgap import run_bandgap_experiment_suite
@@ -24,10 +30,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--benchmark", default="ota2")
     parser.add_argument("--list-benchmarks", action="store_true")
-    parser.add_argument("--steps", type=int, default=3)
-    parser.add_argument("--repeat-runs", type=int, default=5)
-    parser.add_argument("--max-simulations", type=int, default=6)
-    parser.add_argument("--max-candidates-per-step", type=int, default=3)
+    parser.add_argument("--steps", type=int, default=DEFAULT_BENCHMARK_STEPS)
+    parser.add_argument("--repeat-runs", type=int, default=DEFAULT_BENCHMARK_REPEAT_RUNS)
+    parser.add_argument("--max-simulations", type=int, default=DEFAULT_BENCHMARK_MAX_SIMULATIONS)
+    parser.add_argument("--max-candidates-per-step", type=int, default=DEFAULT_BENCHMARK_MAX_CANDIDATES_PER_STEP)
     parser.add_argument("--output", default="")
     parser.add_argument("--stats-json", default="")
     parser.add_argument("--stats-csv", default="")

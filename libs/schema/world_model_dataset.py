@@ -133,17 +133,26 @@ class SurrogateTrainingConfig(BaseModel):
     minimum_eval_records: int = 1
     family_balanced: bool = False
     uncertainty_mode: Literal["neighbor_spread"] = "neighbor_spread"
+    target_coverage: float = 0.9
+    coverage_interval_scale: float = 1.0
 
     @field_validator("target_metrics")
     @classmethod
     def dedupe_targets(cls, values: list[str]) -> list[str]:
         return _ordered_unique(values)
 
-    @field_validator("train_fraction")
+    @field_validator("train_fraction", "target_coverage")
     @classmethod
     def validate_fraction(cls, value: float) -> float:
         if value <= 0.0 or value >= 1.0:
             raise ValueError("train_fraction must be within (0, 1)")
+        return round(float(value), 6)
+
+    @field_validator("coverage_interval_scale")
+    @classmethod
+    def validate_interval_scale(cls, value: float) -> float:
+        if value <= 0.0:
+            raise ValueError("coverage_interval_scale must be > 0")
         return round(float(value), 6)
 
 
@@ -159,6 +168,133 @@ class SurrogateMetricSummary(BaseModel):
     covered_eval_records: int
 
 
+class SurrogateSplitSummary(BaseModel):
+    """Train/eval split provenance for one training run."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    split_source: Literal[
+        "dataset_declared",
+        "single_record_reuse",
+        "fallback_missing_eval",
+        "fallback_missing_train",
+    ]
+    split_policy: str
+    dataset_declares_train: bool
+    dataset_declares_eval: bool
+    fallback_applied: bool
+    train_record_ids: list[str] = Field(default_factory=list)
+    eval_record_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("train_record_ids", "eval_record_ids")
+    @classmethod
+    def dedupe_record_ids(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class SurrogateTrainingReproducibility(BaseModel):
+    """Reproducibility identity for one trainable-surrogate run."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    dataset_signature: str
+    config_signature: str
+    training_signature: str
+    config_source: str
+    config_overrides: list[str] = Field(default_factory=list)
+    resolved_config: dict[str, object] = Field(default_factory=dict)
+    dataset_split_policy: str
+    split_source: str
+    uncalibrated_baseline: bool = True
+
+    @field_validator("config_overrides")
+    @classmethod
+    def dedupe_overrides(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+
+class SurrogatePredictionInterval(BaseModel):
+    """One metric prediction interval captured during evaluation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str
+    predicted_value: float
+    truth_value: float
+    uncertainty: float
+    lower_bound: float
+    upper_bound: float
+    covered: bool
+
+
+class SurrogateEvaluationExample(BaseModel):
+    """Representative evaluation example for later inspection."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    record_id: str
+    family: str
+    nearest_training_ids: list[str] = Field(default_factory=list)
+    confidence: float
+    interval_status: Literal["uncalibrated_neighbor_spread"]
+    prediction_intervals: list[SurrogatePredictionInterval] = Field(default_factory=list)
+
+    @field_validator("nearest_training_ids")
+    @classmethod
+    def dedupe_training_ids(cls, values: list[str]) -> list[str]:
+        return _ordered_unique(values)
+
+    @field_validator("confidence")
+    @classmethod
+    def validate_confidence(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("confidence must be within [0, 1]")
+        return round(float(value), 6)
+
+
+class SurrogateCoverageSummary(BaseModel):
+    """Coverage-style summary for one predicted metric."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str
+    target_coverage: float
+    empirical_coverage: float
+    coverage_gap: float
+    mean_interval_width: float
+    mean_relative_interval_width: float
+    mean_uncertainty: float
+    sample_count: int
+    interval_status: Literal["uncalibrated_neighbor_spread"]
+
+    @field_validator("target_coverage", "empirical_coverage")
+    @classmethod
+    def validate_coverage(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("coverage values must be within [0, 1]")
+        return round(float(value), 6)
+
+
+class SurrogateConfidenceAlignmentSummary(BaseModel):
+    """Confidence-vs-hit-rate reliability summary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    summary_name: Literal["all_target_metrics_interval_hit"]
+    mean_predicted_confidence: float
+    empirical_hit_rate: float
+    reliability_gap: float
+    sample_count: int
+    calibration_status: Literal["uncalibrated"]
+
+    @field_validator("mean_predicted_confidence", "empirical_hit_rate")
+    @classmethod
+    def validate_probability(cls, value: float) -> float:
+        if value < 0.0 or value > 1.0:
+            raise ValueError("probability values must be within [0, 1]")
+        return round(float(value), 6)
+
+
 class SurrogateTrainingRun(BaseModel):
     """Structured training output for the first trainable surrogate baseline."""
 
@@ -168,11 +304,16 @@ class SurrogateTrainingRun(BaseModel):
     dataset_id: str
     created_at: str
     config: SurrogateTrainingConfig
+    split_summary: SurrogateSplitSummary
+    reproducibility: SurrogateTrainingReproducibility
     training_record_count: int
     evaluation_record_count: int
     feature_keys: list[str] = Field(default_factory=list)
     target_metrics: list[str] = Field(default_factory=list)
     per_metric_summary: list[SurrogateMetricSummary] = Field(default_factory=list)
+    evaluation_examples: list[SurrogateEvaluationExample] = Field(default_factory=list)
+    coverage_summary: list[SurrogateCoverageSummary] = Field(default_factory=list)
+    confidence_alignment: SurrogateConfidenceAlignmentSummary
     overall_mae: float
     overall_relative_mae: float
     model_payload: dict[str, object] = Field(default_factory=dict)

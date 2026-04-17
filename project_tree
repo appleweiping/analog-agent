@@ -71,16 +71,22 @@ analog-agent/
 |-- libs/
 |   |-- eval/
 |   |   |-- bayesopt.py
+|   |   |-- benchmark_protocol.py
 |   |   |-- benchmark_registry.py
+|   |   |-- benchmark_reporting.py
 |   |   |-- budget.py
 |   |   |-- cmaes.py
 |   |   |-- experiment_runner.py
 |   |   |-- explainability.py
+|   |   |-- memory_evidence.py
 |   |   |-- metrics.py
+|   |   |-- paper_evidence.py
+|   |   |-- planner_evidence.py
 |   |   |-- random_search.py
 |   |   |-- rl_baseline.py
 |   |   |-- robustness.py
-|   |   `-- stats.py
+|   |   |-- stats.py
+|   |   `-- submission_package.py
 |   |-- interaction/
 |   |   |-- normalizer.py
 |   |   |-- parser.py
@@ -133,19 +139,24 @@ analog-agent/
 |   |-- schema/
 |   |   |-- action_ir.py
 |   |   |-- benchmark.py
+|   |   |-- benchmark_evidence.py
 |   |   |-- circuit_ir.py
 |   |   |-- design_spec.py
 |   |   |-- design_task.py
 |   |   |-- experiment.py
 |   |   |-- memory.py
+|   |   |-- memory_evidence.py
+|   |   |-- paper_evidence.py
 |   |   |-- planning.py
 |   |   |-- reflection_ir.py
 |   |   |-- result_ir.py
 |   |   |-- simulation.py
 |   |   |-- simulation_ir.py
 |   |   |-- stats.py
+|   |   |-- submission_package.py
 |   |   |-- system_binding.py
-|   |   `-- world_model.py
+|   |   |-- world_model.py
+|   |   `-- world_model_dataset.py
 |   |-- simulation/
 |   |   |-- artifact_registry.py
 |   |   |-- backend_router.py
@@ -227,10 +238,46 @@ analog-agent/
 |   |-- smoke/
 |   |   |-- run_ngspice_smoke.py
 |   |   `-- test_ngspice_min.cir
+|   |-- audit_baseline_parity.py
+|   |-- audit_planner_rollout_claim.py
 |   |-- bootstrap_dev_env.ps1
+|   |-- build_baseline_narrative_package.py
+|   |-- build_benchmark_fidelity_framing.py
+|   |-- build_benchmark_robustness_narrative.py
 |   |-- build_dataset.py
+|   |-- build_family_summary_tables.py
+|   |-- build_final_internal_submission_package.py
+|   |-- build_multitask_rollup_tables.py
+|   |-- build_physical_validity_boundary_package.py
+|   |-- build_planner_paper_layout.py
+|   |-- build_submission_appendix_allocation.py
+|   |-- build_submission_experiments_alignment.py
+|   |-- build_submission_limitations_finalization.py
+|   |-- build_submission_main_figures.py
+|   |-- build_submission_main_tables.py
+|   |-- build_submission_manuscript_structure_freeze.py
+|   |-- build_submission_protocol_finalization.py
+|   |-- check_configured_truth_readiness.py
+|   |-- check_container_runtime.py
+|   |-- check_native_artifact_rerunability.py
+|   |-- check_open_pdk_ready.py
+|   |-- confirm_common_benchmark_protocol.py
+|   |-- explain_user_action_boundary.py
 |   |-- export_paper_tables.py
+|   |-- generate_memory_chapter_evidence.py
+|   |-- generate_memory_evidence.py
+|   |-- generate_memory_submission_package.py
+|   |-- generate_memory_transfer_evidence.py
+|   |-- generate_vertical_slice_planner_evidence.py
+|   |-- generate_vertical_slice_world_model_evidence.py
+|   |-- generate_world_model_evidence.py
+|   |-- replay_native_artifact.py
 |   |-- replay_trace.py
+|   |-- review_planner_rollout_evidence.py
+|   |-- review_stage_b_truth_groundwork.py
+|   |-- review_stage_c_world_model_readiness.py
+|   |-- review_stage_d_planner_package.py
+|   |-- review_stage_e_benchmark_package.py
 |   |-- run_bandgap_acceptance.py
 |   |-- run_bandgap_experiment_suite.py
 |   |-- run_benchmark.py
@@ -240,8 +287,10 @@ analog-agent/
 |   |-- run_ldo_experiment_suite.py
 |   |-- run_ota_acceptance.py
 |   |-- run_ota_experiment_suite.py
+|   |-- run_system_closure_report.py
 |   |-- run_test_suite.ps1
 |   |-- run_test_suite.py
+|   |-- synthesize_benchmark_failure_modes.py
 |   `-- train_world_model.py
 |-- templates/
 |   |-- netlist/
@@ -316,15 +365,35 @@ analog-agent/
 |   |-- unit/
 |   |   |-- .gitkeep
 |   |   |-- __init__.py
+|   |   |-- test_baseline_audits.py
+|   |   |-- test_benchmark_protocol.py
 |   |   |-- test_benchmark_registry.py
+|   |   |-- test_benchmark_reporting.py
+|   |   |-- test_configured_truth_readiness.py
+|   |   |-- test_container_runtime_contract.py
 |   |   |-- test_interaction_layer.py
 |   |   |-- test_measurement_contract.py
 |   |   |-- test_memory_layer.py
 |   |   |-- test_model_binding_validation.py
+|   |   |-- test_native_truth_config.py
 |   |   |-- test_ngspice_backend_smoke.py
+|   |   |-- test_open_pdk_readiness.py
+|   |   |-- test_paper_evidence.py
+|   |   |-- test_planner_evidence.py
+|   |   |-- test_planner_paper_layout.py
+|   |   |-- test_planner_rollout_evidence_review.py
 |   |   |-- test_planning_layer.py
+|   |   |-- test_replay_tools.py
+|   |   |-- test_rollout_claim_audit.py
+|   |   |-- test_simulation_claim_scope.py
 |   |   |-- test_simulation_layer.py
+|   |   |-- test_stage_b_review.py
+|   |   |-- test_stage_c_review.py
+|   |   |-- test_stage_d_review.py
+|   |   |-- test_stage_e_review.py
+|   |   |-- test_submission_package.py
 |   |   |-- test_task_formalization_layer.py
+|   |   |-- test_world_model_dataset.py
 |   |   `-- test_world_model_layer.py
 |   `-- __init__.py
 |-- .env.example

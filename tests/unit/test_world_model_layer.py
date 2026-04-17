@@ -5,13 +5,22 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
+from apps.worker_world_model.uncertainty_service import UncertaintyService
 from libs.schema.design_spec import DesignSpec, Environment, MetricRange, Objectives
 from libs.schema.world_model import TruthCalibrationRecord, TruthMetric
+from libs.schema.world_model_dataset import (
+    DatasetMetricValue,
+    FamilyDatasetSummary,
+    SurrogateTrainingConfig,
+    WorldModelDatasetBundle,
+    WorldModelDatasetRecord,
+)
 from libs.tasking.compiler import compile_design_task
 from libs.world_model.action_builder import build_design_action
 from libs.world_model.compiler import compile_world_model_bundle
 from libs.world_model.service import WorldModelService
 from libs.world_model.state_builder import build_world_state
+from libs.world_model.train import build_trained_world_model_bundle, train_from_dataset
 
 
 def build_standard_ota_task():
@@ -36,6 +45,73 @@ def build_standard_ota_task():
     compiled = compile_design_task(spec)
     assert compiled.design_task is not None
     return compiled.design_task
+
+
+def build_training_bundle() -> WorldModelDatasetBundle:
+    records = []
+    for index in range(4):
+        split = "train" if index < 3 else "eval"
+        records.append(
+            WorldModelDatasetRecord(
+                record_id=f"ota_record_{index}",
+                dataset_split=split,
+                source_kind="experiment_verification",
+                source_run_id=f"ota_run_{index}",
+                task_id="wm-standard-ota",
+                family="two_stage_ota",
+                mode="full_system",
+                candidate_id=f"cand_{index}",
+                fidelity_level="quick_truth",
+                truth_level="demonstrator_truth",
+                validation_status="demonstrator_truth",
+                feasibility_status="feasible_nominal",
+                dominant_failure_mode="none",
+                runtime_sec=0.25,
+                parameter_values={"w_in": 8e-6 + index * 1e-6, "cc": 1.0e-12 + index * 1.0e-13, "ibias": 5e-5 + index * 5e-6},
+                normalized_parameters={"w_in": 0.35 + 0.1 * index, "cc": 0.25 + 0.08 * index, "ibias": 0.3 + 0.07 * index},
+                environment={"corner": "tt", "temperature_c": 27.0},
+                predicted_metrics=[
+                    DatasetMetricValue(metric="gbw_hz", value=1.05e8 + index * 5e6),
+                    DatasetMetricValue(metric="phase_margin_deg", value=60.0 + index),
+                    DatasetMetricValue(metric="power_w", value=7.0e-4 + index * 2e-5),
+                ],
+                measured_metrics=[
+                    DatasetMetricValue(metric="gbw_hz", value=1.08e8 + index * 5e6),
+                    DatasetMetricValue(metric="phase_margin_deg", value=61.0 + index),
+                    DatasetMetricValue(metric="power_w", value=7.2e-4 + index * 2e-5),
+                ],
+                prediction_gap=[
+                    DatasetMetricValue(metric="gbw_hz", value=3e6),
+                    DatasetMetricValue(metric="phase_margin_deg", value=1.0),
+                    DatasetMetricValue(metric="power_w", value=2e-5),
+                ],
+                artifact_refs=[f"artifact://ota/{index}"],
+            )
+        )
+    return WorldModelDatasetBundle(
+        dataset_id="wm_day23_bundle",
+        created_at=datetime.now(timezone.utc).isoformat(),
+        source_scope="experiment_suite",
+        sampling_policy="family_as_observed",
+        split_policy="declared_train_eval",
+        source_run_ids=[f"ota_run_{index}" for index in range(4)],
+        family_coverage=["two_stage_ota"],
+        feature_keys=["w_in", "cc", "ibias", "env:temperature_c"],
+        target_metrics=["gbw_hz", "phase_margin_deg", "power_w"],
+        family_summaries=[
+            FamilyDatasetSummary(
+                family="two_stage_ota",
+                record_count=4,
+                train_count=3,
+                eval_count=1,
+                modes=["full_system"],
+                target_metrics=["gbw_hz", "phase_margin_deg", "power_w"],
+            )
+        ],
+        records=records,
+        notes=[],
+        provenance=["unit_test_fixture"],
+    )
 
 
 class WorldModelLayerTests(unittest.TestCase):
@@ -146,3 +222,54 @@ class WorldModelLayerTests(unittest.TestCase):
 
         self.assertTrue(update.updated_bundle.calibration_state.local_patch_history)
         self.assertIn("gbw_hz", [item.metric for item in update.updated_metrics])
+
+    def test_trained_surrogate_bundle_exposes_backend_and_uncertainty_summary(self) -> None:
+        task = build_standard_ota_task()
+        training_run = train_from_dataset(
+            build_training_bundle(),
+            SurrogateTrainingConfig(
+                name="tabular_surrogate_v1",
+                model_family="tabular_knn",
+                distance_metric="weighted_l1",
+                target_metrics=["gbw_hz", "phase_margin_deg", "power_w"],
+                k_neighbors=2,
+                train_fraction=0.8,
+                minimum_eval_records=1,
+                family_balanced=False,
+            ),
+            config_source="tests/unit/test_world_model_layer.py",
+            config_overrides=["k_neighbors=2"],
+        )
+        bundle = build_trained_world_model_bundle(task, training_run)
+        state = build_world_state(task)
+        prediction = WorldModelService(bundle, task).predict_metrics(state)
+
+        self.assertIsNotNone(prediction.surrogate_backend)
+        self.assertEqual(prediction.surrogate_backend.backend_kind, "trainable_tabular_surrogate")
+        self.assertIsNotNone(prediction.uncertainty_summary)
+        assert prediction.uncertainty_summary is not None
+        self.assertEqual(prediction.uncertainty_summary.summary_status, "uncalibrated_neighbor_spread")
+        self.assertTrue(prediction.uncertainty_summary.per_metric)
+
+    def test_uncertainty_service_returns_structured_summary(self) -> None:
+        task = build_standard_ota_task()
+        training_run = train_from_dataset(
+            build_training_bundle(),
+            SurrogateTrainingConfig(
+                name="tabular_surrogate_v1",
+                model_family="tabular_knn",
+                distance_metric="weighted_l1",
+                target_metrics=["gbw_hz", "phase_margin_deg", "power_w"],
+                k_neighbors=2,
+                train_fraction=0.8,
+                minimum_eval_records=1,
+                family_balanced=False,
+            ),
+        )
+        bundle = build_trained_world_model_bundle(task, training_run)
+        state = build_world_state(task)
+        summary = UncertaintyService(bundle, task).estimate(state)
+
+        self.assertEqual(summary.summary_status, "uncalibrated_neighbor_spread")
+        self.assertGreaterEqual(summary.aggregate_support, 0.0)
+        self.assertTrue(summary.per_metric)

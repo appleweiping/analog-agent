@@ -58,8 +58,22 @@ class PlannerAblationIntegrationTests(unittest.TestCase):
         self.assertTrue(bundle.summary.phase_updates_effective in {True, False})
         self.assertTrue(bundle.summary.calibration_replanning_effective in {True, False})
         self.assertTrue(bundle.summary.rollout_guidance_effective in {True, False})
+        self.assertTrue(bundle.summary.planner_reduces_simulations_vs_top_k in {True, False})
+        self.assertTrue(bundle.summary.fidelity_escalation_reduces_simulations in {True, False})
+        self.assertTrue(bundle.summary.phase_updates_improve_convergence in {True, False})
+        self.assertTrue(bundle.summary.calibration_replanning_improves_convergence in {True, False})
+        self.assertTrue(bundle.summary.rollout_claim_limited_to_short_horizon_guidance)
+        self.assertTrue(bundle.summary.rollout_evidence_real_not_placeholder in {True, False})
+        self.assertTrue(bundle.summary.failure_synthesis_ready)
+        self.assertTrue(bundle.summary.efficiency_synthesis_ready)
         self.assertTrue(any(figure.figure_id == "fig_planner_simulation_calls" for figure in bundle.figures))
+        self.assertTrue(any(figure.figure_id == "fig_planner_rollout_claim_audit" for figure in bundle.figures))
+        self.assertTrue(any(figure.figure_id == "fig_planner_failure_pressure" for figure in bundle.figures))
+        self.assertTrue(any(figure.figure_id == "fig_planner_efficiency_frontier" for figure in bundle.figures))
         self.assertTrue(any(table.table_id == "tbl_planner_delta_vs_topk" for table in bundle.tables))
+        self.assertTrue(any(table.table_id == "tbl_planner_rollout_claim_audit" for table in bundle.tables))
+        self.assertTrue(any(table.table_id == "tbl_planner_failure_mode_summary" for table in bundle.tables))
+        self.assertTrue(any(table.table_id == "tbl_planner_efficiency_synthesis" for table in bundle.tables))
 
 
 if __name__ == "__main__":
