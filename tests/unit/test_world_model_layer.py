@@ -18,6 +18,7 @@ from libs.schema.world_model_dataset import (
 from libs.tasking.compiler import compile_design_task
 from libs.world_model.action_builder import build_design_action
 from libs.world_model.compiler import compile_world_model_bundle
+from libs.world_model.latent_state import build_latent_state, compare_latent_states
 from libs.world_model.service import WorldModelService
 from libs.world_model.state_builder import build_world_state
 from libs.world_model.train import build_trained_world_model_bundle, train_from_dataset
@@ -169,6 +170,49 @@ class WorldModelLayerTests(unittest.TestCase):
 
         self.assertGreater(transition.delta_features.metric_deltas["gbw_hz"], 0.0)
         self.assertGreater(transition.delta_features.metric_deltas["power_w"], 0.0)
+
+    def test_latent_state_projection_is_deterministic_and_parameter_sensitive(self) -> None:
+        task = build_standard_ota_task()
+        baseline = build_world_state(task)
+        changed = build_world_state(task, parameter_values={"ibias": 8.5e-5})
+
+        latent = build_latent_state(baseline)
+        repeated = build_latent_state(baseline)
+        comparison = compare_latent_states(baseline, changed)
+
+        self.assertEqual(latent.version, "latent-state-v1")
+        self.assertEqual(latent.feature_vector, repeated.feature_vector)
+        self.assertIn("param:ibias", latent.feature_vector)
+        self.assertGreater(comparison.l2_distance, 0.0)
+        self.assertTrue(comparison.top_deltas)
+
+    def test_rollout_diagnostics_report_terminal_latent_error(self) -> None:
+        task = build_standard_ota_task()
+        bundle = compile_world_model_bundle(task).world_model_bundle
+        assert bundle is not None
+        service = WorldModelService(bundle, task)
+        state = build_world_state(task)
+        action = build_design_action(
+            task,
+            action_family="parameter_update",
+            target_kind="variable",
+            variable_names=["ibias"],
+            operator="scale",
+            payload={"factor": 1.1},
+            expected_scope=["operating_point", "power"],
+            source="planner",
+        )
+
+        rollout = service.rollout(state, [action])
+        diagnostics = service.rollout_diagnostics(rollout, truth_terminal_state=rollout.terminal_state)
+
+        self.assertEqual(diagnostics["version"], "latent-state-v1")
+        self.assertEqual(diagnostics["step_count"], 1)
+        self.assertEqual(diagnostics["path_distance_count"], 1)
+        self.assertEqual(len(diagnostics["path_l2_distances"]), 1)
+        self.assertGreater(diagnostics["path_l2_distances"][0], 0.0)
+        self.assertEqual(diagnostics["terminal_l2_error"], 0.0)
+        self.assertEqual(diagnostics["step_simulation_decisions"], [rollout.steps[0].simulation_value.decision])
 
     def test_multi_environment_case_changes_predictions(self) -> None:
         task = build_standard_ota_task()

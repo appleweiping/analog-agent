@@ -32,3 +32,7 @@ jobs:
       - name: Run full test suite
         run: |
           python scripts/run_test_suite.py --require-api-deps
+
+      - name: Run harness closeout smoke
+        run: |
+          python scripts/review_harness_closeout.py

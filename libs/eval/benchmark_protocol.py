@@ -38,13 +38,24 @@ DEFAULT_BENCHMARK_MAX_CANDIDATES_PER_STEP = 3
 
 BASELINE_MODE_NARRATIVES = {
     "full_simulation_baseline": "Upper-cost reference that evaluates every proposed candidate with real simulation rather than planner-side selectivity.",
-    "top_k_baseline": "Simple rank-then-simulate heuristic that removes the richer planner control stack.",
-    "random_search_baseline": "Deterministic random-search style baseline using the shared candidate and verification interfaces.",
+    "top_k_baseline": "Lightweight internal rank-then-simulate heuristic that removes the richer planner control stack.",
+    "random_search_baseline": "Lightweight internal random-search style baseline using the shared candidate and verification interfaces.",
     "bayesopt_baseline": "Lightweight internal BayesOpt-style baseline sharing the same benchmark budget and truth loop.",
     "cmaes_baseline": "Lightweight internal CMA-ES-style baseline sharing the same benchmark budget and truth loop.",
     "rl_baseline": "Lightweight internal RL-style policy baseline sharing the same benchmark budget and truth loop.",
     "no_world_model_baseline": "Ablative baseline that preserves the closed-loop search path while removing world-model guidance.",
     "full_system": "The complete analog-agent planner with world-model guidance, calibration, and selective truth escalation.",
+}
+
+BASELINE_STRENGTH_TIERS = {
+    "full_simulation_baseline": "upper_cost_reference",
+    "top_k_baseline": "lightweight_internal",
+    "random_search_baseline": "lightweight_internal",
+    "bayesopt_baseline": "lightweight_internal",
+    "cmaes_baseline": "lightweight_internal",
+    "rl_baseline": "lightweight_internal",
+    "no_world_model_baseline": "system_ablation",
+    "full_system": "system_under_test",
 }
 
 
@@ -72,4 +83,5 @@ def benchmark_protocol_contract() -> dict[str, object]:
         "methodology_modes": list(METHODOLOGY_BENCHMARK_MODES),
         "planner_ablation_modes": list(PLANNER_ABLATION_BENCHMARK_MODES),
         "baseline_mode_narratives": dict(BASELINE_MODE_NARRATIVES),
+        "baseline_strength_tiers": dict(BASELINE_STRENGTH_TIERS),
     }

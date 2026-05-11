@@ -19,6 +19,8 @@ class BaselineAuditTests(unittest.TestCase):
         self.assertTrue(status["all_benchmarks_frozen_runnable"])
         self.assertFalse(status["missing_supported_modes"])
         self.assertTrue(status["baseline_mode_narratives_ready"])
+        self.assertTrue(status["baseline_strength_tiers_ready"])
+        self.assertEqual(status["baseline_strength_tiers"]["bayesopt_baseline"], "lightweight_internal")
 
     def test_common_protocol_confirmation_reports_consistent_contract(self) -> None:
         status = build_protocol_status()

@@ -32,6 +32,13 @@ from libs.schema.world_model import (
 )
 from libs.utils.hashing import stable_hash
 from libs.world_model.feature_projection import build_metric_estimates, evaluate_constraints, project_metrics
+from libs.world_model.latent_state import (
+    LatentState,
+    LatentStateComparison,
+    build_latent_state,
+    compare_latent_states,
+    rollout_error_summary,
+)
 from libs.world_model.design_task_adapter import resolve_active_family
 from libs.world_model.state_builder import build_world_state, build_world_state_from_design_task
 from libs.world_model.trainable_surrogate import build_state_feature_vector, predict_with_training_examples
@@ -48,6 +55,7 @@ class WorldModelService:
     def __init__(self, bundle: WorldModelBundle, task: DesignTask) -> None:
         self.bundle = bundle
         self.task = task
+        self._rollout_initial_states: dict[tuple[str, str], WorldState] = {}
 
     def validate_state(self, state: WorldState):
         return validate_world_state(self.bundle, self.task, state)
@@ -508,6 +516,12 @@ class WorldModelService:
             ),
         )
 
+    def build_latent_state(self, state: WorldState) -> LatentState:
+        return build_latent_state(state)
+
+    def compare_latent_states(self, lhs: WorldState | LatentState, rhs: WorldState | LatentState) -> LatentStateComparison:
+        return compare_latent_states(lhs, rhs)
+
     def rollout(self, initial_state: WorldState, actions: list[DesignAction], horizon: int | None = None) -> RolloutResponse:
         horizon = horizon or len(actions)
         current = initial_state
@@ -518,12 +532,28 @@ class WorldModelService:
             steps.append(RolloutStep(step_index=index, action=action, transition=transition, simulation_value=sim_value))
             current = transition.next_state
         terminal_trust = self.predict_feasibility(current).trust_assessment if steps else self.predict_feasibility(initial_state).trust_assessment
-        return RolloutResponse(
+        rollout = RolloutResponse(
             initial_state_id=initial_state.state_id,
             horizon=horizon,
             steps=steps,
             terminal_state=current,
             trust_assessment=terminal_trust,
+        )
+        self._rollout_initial_states[(rollout.initial_state_id, rollout.terminal_state.state_id)] = initial_state
+        return rollout
+
+    def rollout_diagnostics(
+        self,
+        rollout: RolloutResponse,
+        *,
+        initial_state: WorldState | None = None,
+        truth_terminal_state: WorldState | None = None,
+    ) -> dict[str, object]:
+        resolved_initial = initial_state or self._rollout_initial_states.get((rollout.initial_state_id, rollout.terminal_state.state_id))
+        return rollout_error_summary(
+            rollout,
+            initial_state=resolved_initial,
+            truth_terminal_state=truth_terminal_state,
         )
 
     def calibrate_with_truth(self, state: WorldState, truth: TruthCalibrationRecord) -> CalibrationUpdateResponse:

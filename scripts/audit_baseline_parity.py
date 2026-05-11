@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from libs.eval.benchmark_protocol import BASELINE_BENCHMARK_MODES, BASELINE_MODE_NARRATIVES
+from libs.eval.benchmark_protocol import BASELINE_BENCHMARK_MODES, BASELINE_MODE_NARRATIVES, BASELINE_STRENGTH_TIERS
 from libs.eval.benchmark_registry import list_benchmark_definitions, load_benchmark_suite_definition
 
 
@@ -22,7 +22,8 @@ def build_status() -> dict[str, object]:
     missing_modes = [mode for mode in BASELINE_BENCHMARK_MODES if mode not in supported_modes]
     all_frozen_runnable = all(item.execution_readiness == "frozen_runnable" for item in benchmarks)
     narrative_ready = all(mode in BASELINE_MODE_NARRATIVES for mode in BASELINE_BENCHMARK_MODES)
-    parity_ready = all_frozen_runnable and not missing_modes and narrative_ready
+    strength_tiers_ready = all(mode in BASELINE_STRENGTH_TIERS for mode in BASELINE_BENCHMARK_MODES)
+    parity_ready = all_frozen_runnable and not missing_modes and narrative_ready and strength_tiers_ready
     return {
         "stage": "Stage E",
         "audit": "baseline_parity",
@@ -32,10 +33,13 @@ def build_status() -> dict[str, object]:
         "supported_modes": suite.supported_modes,
         "missing_supported_modes": missing_modes,
         "baseline_mode_narratives_ready": narrative_ready,
+        "baseline_strength_tiers": dict(BASELINE_STRENGTH_TIERS),
+        "baseline_strength_tiers_ready": strength_tiers_ready,
         "benchmark_ids": [item.benchmark_id for item in benchmarks],
         "ready_for_common_protocol_confirmation": parity_ready,
         "notes": [
             "Baseline parity here means the frozen benchmark suite advertises the same baseline roster that the runnable vertical slices are expected to support.",
+            "Lightweight internal baselines are contract-fair comparison routes, not claims of production-strength external reimplementation.",
             "This parity audit checks contract-level roster fairness and does not claim that every baseline has already been rerun for every benchmark in the current environment.",
         ],
     }
