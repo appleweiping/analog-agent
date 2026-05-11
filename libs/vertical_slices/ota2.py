@@ -231,7 +231,7 @@ def run_ota_planner_evidence(
     budget: ExperimentBudget | None = None,
     backend_preference: str | None = None,
     fidelity_level: str | None = None,
-    output_root: str | Path = "research/papers/ota2_v1",
+    output_root: str | Path = "archive/research/papers/ota2_v1",
 ) -> PlannerAblationEvidenceBundle:
     config = load_ota2_v1_config()
     return run_vertical_slice_planner_evidence(
@@ -272,7 +272,7 @@ def run_ota_memory_evidence(
     max_steps: int = 3,
     backend_preference: str | None = None,
     fidelity_level: str | None = None,
-    output_root: str | Path = "research/papers/ota2_v1",
+    output_root: str | Path = "archive/research/papers/ota2_v1",
 ) -> MemoryAblationEvidenceBundle:
     """Generate repeated-episode memory evidence bundle for OTA v1."""
 

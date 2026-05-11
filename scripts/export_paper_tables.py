@@ -7,7 +7,7 @@ import argparse
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default="research/papers/tables")
+    parser.add_argument("--output", default="archive/research/papers/tables")
     args = parser.parse_args()
     print(f"paper table export stub into {args.output}")
 

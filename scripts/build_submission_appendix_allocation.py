@@ -15,7 +15,7 @@ from libs.eval.submission_package import build_submission_appendix_allocation_bu
 def main() -> None:
     bundle = build_submission_appendix_allocation_bundle(
         profile_name="paper",
-        output_root=Path("research/papers/submission_package/appendix"),
+        output_root=Path("archive/research/papers/submission_package/appendix"),
     )
     print(bundle.model_dump_json(indent=2))
 

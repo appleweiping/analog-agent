@@ -29,7 +29,7 @@ def main() -> None:
     parser.add_argument("--source-episodes", type=int, default=3)
     parser.add_argument("--target-episodes", type=int, default=3)
     parser.add_argument("--steps", type=int, default=3)
-    parser.add_argument("--output-root", type=Path, default=Path("research/papers"))
+    parser.add_argument("--output-root", type=Path, default=Path("archive/research/papers"))
     args = parser.parse_args()
 
     if args.pair == "ota_to_folded_cascode":

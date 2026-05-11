@@ -39,7 +39,7 @@ PROFILES = {
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate submission-facing memory chapter package.")
     parser.add_argument("--profile", choices=sorted(PROFILES.keys()), default="paper")
-    parser.add_argument("--output-root", type=Path, default=Path("research/papers/memory_chapter"))
+    parser.add_argument("--output-root", type=Path, default=Path("archive/research/papers/memory_chapter"))
     args = parser.parse_args()
 
     profile = PROFILES[args.profile]

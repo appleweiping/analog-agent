@@ -7,7 +7,7 @@ import argparse
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--trace", default="research/datasets/online_traces/example.json")
+    parser.add_argument("--trace", default="archive/research/datasets/online_traces/example.json")
     args = parser.parse_args()
     print(f"trace replay stub for {args.trace}")
 

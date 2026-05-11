@@ -103,7 +103,7 @@ def run_folded_cascode_world_model_evidence(
     budget: ExperimentBudget | None = None,
     backend_preference: str | None = None,
     fidelity_level: str | None = None,
-    output_root: str | Path = "research/papers/folded_cascode_v1",
+    output_root: str | Path = "archive/research/papers/folded_cascode_v1",
 ) -> WorldModelEvidenceBundle:
     """Generate paper-facing world-model evidence for folded_cascode_v1."""
 
@@ -128,7 +128,7 @@ def run_folded_cascode_planner_evidence(
     budget: ExperimentBudget | None = None,
     backend_preference: str | None = None,
     fidelity_level: str | None = None,
-    output_root: str | Path = "research/papers/folded_cascode_v1",
+    output_root: str | Path = "archive/research/papers/folded_cascode_v1",
 ) -> PlannerAblationEvidenceBundle:
     config = load_folded_cascode_v1_config()
     return run_vertical_slice_planner_evidence(
@@ -169,7 +169,7 @@ def run_folded_cascode_memory_evidence(
     max_steps: int = 3,
     backend_preference: str | None = None,
     fidelity_level: str | None = None,
-    output_root: str | Path = "research/papers/folded_cascode_v1",
+    output_root: str | Path = "archive/research/papers/folded_cascode_v1",
 ) -> MemoryAblationEvidenceBundle:
     """Generate repeated-episode memory evidence bundle for folded_cascode_v1."""
 

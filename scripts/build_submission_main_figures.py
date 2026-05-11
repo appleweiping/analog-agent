@@ -15,7 +15,7 @@ from libs.eval.submission_package import build_submission_main_figure_freeze_bun
 def main() -> None:
     bundle = build_submission_main_figure_freeze_bundle(
         profile_name="paper",
-        output_root=Path("research/papers/submission_package"),
+        output_root=Path("archive/research/papers/submission_package"),
     )
     print(bundle.model_dump_json(indent=2))
 

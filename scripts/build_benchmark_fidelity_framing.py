@@ -14,7 +14,7 @@ from libs.eval.benchmark_reporting import build_fidelity_corner_load_bundle
 
 
 def main() -> None:
-    bundle = build_fidelity_corner_load_bundle(output_root=Path("research/papers/benchmark_fidelity_framing"))
+    bundle = build_fidelity_corner_load_bundle(output_root=Path("archive/research/papers/benchmark_fidelity_framing"))
     print(json.dumps(bundle.model_dump(mode="json"), indent=2))
 
 

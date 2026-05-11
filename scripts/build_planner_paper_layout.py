@@ -18,7 +18,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle-json", required=True, help="Path to planner_evidence_bundle.json")
     parser.add_argument("--profile", default="paper")
-    parser.add_argument("--output-root", type=Path, default=Path("research/papers/planner_layout"))
+    parser.add_argument("--output-root", type=Path, default=Path("archive/research/papers/planner_layout"))
     args = parser.parse_args()
 
     bundle = PlannerAblationEvidenceBundle.model_validate_json(Path(args.bundle_json).read_text(encoding="utf-8"))

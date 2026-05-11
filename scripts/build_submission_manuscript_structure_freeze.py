@@ -15,7 +15,7 @@ from libs.eval.submission_package import build_submission_manuscript_structure_f
 def main() -> None:
     bundle = build_submission_manuscript_structure_freeze_bundle(
         profile_name="paper",
-        output_root=Path("research/papers/submission_package/manuscript"),
+        output_root=Path("archive/research/papers/submission_package/manuscript"),
     )
     print(bundle.model_dump_json(indent=2))
 

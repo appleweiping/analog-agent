@@ -105,11 +105,11 @@ def main() -> None:
     else:
         raise ValueError(f"benchmark '{benchmark_definition.benchmark_id}' is frozen_runnable but not yet wired into run_benchmark.py")
 
-    output_path = Path(args.output or f"research/benchmarks/{benchmark_name}_experiment_results.json")
+    output_path = Path(args.output or f"archive/research/benchmarks/{benchmark_name}_experiment_results.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(suite.model_dump(), indent=2), encoding="utf-8")
-    stats_json = export_stats_json(suite, args.stats_json or f"research/benchmarks/{benchmark_name}_stats_summary.json")
-    stats_csv = export_stats_csv(suite, args.stats_csv or f"research/benchmarks/{benchmark_name}_stats_summary.csv")
+    stats_json = export_stats_json(suite, args.stats_json or f"archive/research/benchmarks/{benchmark_name}_stats_summary.json")
+    stats_csv = export_stats_csv(suite, args.stats_csv or f"archive/research/benchmarks/{benchmark_name}_stats_summary.csv")
     print(
         json.dumps(
             {

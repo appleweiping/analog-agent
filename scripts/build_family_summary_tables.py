@@ -14,7 +14,7 @@ from libs.eval.benchmark_reporting import build_family_summary_bundle
 
 
 def main() -> None:
-    bundle = build_family_summary_bundle(output_root=Path("research/papers/benchmark_family_summary"))
+    bundle = build_family_summary_bundle(output_root=Path("archive/research/papers/benchmark_family_summary"))
     print(json.dumps(bundle.model_dump(mode="json"), indent=2))
 
 

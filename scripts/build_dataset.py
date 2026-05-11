@@ -45,7 +45,7 @@ def main() -> None:
     parser.add_argument("--max-candidates-per-step", type=int, default=2)
     parser.add_argument("--max-records-per-family", type=int, default=8)
     parser.add_argument("--dataset-name", default="world_model_multitask_v1")
-    parser.add_argument("--output", default="research/datasets/world_model_multitask_v1.json")
+    parser.add_argument("--output", default="archive/research/datasets/world_model_multitask_v1.json")
     args = parser.parse_args()
 
     task_names = [task.strip() for task in args.tasks.split(",") if task.strip()]

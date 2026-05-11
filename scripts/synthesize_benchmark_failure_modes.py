@@ -14,7 +14,7 @@ from libs.eval.benchmark_reporting import build_failure_mode_synthesis_bundle
 
 
 def main() -> None:
-    bundle = build_failure_mode_synthesis_bundle(output_root=Path("research/papers/benchmark_failure_modes"))
+    bundle = build_failure_mode_synthesis_bundle(output_root=Path("archive/research/papers/benchmark_failure_modes"))
     print(json.dumps(bundle.model_dump(mode="json"), indent=2))
 
 

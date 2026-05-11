@@ -25,7 +25,7 @@ def main() -> None:
     parser.add_argument("--repeat-runs", type=int, default=5)
     parser.add_argument("--max-simulations", type=int, default=6)
     parser.add_argument("--max-candidates-per-step", type=int, default=3)
-    parser.add_argument("--output-root", default="research/papers")
+    parser.add_argument("--output-root", default="archive/research/papers")
     args = parser.parse_args()
 
     budget = ExperimentBudget(

@@ -15,7 +15,7 @@ from libs.eval.submission_package import build_submission_experiments_alignment_
 def main() -> None:
     bundle = build_submission_experiments_alignment_bundle(
         profile_name="paper",
-        output_root=Path("research/papers/submission_package/experiments"),
+        output_root=Path("archive/research/papers/submission_package/experiments"),
     )
     print(bundle.model_dump_json(indent=2))
 

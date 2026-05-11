@@ -15,7 +15,7 @@ from libs.eval.submission_package import build_final_internal_submission_package
 def main() -> None:
     bundle = build_final_internal_submission_package_bundle(
         profile_name="paper",
-        output_root=Path("research/papers/submission_package/final_internal"),
+        output_root=Path("archive/research/papers/submission_package/final_internal"),
     )
     print(bundle.model_dump_json(indent=2))
 

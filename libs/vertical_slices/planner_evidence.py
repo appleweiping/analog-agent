@@ -21,7 +21,7 @@ def run_vertical_slice_planner_evidence(
     budget: ExperimentBudget | None = None,
     backend_preference: str = "ngspice",
     fidelity_level: str = "focused_truth",
-    output_root: str | Path = "research/papers",
+    output_root: str | Path = "archive/research/papers",
 ) -> PlannerAblationEvidenceBundle:
     output_root = Path(output_root)
     methodology_root = output_root / "planner_methodology"

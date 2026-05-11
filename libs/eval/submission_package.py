@@ -24,7 +24,7 @@ from libs.schema.submission_package import (
 from scripts.review_stage_b_truth_groundwork import build_status as stage_b_review_status
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PAPERS_ROOT = REPO_ROOT / "research" / "papers"
+PAPERS_ROOT = REPO_ROOT / "archive" / "research" / "papers"
 
 _FALLBACK_DOCS: dict[str, str] = {
     "experimental_protocol.md": """# Experimental Protocol

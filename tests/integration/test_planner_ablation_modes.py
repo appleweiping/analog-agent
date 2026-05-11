@@ -51,7 +51,7 @@ class PlannerAblationIntegrationTests(unittest.TestCase):
             steps=2,
             repeat_runs=1,
             budget=ExperimentBudget(max_simulations=4, max_candidates_per_step=2),
-            output_root="research/papers/ota2_v1_ci",
+            output_root="archive/research/papers/ota2_v1_ci",
         )
         self.assertTrue(bundle.summary.fidelity_escalation_effective in {True, False})
         self.assertTrue(bundle.summary.planner_beats_top_k in {True, False})

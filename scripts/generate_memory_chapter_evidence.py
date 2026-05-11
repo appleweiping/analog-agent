@@ -34,7 +34,7 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, default=3)
     parser.add_argument("--transfer-episodes", type=int, default=2)
     parser.add_argument("--steps", type=int, default=2)
-    parser.add_argument("--output-root", type=Path, default=Path("research/papers/memory_chapter"))
+    parser.add_argument("--output-root", type=Path, default=Path("archive/research/papers/memory_chapter"))
     args = parser.parse_args()
 
     repeated_bundles = [

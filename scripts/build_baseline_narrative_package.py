@@ -83,7 +83,7 @@ def export_package(output_root: str | Path) -> dict[str, str]:
 
 
 def main() -> None:
-    outputs = export_package(Path("research/papers/baseline_narrative"))
+    outputs = export_package(Path("archive/research/papers/baseline_narrative"))
     print(json.dumps(outputs, indent=2))
 
 

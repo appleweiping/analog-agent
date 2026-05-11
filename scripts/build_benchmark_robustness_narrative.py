@@ -14,7 +14,7 @@ from libs.eval.benchmark_reporting import build_robustness_narrative_bundle
 
 
 def main() -> None:
-    bundle = build_robustness_narrative_bundle(output_root=Path("research/papers/benchmark_robustness"))
+    bundle = build_robustness_narrative_bundle(output_root=Path("archive/research/papers/benchmark_robustness"))
     print(json.dumps(bundle.model_dump(mode="json"), indent=2))
 
 

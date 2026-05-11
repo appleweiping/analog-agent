@@ -35,28 +35,28 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.task == "ota2":
-        output_root = args.output_root or Path("research/papers/ota2_v1")
+        output_root = args.output_root or Path("archive/research/papers/ota2_v1")
         bundle = run_ota_memory_evidence(
             episodes=args.episodes,
             max_steps=args.steps,
             output_root=output_root,
         )
     elif args.task == "folded_cascode":
-        output_root = args.output_root or Path("research/papers/folded_cascode_v1")
+        output_root = args.output_root or Path("archive/research/papers/folded_cascode_v1")
         bundle = run_folded_cascode_memory_evidence(
             episodes=args.episodes,
             max_steps=args.steps,
             output_root=output_root,
         )
     elif args.task == "ldo":
-        output_root = args.output_root or Path("research/papers/ldo_v1")
+        output_root = args.output_root or Path("archive/research/papers/ldo_v1")
         bundle = run_ldo_memory_evidence(
             episodes=args.episodes,
             max_steps=args.steps,
             output_root=output_root,
         )
     else:
-        output_root = args.output_root or Path("research/papers/bandgap_v1")
+        output_root = args.output_root or Path("archive/research/papers/bandgap_v1")
         bundle = run_bandgap_memory_evidence(
             episodes=args.episodes,
             max_steps=args.steps,

@@ -14,7 +14,7 @@ from libs.eval.submission_package import build_physical_validity_boundary_bundle
 
 def main() -> None:
     bundle = build_physical_validity_boundary_bundle(
-        output_root=Path("research/papers/physical_validity_boundaries"),
+        output_root=Path("archive/research/papers/physical_validity_boundaries"),
     )
     print(bundle.model_dump_json(indent=2))
 

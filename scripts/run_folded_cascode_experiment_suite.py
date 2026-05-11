@@ -22,8 +22,8 @@ def main() -> None:
     parser.add_argument("--max-simulations", type=int, default=6)
     parser.add_argument("--max-candidates-per-step", type=int, default=3)
     parser.add_argument("--comparison-profile", choices=["baseline", "methodology"], default="baseline")
-    parser.add_argument("--output", default="research/benchmarks/folded_cascode_experiment_results.json")
-    parser.add_argument("--export-dir", default="research/benchmarks")
+    parser.add_argument("--output", default="archive/research/benchmarks/folded_cascode_experiment_results.json")
+    parser.add_argument("--export-dir", default="archive/research/benchmarks")
     args = parser.parse_args()
 
     suite = run_folded_cascode_experiment_suite(

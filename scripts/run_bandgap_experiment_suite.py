@@ -9,7 +9,7 @@ from libs.vertical_slices.bandgap import run_bandgap_experiment_suite
 
 
 def main() -> None:
-    suite = run_bandgap_experiment_suite(export_directory=Path("research/benchmarks"))
+    suite = run_bandgap_experiment_suite(export_directory=Path("archive/research/benchmarks"))
     print(json.dumps(suite.model_dump(mode="json"), indent=2))
 
 

@@ -21,7 +21,7 @@ def main() -> None:
     parser.add_argument("--repeat-runs", type=int, default=5)
     parser.add_argument("--max-simulations", type=int, default=6)
     parser.add_argument("--max-candidates-per-step", type=int, default=3)
-    parser.add_argument("--output-root", default="research/papers")
+    parser.add_argument("--output-root", default="archive/research/papers")
     parser.add_argument("--task-id", default="benchmark-ota2-v1-world-model-evidence")
     args = parser.parse_args()
 

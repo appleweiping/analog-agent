@@ -130,7 +130,7 @@ def _render_report(result) -> str:
 
 
 def main() -> None:
-    output_dir = REPO_ROOT / "research" / "implementation_notes"
+    output_dir = REPO_ROOT / "archive" / "research" / "implementation_notes"
     output_dir.mkdir(parents=True, exist_ok=True)
     result = run_ota_submission_ready_freeze(
         acceptance_steps=2,

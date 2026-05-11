@@ -11,6 +11,6 @@ runtime:
   world_model: tabular_surrogate
 
 paths:
-  data_root: research/datasets
-  trace_root: research/datasets/online_traces
-  benchmark_root: research/benchmarks
+  data_root: archive/research/datasets
+  trace_root: archive/research/datasets/online_traces
+  benchmark_root: archive/research/benchmarks

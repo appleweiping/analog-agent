@@ -15,7 +15,7 @@ from libs.eval.submission_package import build_submission_limitations_finalizati
 def main() -> None:
     bundle = build_submission_limitations_finalization_bundle(
         profile_name="paper",
-        output_root=Path("research/papers/submission_package/limitations"),
+        output_root=Path("archive/research/papers/submission_package/limitations"),
     )
     print(bundle.model_dump_json(indent=2))
 

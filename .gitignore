@@ -201,17 +201,14 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-# Local paper drafts and notes
+# Local archive sink for paper drafts, notes, benchmark exports, and experiments
+archive/
 paper/
+research/
 
 # Local simulation artifacts
 .artifacts/
 .pdk/
-research/
-research/benchmarks/*_experiment_results.json
-research/benchmarks/*_stats_summary.json
-research/benchmarks/*_stats_summary.csv
-research/papers/*_ci/
 
 # Marimo
 marimo/_static/
