@@ -2,8 +2,8 @@ model: gpt-5
 provider: codex_local
 temperature: 0.2
 max_output_tokens: 4096
-role: planner
-system_goal: Generate candidate design actions and experiment plans.
+role: topology
+system_goal: Propose circuit topologies compatible with the requested objective and truth boundary.
 prompt_contract_version: v1
 tool_schema_version: v1
 response_schema_version: v1

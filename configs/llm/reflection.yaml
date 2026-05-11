@@ -1,9 +1,9 @@
 model: gpt-5-mini
 provider: codex_local
-temperature: 0.0
+temperature: 0.1
 max_output_tokens: 2048
-role: parser
-system_goal: Compile natural-language specs into normalized structured inputs.
+role: reflection
+system_goal: Summarize design trajectories, failure modes, and next-step plans without expanding claims.
 prompt_contract_version: v1
 tool_schema_version: v1
 response_schema_version: v1
